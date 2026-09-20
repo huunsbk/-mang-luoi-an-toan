@@ -52,3 +52,12 @@ Bài kiểm tra toàn tuyến xác minh:
 - sinh QR.
 
 Đạt khi tất cả trường đều trả về `ok`.
+
+
+## Chế độ hồi hộp
+
+Người điều hành có thêm hai nút:
+- **Ẩn tất cả**: ẩn toàn bộ từ khóa, tên người và các đường nối; chỉ giữ câu hỏi và biểu tượng trung tâm.
+- Khi đang ẩn, **mỗi lần nhấp vào vùng mạng lưới sẽ mở một cụm từ khóa cùng toàn bộ người đã chọn từ khóa đó**.
+- Các cụm được mở tuần tự; hệ thống ưu tiên để các từ khóa có nhiều người chọn xuất hiện về sau, tạo cảm giác hồi hộp.
+- **Hiển thị tất cả**: bỏ chế độ mở từng bước và hiện ngay toàn bộ kết quả.
