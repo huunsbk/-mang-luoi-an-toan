@@ -2,44 +2,44 @@
 
 Mini app tương tác dành cho tập huấn **An toàn trên mạng và Bảo vệ trẻ em**.
 
-## Bản web online
+## Bản online
 
-Repository đã có bản **Vercel-ready** ở `index.html`. Báo cáo viên mở trang web trên máy chiếu; hệ thống tự tạo một phòng và QR. Học viên quét QR, nhập tên và một người/hành động có thể giúp bảo vệ trẻ em. Câu trả lời được gửi trực tiếp từ trình duyệt học viên tới trình duyệt báo cáo viên bằng WebRTC/PeerJS và xuất hiện thành các nút của **mạng lưới an toàn**.
+Mở: https://mang-luoi-an-toan.vercel.app
 
-### Đặc điểm
+Quy trình:
+1. Báo cáo viên mở trang chủ trên máy tính/màn chiếu.
+2. Hệ thống tự tạo một **mã phòng ngẫu nhiên** và QR.
+3. Học viên quét QR bằng điện thoại.
+4. Học viên nhập tên + một người/hành động giúp bảo vệ trẻ em.
+5. Câu trả lời được gửi qua HTTPS tới API Vercel, lưu tạm trong Supabase và màn chiếu đồng bộ khoảng mỗi 0,8 giây.
+6. Mỗi câu trả lời trở thành một mắt xích và sợi dây trong mạng lưới.
+7. Nút **Tạo lượt chơi mới** tạo mã phòng mới; QR cũ không còn hiển thị vào lượt hiện tại.
 
-- Không cần học viên cài ứng dụng hay đăng nhập.
-- Không cần cơ sở dữ liệu.
-- Không lưu câu trả lời lên máy chủ của ứng dụng.
-- Mỗi lần mở trang báo cáo viên sẽ tạo một phòng mới.
-- Dữ liệu của lượt chơi nằm trong bộ nhớ trình duyệt báo cáo viên và mất khi tải lại trang.
-- Cần Internet để tải trang và dùng dịch vụ tín hiệu WebRTC PeerJS Cloud.
+## Kiến trúc v2.1
 
-## Triển khai Vercel
+- Frontend tĩnh: Vercel.
+- API cùng tên miền: Vercel Functions.
+- Dữ liệu tạm: Supabase PostgreSQL thông qua 2 RPC giới hạn chức năng.
+- Không dùng WebRTC/PeerJS, nên không phụ thuộc NAT, TURN hoặc việc các thiết bị có cùng Wi-Fi.
+- QR được tạo bởi API của chính ứng dụng, không phụ thuộc CDN/QR bên ngoài.
+- Dữ liệu lượt chơi được tự loại khỏi kết quả sau tối đa 24 giờ.
+- Bảng dữ liệu không được cấp SELECT/INSERT trực tiếp cho anon; frontend chỉ gọi RPC giới hạn theo mã phòng UUID.
 
-Import repository này vào Vercel và deploy ở thư mục gốc. Không cần Build Command, không cần Environment Variables.
+## Kiểm tra hệ thống
 
-Vercel sẽ phục vụ trực tiếp `index.html` và `vercel.json`.
+Endpoint kiểm tra toàn tuyến:
+- `/api/health`
 
-## Bản dùng nội bộ không cần Internet
+Kết quả đạt yêu cầu khi trả về:
+`{"ok":true,...,"database":"ok"}`
 
-Repository vẫn giữ bản chạy LAN bằng Python:
+## Bản LAN ngoại tuyến
 
-1. Laptop và điện thoại cùng Wi-Fi.
-2. Máy tính có Python 3.9+.
-3. Chạy `start.bat` trên Windows.
-4. Nếu Windows Firewall hỏi, chọn **Allow access / Private network**.
-5. Học viên quét QR trên màn hình báo cáo viên.
+Bản Python cũ được lưu trong thư mục `offline/` để dự phòng khi địa điểm không có Internet.
 
 ## Khẩu lệnh gợi ý
 
 **Báo cáo viên:** “AN TOÀN!”  
 **Cả lớp:** “CHO TRẺ EM!”
 
-## Lời dẫn gợi ý
-
-> Mỗi thầy cô hãy quét QR. Khi nhận được màn hình, nhập tên mình và chia sẻ một người hoặc một hành động có thể giúp bảo vệ trẻ em. Khi nhấn Gửi, thầy cô sẽ trở thành một mắt xích của Mạng lưới an toàn trên màn hình của chúng ta.
-
----
-
-Thiết kế cho hoạt động **“Mạng lưới an toàn”** trong tập huấn bảo vệ trẻ em.
+> Lưu ý bảo vệ trẻ em: trong hoạt động khởi động không yêu cầu người học kể trường hợp xâm hại có thật hoặc chia sẻ thông tin nhận diện của trẻ.
