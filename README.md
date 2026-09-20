@@ -1,40 +1,54 @@
 # Mạng lưới an toàn
 
-Mini app tương tác cho tập huấn. Bản production: https://mang-luoi-an-toan.vercel.app
+Bản production: https://mang-luoi-an-toan.vercel.app
 
-## Quy trình v3
+## Phiên bản 4.0
 
-1. Người điều hành mở trang chủ.
-2. **Người điều hành tự nhập câu hỏi** phù hợp với hoạt động đang tổ chức.
-3. Bấm **Bắt đầu câu hỏi**. Hệ thống tạo phòng và QR.
-4. Học viên quét QR bằng điện thoại.
-5. Điện thoại hiển thị đúng câu hỏi của người điều hành.
-6. Học viên nhập tên và **tự viết câu trả lời**; ứng dụng không đưa đáp án/gợi ý.
-7. Câu trả lời xuất hiện trên màn hình chung dưới dạng các mắt xích và sợi dây.
-8. Muốn dùng ứng dụng cho nội dung khác, bấm **Câu hỏi mới**, nhập câu hỏi khác và tạo lượt mới.
+Người điều hành:
+1. Nhập câu hỏi.
+2. Chọn **giới hạn số từ** cho câu trả lời (1–20 từ).
+3. Bấm **Bắt đầu câu hỏi** để tạo phòng và QR.
 
-## Nguyên tắc thiết kế
+Người tham gia:
+- Không nhận đáp án gợi ý.
+- Nhập tên và một từ khóa/cụm từ ngắn.
+- Từ khóa tự chuyển sang CHỮ HOA.
+- Dấu câu/ký hiệu được bỏ; khoảng trắng thừa được chuẩn hóa.
+- Hệ thống chặn câu trả lời vượt quá giới hạn số từ do người điều hành đặt.
 
-- Không cố định câu hỏi vào chủ đề duy nhất.
-- Không hiển thị các đáp án gợi ý cho học viên để tránh định hướng câu trả lời.
-- Mỗi lượt có mã phòng UUID riêng.
-- QR chỉ được sinh sau khi câu hỏi đã được người điều hành lưu.
-- Frontend và API chạy trên Vercel; dữ liệu tạm trên Supabase.
-- Không dùng WebRTC/PeerJS.
-- Học viên không cần cùng Wi‑Fi với máy chiếu.
-- Bảng dữ liệu không cho anon đọc/ghi trực tiếp; chỉ các RPC giới hạn của ứng dụng được gọi.
+## Cách nhóm từ khóa
 
-## Tự kiểm tra production
+Hai câu trả lời được coi là cùng từ khóa khi, sau chuẩn hóa:
+- cùng chữ HOA;
+- bỏ dấu câu/ký hiệu;
+- bỏ khoảng trắng để tạo khóa so sánh.
 
-Endpoint: `/api/health`
+Ví dụ:
+- `lắng nghe trẻ`
+- `LẮNG  NGHE TRẺ!`
+- `lắng-nghe-trẻ`
 
-Bài kiểm tra thực hiện toàn tuyến:
-- tạo/cập nhật phòng và câu hỏi;
-- đọc lại câu hỏi;
-- gửi một câu trả lời;
-- đọc lại câu trả lời;
+đều được nhóm thành **LẮNG NGHE TRẺ**.
+
+## Hiển thị mạng lưới
+
+- Mỗi **từ khóa** là một nút lớn, chữ HOA.
+- Mỗi từ khóa có một màu riêng.
+- Tên những người chọn từ khóa đó dùng cùng màu và có đường nối ngắn đến từ khóa.
+- Từ khóa càng có nhiều người chọn thì cỡ chữ càng lớn.
+- Có thể ẩn/hiện tên người để tập trung vào xu hướng từ khóa.
+
+## Kiểm tra production
+
+Endpoint:
+`/api/health`
+
+Bài kiểm tra toàn tuyến xác minh:
+- tạo phòng và lưu câu hỏi;
+- lưu/đọc giới hạn số từ;
+- chuẩn hóa từ khóa;
+- từ chối câu vượt giới hạn từ;
+- gửi và đọc câu trả lời;
 - sinh QR.
 
-Đạt khi tất cả trường trả về `ok`.
-
-> Với chủ đề bảo vệ trẻ em, không yêu cầu người học chia sẻ danh tính của trẻ hoặc kể chi tiết một vụ xâm hại có thật.
+Đạt khi tất cả trường đều trả về `ok`.
