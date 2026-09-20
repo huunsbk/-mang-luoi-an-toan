@@ -56,8 +56,10 @@ Bài kiểm tra toàn tuyến xác minh:
 
 ## Chế độ hồi hộp
 
-Người điều hành có thêm hai nút:
-- **Ẩn tất cả**: ẩn toàn bộ từ khóa, tên người và các đường nối; chỉ giữ câu hỏi và biểu tượng trung tâm.
-- Khi đang ẩn, **mỗi lần nhấp vào vùng mạng lưới sẽ mở một cụm từ khóa cùng toàn bộ người đã chọn từ khóa đó**.
-- Các cụm được mở tuần tự; hệ thống ưu tiên để các từ khóa có nhiều người chọn xuất hiện về sau, tạo cảm giác hồi hộp.
-- **Hiển thị tất cả**: bỏ chế độ mở từng bước và hiện ngay toàn bộ kết quả.
+Người điều hành có hai nút:
+- **Khóa nội dung**: giữ nguyên toàn bộ cấu trúc mạng lưới, màu cụm, số người và các đường nối, nhưng che nội dung từ khóa bằng 🔒 và che tên người bằng 👤.
+- Mỗi ổ khóa vẫn giữ kích thước của cụm và hiển thị số người lựa chọn, nên cả lớp biết có bao nhiêu nhóm ý kiến và nhóm nào đông.
+- **Nhấp trực tiếp vào ổ khóa nào thì chỉ cụm đó được mở**. Từ khóa và tên những người lựa chọn hiện ra với hiệu ứng mở khóa 🔓.
+- Các cụm khác vẫn bị khóa cho tới khi người điều hành chọn mở.
+- **Mở tất cả**: bỏ chế độ khóa và hiển thị ngay toàn bộ từ khóa và tên người.
+- Nếu có câu trả lời mới trong lúc đang khóa, cụm mới vẫn xuất hiện ở trạng thái khóa.
