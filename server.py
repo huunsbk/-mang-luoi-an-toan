@@ -107,32 +107,49 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             room = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
             person = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+            base = "https://mang-luoi-an-toan.vercel.app"
             try:
-                rpc("safety_submit_answer", {
-                    "p_room_id": room,
-                    "p_participant_id": person,
-                    "p_name": "Health Check",
-                    "p_answer": "Kết nối hệ thống hoạt động"
-                })
-                rows = rpc("safety_get_answers", {"p_room_id": room}) or []
-                ok = any(
+                payload = json.dumps({
+                    "room": room,
+                    "participant": person,
+                    "name": "Health Check",
+                    "answer": "Kết nối hệ thống hoạt động"
+                }, ensure_ascii=False).encode("utf-8")
+                req = urllib.request.Request(
+                    base + "/api/submit",
+                    data=payload,
+                    method="POST",
+                    headers={"Content-Type": "application/json", "User-Agent": "mang-luoi-an-toan-health/2.3"}
+                )
+                with urllib.request.urlopen(req, timeout=8) as r:
+                    submit_data = json.loads(r.read().decode("utf-8") or "{}")
+                with urllib.request.urlopen(base + "/api/answers?room=" + room, timeout=8) as r:
+                    answers_data = json.loads(r.read().decode("utf-8") or "{}")
+                with urllib.request.urlopen(base + "/api/qr?text=" + urllib.parse.quote(base + "/?room=" + room, safe=""), timeout=8) as r:
+                    qr_body = r.read(200).decode("utf-8", errors="ignore")
+                rows = answers_data.get("answers") or []
+                read_ok = any(
                     str(x.get("participant_id")) == person and
                     x.get("answer") == "Kết nối hệ thống hoạt động"
                     for x in rows
                 )
+                submit_ok = bool(submit_data.get("ok"))
+                qr_ok = "<svg" in qr_body or "<?xml" in qr_body
+                ok = submit_ok and read_ok and qr_ok
                 self._json({
                     "ok": ok,
                     "app": "mang-luoi-an-toan",
-                    "version": "2.2.0",
-                    "database": "ok" if ok else "mismatch"
+                    "version": "2.3.0",
+                    "submit": "ok" if submit_ok else "fail",
+                    "read": "ok" if read_ok else "fail",
+                    "qr": "ok" if qr_ok else "fail"
                 }, 200 if ok else 503)
             except Exception as e:
                 self._json({
                     "ok": False,
                     "app": "mang-luoi-an-toan",
-                    "version": "2.2.0",
-                    "database": "error",
-                    "error": str(e)[:200]
+                    "version": "2.3.0",
+                    "error": str(e)[:220]
                 }, 503)
             return
 
