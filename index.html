@@ -6,38 +6,47 @@
 <meta name="theme-color" content="#e9f8ff">
 <title>Mạng lưới an toàn</title>
 <style>
-:root{--ink:#153a61;--muted:#60788f;--blue:#2f80ed;--pink:#ef476f;--green:#2e9f63;--bg:#eef9ff}
+:root{--ink:#153a61;--muted:#60788f;--blue:#2f80ed;--pink:#ef476f;--green:#2e9f63}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}body{background:radial-gradient(circle at 12% 10%,#fff8c9 0 14%,transparent 30%),radial-gradient(circle at 90% 20%,#e9dcff 0 12%,transparent 30%),linear-gradient(145deg,#e8f8ff,#fdf7e5 55%,#f3edff);min-height:100vh}.hide{display:none!important}
 header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-spacing:.11em;font-weight:900;color:#6a7f91}.title{margin:2px;font-size:clamp(32px,4.2vw,62px);line-height:1;font-weight:950}.title b{color:var(--pink)}.sub{font-weight:800;color:#4e6f87;margin-top:8px}
-.host{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:12px;max-width:1540px;margin:auto;padding:10px 16px 18px}.panel,.stage,.card{background:#fffffff0;border:1px solid #fff;border-radius:24px;box-shadow:0 14px 38px #244e7223}.stage{position:relative;min-height:660px;overflow:hidden}.stage svg{display:block;width:100%;height:660px}.side{display:flex;flex-direction:column;gap:10px}.panel{padding:14px}.qrbox{background:#fff;border-radius:18px;display:grid;place-items:center;min-height:250px;overflow:hidden}.qrbox img{width:250px;height:250px;display:block}.url{font-size:11px;word-break:break-all;color:var(--muted);margin-top:8px;line-height:1.35}.code{font-size:17px;font-weight:950;letter-spacing:.08em}.count{font-size:46px;font-weight:950;color:var(--blue);line-height:1}.small{font-size:13px;line-height:1.45;color:var(--muted)}.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:900;padding:7px 10px;border-radius:999px;background:#fff6d9;color:#8b6500}.status.ok{background:#eaf9ef;color:#247444}.status.bad{background:#fff0f3;color:#a8344d}.dot{width:8px;height:8px;border-radius:50%;background:currentColor}.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px}.btn{border:0;border-radius:12px;padding:10px 11px;font:inherit;font-weight:850;cursor:pointer;background:#edf6ff;color:var(--ink)}.btn.primary{background:var(--blue);color:#fff}.btn.danger{background:#fff0f3;color:#aa3450}.controls .wide{grid-column:1/-1}.notice{background:#fff8df;border:1px solid #f3e4ab;border-radius:14px;padding:10px 12px;font-size:12px;line-height:1.45;color:#6f5a13}.wait{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);background:#fff;padding:22px 25px;border-radius:20px;text-align:center;box-shadow:0 12px 30px #244e7224;min-width:260px}.wait .emoji{font-size:46px}
+.host{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px;max-width:1580px;margin:auto;padding:10px 16px 18px}.panel,.stage,.card{background:#fffffff0;border:1px solid #fff;border-radius:24px;box-shadow:0 14px 38px #244e7223}.stage{position:relative;min-height:660px;overflow:hidden}.stage svg{display:block;width:100%;height:660px}.side{display:flex;flex-direction:column;gap:10px}.panel{padding:14px}.questionBar{position:absolute;left:18px;right:18px;top:16px;z-index:3;background:#ffffffee;border:1px solid #dcebf4;border-radius:16px;padding:10px 14px;text-align:center;box-shadow:0 5px 18px #244e7215}.questionBar b{font-size:12px;color:var(--muted)}.questionBar div{font-weight:950;font-size:clamp(15px,1.5vw,21px);margin-top:3px}
+.qrbox{background:#fff;border-radius:18px;display:grid;place-items:center;min-height:238px;overflow:hidden}.qrbox img{width:238px;height:238px;display:block}.qrplaceholder{text-align:center;color:var(--muted);padding:30px}.url{font-size:11px;word-break:break-all;color:var(--muted);margin-top:8px;line-height:1.35}.code{font-size:17px;font-weight:950;letter-spacing:.08em}.count{font-size:44px;font-weight:950;color:var(--blue);line-height:1}.small{font-size:13px;line-height:1.45;color:var(--muted)}.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:900;padding:7px 10px;border-radius:999px;background:#fff6d9;color:#8b6500}.status.ok{background:#eaf9ef;color:#247444}.status.bad{background:#fff0f3;color:#a8344d}.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px}.btn{border:0;border-radius:12px;padding:10px 11px;font:inherit;font-weight:850;cursor:pointer;background:#edf6ff;color:var(--ink)}.btn.primary{background:var(--blue);color:#fff}.btn.danger{background:#fff0f3;color:#aa3450}.controls .wide{grid-column:1/-1}.notice{background:#fff8df;border:1px solid #f3e4ab;border-radius:14px;padding:10px 12px;font-size:12px;line-height:1.45;color:#6f5a13}.wait{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);background:#fff;padding:22px 25px;border-radius:20px;text-align:center;box-shadow:0 12px 30px #244e7224;min-width:275px}.wait .emoji{font-size:46px}
+.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:900;margin-bottom:6px}input,textarea{width:100%;border:2px solid #d8e8f2;background:#fff;border-radius:13px;padding:12px;font:inherit;color:var(--ink);outline:0}input:focus,textarea:focus{border-color:#76adee;box-shadow:0 0 0 3px #2f80ed18}textarea{min-height:90px;resize:vertical}.hostQuestion{min-height:82px}
 .edge{fill:none;stroke:var(--pink);stroke-width:4;opacity:.72}.edge2{fill:none;stroke:#f98fa4;stroke-width:2;opacity:.35}.node{stroke:#fff;stroke-width:3;filter:drop-shadow(0 4px 7px #244e7230)}.name{font-size:15px;font-weight:950;fill:var(--ink)}.ans{font-size:11.5px;font-weight:750;fill:#456176}.new{transform-origin:center;animation:pop .45s ease both}@keyframes pop{from{transform:scale(.35);opacity:0}to{transform:scale(1);opacity:1}}
-.join{min-height:100vh;display:grid;place-items:center;padding:16px}.card{width:min(620px,100%);padding:22px}.center{text-align:center}.shield{font-size:56px}.card h1{font-size:30px;margin:4px 0 7px}.field{margin:14px 0}.field label{display:block;font-size:13px;font-weight:900;margin-bottom:6px}input,textarea{width:100%;border:2px solid #d8e8f2;background:#fff;border-radius:13px;padding:12px;font:inherit;color:var(--ink);outline:0}input:focus,textarea:focus{border-color:#76adee;box-shadow:0 0 0 3px #2f80ed18}textarea{min-height:105px;resize:vertical}.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chip{border:1px solid #cfdfeb;background:#f8fbfd;border-radius:999px;padding:7px 10px;font-size:12px;cursor:pointer}.send{width:100%;border:0;border-radius:14px;padding:14px;background:var(--blue);color:#fff;font-size:16px;font-weight:950;cursor:pointer}.send:disabled{opacity:.55;cursor:wait}.error{background:#fff0f3;color:#a8344d;padding:10px 12px;border-radius:12px;margin-top:10px;font-size:13px;font-weight:750}.success{text-align:center;padding:18px}.success .big{font-size:58px}.privacy{margin-top:12px;border-top:1px dashed #d9e6ef;padding-top:10px;font-size:11.5px;color:#71879a}
-@media(max-width:900px){.host{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.stage,.stage svg{height:570px;min-height:570px}}@media(max-width:610px){.side{grid-template-columns:1fr}.card{padding:18px}.title{font-size:38px}.stage,.stage svg{height:510px;min-height:510px}}
+.join{min-height:100vh;display:grid;place-items:center;padding:16px}.card{width:min(620px,100%);padding:22px}.center{text-align:center}.shield{font-size:56px}.card h1{font-size:30px;margin:4px 0 7px}.promptBox{margin:14px 0;background:#eef7ff;border:1px solid #cfe4f7;border-radius:16px;padding:14px}.promptBox .label{font-size:11px;font-weight:900;letter-spacing:.08em;color:#688198}.promptBox .question{font-size:18px;font-weight:950;line-height:1.35;margin-top:5px}.send{width:100%;border:0;border-radius:14px;padding:14px;background:var(--blue);color:#fff;font-size:16px;font-weight:950;cursor:pointer}.send:disabled{opacity:.55;cursor:wait}.error{background:#fff0f3;color:#a8344d;padding:10px 12px;border-radius:12px;margin-top:10px;font-size:13px;font-weight:750}.success{text-align:center;padding:18px}.success .big{font-size:58px}.privacy{margin-top:12px;border-top:1px dashed #d9e6ef;padding-top:10px;font-size:11.5px;color:#71879a}
+@media(max-width:930px){.host{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.stage,.stage svg{height:590px;min-height:590px}}@media(max-width:630px){.side{grid-template-columns:1fr}.card{padding:18px}.title{font-size:38px}.stage,.stage svg{height:530px;min-height:530px}}
 </style>
 </head>
 <body>
 
 <section id="hostView" class="hide">
-<header><div class="eyebrow">TẬP HUẤN BẢO VỆ TRẺ EM</div><div class="title">MẠNG LƯỚI <b>AN TOÀN</b></div><div class="sub">Cùng nối yêu thương – Chung tay bảo vệ trẻ em</div></header>
+<header><div class="eyebrow">TẬP HUẤN BẢO VỆ TRẺ EM</div><div class="title">MẠNG LƯỚI <b>AN TOÀN</b></div><div class="sub">Người điều hành đặt câu hỏi – học viên cùng tạo mạng lưới câu trả lời</div></header>
 <main class="host">
   <div class="stage">
+    <div id="questionBar" class="questionBar hide"><b>CÂU HỎI CỦA NGƯỜI ĐIỀU HÀNH</b><div id="hostQuestionDisplay"></div></div>
     <svg id="net" viewBox="0 0 1160 690" aria-label="Mạng lưới các câu trả lời"></svg>
-    <div id="wait" class="wait"><div class="emoji">🧶</div><b>Đang chờ mắt xích đầu tiên…</b><div class="small">Mời thầy cô quét QR và gửi câu trả lời.</div></div>
+    <div id="wait" class="wait"><div class="emoji">🧶</div><b id="waitTitle">Hãy đặt câu hỏi để bắt đầu</b><div id="waitText" class="small">QR tham gia sẽ xuất hiện sau khi người điều hành lưu câu hỏi.</div></div>
   </div>
   <aside class="side">
     <div class="panel">
-      <div id="hostStatus" class="status"><span class="dot"></span><span>Đang kiểm tra hệ thống…</span></div>
-      <div class="qrbox" style="margin-top:10px"><img id="qr" alt="Mã QR tham gia trò chơi"></div>
-      <div style="margin-top:8px"><b>Quét QR để tham gia</b></div>
-      <div class="small">Mã phòng: <span id="roomCode" class="code"></span></div>
-      <div id="joinUrl" class="url"></div>
-      <button id="copy" class="btn" style="width:100%;margin-top:8px">📋 Sao chép link tham gia</button>
+      <div class="field" style="margin-top:0"><label for="operatorQuestion">Câu hỏi của người điều hành</label><textarea id="operatorQuestion" class="hostQuestion" maxlength="300" placeholder="Nhập câu hỏi dành cho học viên…"></textarea></div>
+      <button id="startQuestion" class="btn primary" style="width:100%">▶ BẮT ĐẦU CÂU HỎI</button>
+      <div class="small" style="margin-top:7px">Không có đáp án gợi ý. Học viên tự trả lời theo suy nghĩ của mình.</div>
     </div>
-    <div class="panel"><div id="cnt" class="count">0</div><b>MẮT XÍCH ĐÃ KẾT NỐI</b><div id="sync" class="small">Chưa có dữ liệu.</div></div>
+    <div class="panel">
+      <div id="hostStatus" class="status"><span class="dot"></span><span>Chưa mở phòng</span></div>
+      <div id="qrbox" class="qrbox" style="margin-top:10px"><div class="qrplaceholder">QR sẽ xuất hiện sau khi câu hỏi được lưu.</div></div>
+      <div style="margin-top:8px"><b>Quét QR để tham gia</b></div>
+      <div class="small">Mã phòng: <span id="roomCode" class="code">—</span></div>
+      <div id="joinUrl" class="url"></div>
+      <button id="copy" class="btn hide" style="width:100%;margin-top:8px">📋 Sao chép link tham gia</button>
+    </div>
+    <div class="panel"><div id="cnt" class="count">0</div><b>MẮT XÍCH ĐÃ KẾT NỐI</b><div id="sync" class="small">Chưa bắt đầu.</div></div>
     <div class="panel controls">
       <button id="fs" class="btn primary">⛶ Toàn màn hình</button>
       <button id="toggle" class="btn">👁 Ẩn nội dung</button>
-      <button id="reset" class="btn danger wide">↻ Tạo lượt chơi mới</button>
+      <button id="reset" class="btn danger wide">＋ Câu hỏi mới</button>
     </div>
     <div class="notice"><b>Khẩu lệnh:</b> Báo cáo viên: “AN TOÀN!” — Cả lớp: “CHO TRẺ EM!”</div>
   </aside>
@@ -50,16 +59,16 @@ header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-sp
     <div class="shield">🛡️❤️</div>
     <h1>Mạng lưới an toàn</h1>
     <div id="joinStatus" class="status"><span class="dot"></span><span>Đang kết nối…</span></div>
-    <p class="small">Mỗi người là một mắt xích giúp trẻ em được an toàn.</p>
   </div>
-  <form id="form">
-    <div class="field"><label for="name">Tên của thầy/cô</label><input id="name" maxlength="50" autocomplete="name" placeholder="Ví dụ: Nguyễn Văn Hữu" required></div>
-    <div class="field"><label for="answer">Một người hoặc một hành động có thể giúp bảo vệ trẻ em</label><textarea id="answer" maxlength="180" placeholder="Ví dụ: Lắng nghe trẻ và không đổ lỗi…" required></textarea><div id="chips" class="chips"></div></div>
-    <button id="send" class="send" type="submit">KẾT NỐI VÀO MẠNG LƯỚI 🧶</button>
+  <div id="promptBox" class="promptBox hide"><div class="label">CÂU HỎI CỦA NGƯỜI ĐIỀU HÀNH</div><div id="participantQuestion" class="question"></div></div>
+  <form id="form" class="hide">
+    <div class="field"><label for="name">Tên của thầy/cô</label><input id="name" maxlength="50" autocomplete="name" placeholder="Nhập tên của thầy/cô" required></div>
+    <div class="field"><label for="answer">Câu trả lời</label><textarea id="answer" maxlength="180" placeholder="Nhập câu trả lời của thầy/cô…" required></textarea></div>
+    <button id="send" class="send" type="submit">GỬI CÂU TRẢ LỜI 🧶</button>
     <div id="error" class="error hide"></div>
   </form>
   <div id="success" class="success hide"><div class="big">🎉</div><h2>Đã kết nối thành công!</h2><p>Câu trả lời của thầy/cô đã xuất hiện trên màn hình chung.</p><button id="edit" class="btn">✏️ Sửa câu trả lời</button></div>
-  <div class="privacy">Không chia sẻ thông tin nhận diện của trẻ hoặc tình huống xâm hại có thật trong hoạt động khởi động này. Câu trả lời của lượt chơi không còn được hiển thị sau 24 giờ.</div>
+  <div class="privacy">Không chia sẻ thông tin nhận diện của trẻ hoặc tình huống xâm hại có thật. Câu trả lời của lượt chơi không còn được hiển thị sau 24 giờ.</div>
 </div>
 </section>
 
@@ -69,28 +78,55 @@ const $=id=>document.getElementById(id);
 const qs=new URLSearchParams(location.search);
 const room=qs.get('room');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const suggestions=['Lắng nghe trẻ','Cha mẹ đồng hành','Giáo viên quan tâm','Không đổ lỗi','Báo cáo nguy cơ','Gọi Tổng đài 111','Chặn & báo cáo','Lưu bằng chứng','Tôn trọng trẻ','Tạo môi trường an toàn'];
 function uuid(){if(crypto.randomUUID)return crypto.randomUUID();return'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16))}
 function setStatus(el,text,kind=''){el.className='status'+(kind?' '+kind:'');el.innerHTML='<span class="dot"></span><span>'+text+'</span>'}
 function escapeXml(v){return String(v).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]))}
-function wrapText(s,max=21){const words=String(s).trim().split(/\s+/),lines=[];let cur='';for(const w of words){if((cur+' '+w).trim().length<=max)cur=(cur+' '+w).trim();else{if(cur)lines.push(cur);cur=w;if(lines.length===1)break}}if(lines.length<2&&cur)lines.push(cur);const shown=lines.join(' ');if(shown.length<String(s).trim().length&&lines.length)lines[lines.length-1]=lines[lines.length-1].replace(/…?$/,'…');return lines.slice(0,2)}
-async function jsonFetch(url,options={}){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),9000);try{const r=await fetch(url,{cache:'no-store',...options,signal:ctl.signal});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:text||('HTTP '+r.status)}}if(!r.ok)throw new Error(data.error||data.message||('HTTP '+r.status));return data}finally{clearTimeout(t)}}
+function wrapText(s,max=21){const words=String(s).trim().split(/\s+/),lines=[];let cur='';for(const w of words){if((cur+' '+w).trim().length<=max)cur=(cur+' '+w).trim();else{if(cur)lines.push(cur);cur=w;if(lines.length===1)break}}if(lines.length<2&&cur)lines.push(cur);if(lines.join(' ').length<String(s).trim().length&&lines.length)lines[lines.length-1]=lines[lines.length-1].replace(/…?$/,'…');return lines.slice(0,2)}
+async function jsonFetch(url,options={}){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),10000);try{const r=await fetch(url,{cache:'no-store',...options,signal:ctl.signal});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:text||('HTTP '+r.status)}}if(!r.ok)throw new Error(data.error||data.message||('HTTP '+r.status));return data}finally{clearTimeout(t)}}
 if(room)joinMode(room);else hostMode();
 
 function hostMode(){
   $('hostView').classList.remove('hide');
-  let currentRoom=uuid(),responses=[],showAnswers=true,lastSignature='',seen=new Set(),pollTimer=null,failCount=0;
+  let currentRoom=uuid(),hostToken=uuid(),roomReady=false,responses=[],showAnswers=true,lastSignature='',seen=new Set(),pollTimer=null,failCount=0,currentQuestion='';
   const palette=['#ffe39a','#d8f5e3','#dcecff','#ffe0e7','#eadcff','#d7f4f0','#ffe9c8','#dff0ff'];
-  function setupRoom(){
-    responses=[];lastSignature='';seen.clear();draw();
-    const join=new URL(location.href);join.search='';join.searchParams.set('room',currentRoom);
-    $('joinUrl').textContent=join.href;$('roomCode').textContent=currentRoom.slice(0,8).toUpperCase();
-    $('qr').src='/api/qr?text='+encodeURIComponent(join.href)+'&v='+Date.now();
-    $('qr').onerror=()=>{setStatus($('hostStatus'),'Không tạo được QR – dùng link bên dưới','bad')};
-    setStatus($('hostStatus'),'Đang kiểm tra hệ thống…');$('sync').textContent='Đang đồng bộ dữ liệu…';
-    if(pollTimer)clearTimeout(pollTimer);poll();
+
+  function resetLocal(clearQuestion=true){
+    if(pollTimer){clearTimeout(pollTimer);pollTimer=null}
+    currentRoom=uuid();hostToken=uuid();roomReady=false;responses=[];lastSignature='';seen.clear();currentQuestion='';
+    $('cnt').textContent='0';$('roomCode').textContent='—';$('joinUrl').textContent='';$('copy').classList.add('hide');
+    $('qrbox').innerHTML='<div class="qrplaceholder">QR sẽ xuất hiện sau khi câu hỏi được lưu.</div>';
+    $('questionBar').classList.add('hide');setStatus($('hostStatus'),'Chưa mở phòng');$('sync').textContent='Chưa bắt đầu.';
+    $('wait').classList.remove('hide');$('waitTitle').textContent='Hãy đặt câu hỏi để bắt đầu';$('waitText').textContent='QR tham gia sẽ xuất hiện sau khi người điều hành lưu câu hỏi.';
+    if(clearQuestion)$('operatorQuestion').value='';
+    draw();
   }
+
+  async function saveQuestion(){
+    const q=$('operatorQuestion').value.trim();
+    if(q.length<5){alert('Vui lòng nhập câu hỏi ít nhất 5 ký tự.');$('operatorQuestion').focus();return}
+    if(roomReady && responses.length>0){
+      if(!confirm('Lượt hiện tại đã có câu trả lời. Bắt đầu câu hỏi mới sẽ tạo một phòng mới. Tiếp tục?'))return;
+      resetLocal(false);
+    }
+    $('startQuestion').disabled=true;$('startQuestion').textContent='ĐANG LƯU…';
+    try{
+      await jsonFetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:currentRoom,host_token:hostToken,question:q})});
+      currentQuestion=q;roomReady=true;
+      $('hostQuestionDisplay').textContent=q;$('questionBar').classList.remove('hide');
+      const join=new URL(location.href);join.search='';join.searchParams.set('room',currentRoom);
+      $('joinUrl').textContent=join.href;$('roomCode').textContent=currentRoom.slice(0,8).toUpperCase();
+      $('qrbox').innerHTML='<img id="qr" alt="Mã QR tham gia trò chơi">';
+      $('qr').src='/api/qr?text='+encodeURIComponent(join.href)+'&v='+Date.now();
+      $('qr').onerror=()=>setStatus($('hostStatus'),'Không tạo được QR – dùng link bên dưới','bad');
+      $('copy').classList.remove('hide');$('waitTitle').textContent='Đang chờ mắt xích đầu tiên…';$('waitText').textContent='Mời thầy cô quét QR và trả lời câu hỏi.';
+      setStatus($('hostStatus'),'Phòng đã mở – sẵn sàng','ok');$('sync').textContent='Đang đồng bộ dữ liệu…';
+      if(pollTimer)clearTimeout(pollTimer);poll();
+    }catch(e){setStatus($('hostStatus'),'Không mở được phòng','bad');alert('Không lưu được câu hỏi: '+e.message)}
+    finally{$('startQuestion').disabled=false;$('startQuestion').textContent=roomReady?'✓ CẬP NHẬT CÂU HỎI':'▶ BẮT ĐẦU CÂU HỎI'}
+  }
+
   async function poll(){
+    if(!roomReady)return;
     try{
       const data=await jsonFetch('/api/answers?room='+encodeURIComponent(currentRoom)+'&_='+Date.now());
       failCount=0;setStatus($('hostStatus'),'Hệ thống trực tuyến – sẵn sàng','ok');
@@ -98,43 +134,62 @@ function hostMode(){
       const sig=list.map(x=>x.id+':'+x.created_at).join('|');
       if(sig!==lastSignature){responses=list;lastSignature=sig;draw()}
       $('sync').textContent='Đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN');
-    }catch(e){
-      failCount++;setStatus($('hostStatus'),'Mất kết nối dữ liệu – đang thử lại','bad');$('sync').textContent='Lỗi: '+e.message;
-    }finally{pollTimer=setTimeout(poll,failCount?1800:800)}
+    }catch(e){failCount++;setStatus($('hostStatus'),'Mất kết nối dữ liệu – đang thử lại','bad');$('sync').textContent='Lỗi: '+e.message}
+    finally{if(roomReady)pollTimer=setTimeout(poll,failCount?1800:800)}
   }
+
   function position(i,n){
     const rings=n<=8?[n]:n<=20?[8,n-8]:[8,12,n-20],radii=[205,315,405];let idx=i,ring=0;
     while(ring<rings.length&&idx>=rings[ring]){idx-=rings[ring];ring++}
     const total=Math.max(1,rings[ring]||1),ang=-Math.PI/2+2*Math.PI*idx/total+(ring*.13),r=radii[ring]||405;
-    return{x:580+Math.cos(ang)*r,y:345+Math.sin(ang)*r*.68};
+    return{x:580+Math.cos(ang)*r,y:365+Math.sin(ang)*r*.66};
   }
   function curve(a,b){return'M'+a.x+','+a.y+' Q'+((a.x+b.x)/2)+','+(((a.y+b.y)/2)-16)+' '+b.x+','+b.y}
   function draw(){
-    $('cnt').textContent=responses.length;$('wait').classList.toggle('hide',responses.length>0);
-    const svg=$('net'),n=responses.length,ps=responses.map((_,i)=>position(i,n)),center={x:580,y:345};let h='';
+    $('cnt').textContent=responses.length;$('wait').classList.toggle('hide',roomReady&&responses.length>0);
+    const svg=$('net'),n=responses.length,ps=responses.map((_,i)=>position(i,n)),center={x:580,y:365};let h='';
     responses.forEach((r,i)=>{h+='<path class="edge" d="'+curve(center,ps[i])+'"/>';if(i)h+='<path class="edge2" d="'+curve(ps[i-1],ps[i])+'"/>'});
-    h+='<g><path d="M580 232C620 247 650 250 682 250v76c0 82-44 126-102 152-58-26-102-70-102-152v-76c32 0 62-3 102-18z" fill="#2f80ed" stroke="#fff" stroke-width="8"/><text x="580" y="316" text-anchor="middle" font-size="42">❤️</text><text x="580" y="358" text-anchor="middle" font-size="24" font-weight="950" fill="#fff">BẢO VỆ TRẺ EM</text></g>';
+    h+='<g><path d="M580 252C620 267 650 270 682 270v76c0 82-44 126-102 152-58-26-102-70-102-152v-76c32 0 62-3 102-18z" fill="#2f80ed" stroke="#fff" stroke-width="8"/><text x="580" y="336" text-anchor="middle" font-size="42">❤️</text><text x="580" y="378" text-anchor="middle" font-size="24" font-weight="950" fill="#fff">BẢO VỆ TRẺ EM</text></g>';
     responses.forEach((r,i)=>{const p=ps[i],w=164,x=p.x-w/2,y=p.y-39,isNew=!seen.has(r.id);seen.add(r.id);const lines=wrapText(r.answer);h+='<g class="'+(isNew?'new':'')+'"><rect class="node" x="'+x+'" y="'+y+'" width="'+w+'" height="78" rx="17" fill="'+palette[i%palette.length]+'"/><text class="name" x="'+(x+10)+'" y="'+(y+23)+'">'+escapeXml(String(r.participant_name).slice(0,19))+'</text>';if(showAnswers){lines.forEach((t,k)=>h+='<text class="ans" x="'+(x+10)+'" y="'+(y+47+k*16)+'">'+escapeXml(t)+'</text>')}else h+='<text class="ans" x="'+(x+10)+'" y="'+(y+50)+'">Một mắt xích bảo vệ ❤️</text>';h+='</g>'});
     svg.innerHTML=h;
   }
+
+  $('startQuestion').onclick=saveQuestion;
+  $('operatorQuestion').addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')saveQuestion()});
   $('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
   $('toggle').onclick=()=>{showAnswers=!showAnswers;$('toggle').textContent=showAnswers?'👁 Ẩn nội dung':'👁 Hiện nội dung';draw()};
   $('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('joinUrl').textContent);$('copy').textContent='✅ Đã sao chép';setTimeout(()=>$('copy').textContent='📋 Sao chép link tham gia',1600)}catch{$('copy').textContent='Hãy sao chép link bên trên'}};
-  $('reset').onclick=()=>{if(confirm('Tạo lượt chơi mới? QR cũ sẽ không còn hiển thị vào màn chiếu này.')){currentRoom=uuid();setupRoom()}};
-  setupRoom();
+  $('reset').onclick=()=>{if(roomReady||$('operatorQuestion').value.trim()){if(!confirm('Tạo câu hỏi mới? Lượt hiện tại trên màn hình sẽ được kết thúc.'))return}resetLocal(true);$('operatorQuestion').focus()};
+  resetLocal(false);
 }
 
 function joinMode(roomId){
   $('joinView').classList.remove('hide');
-  const status=$('joinStatus'),form=$('form'),success=$('success'),error=$('error'),send=$('send'),name=$('name'),answer=$('answer');
-  if(!UUID.test(roomId)){setStatus(status,'QR không hợp lệ','bad');form.classList.add('hide');error.textContent='Mã phòng không hợp lệ. Hãy quét lại QR trên màn hình báo cáo viên.';error.classList.remove('hide');return}
+  const status=$('joinStatus'),form=$('form'),success=$('success'),error=$('error'),send=$('send'),name=$('name'),answer=$('answer'),prompt=$('promptBox'),question=$('participantQuestion');
+  if(!UUID.test(roomId)){setStatus(status,'QR không hợp lệ','bad');error.textContent='Mã phòng không hợp lệ. Hãy quét lại QR trên màn hình người điều hành.';error.classList.remove('hide');return}
   name.value=localStorage.getItem('safety_name')||'';
   let participant=localStorage.getItem('safety_participant_id');if(!UUID.test(participant||'')){participant=uuid();localStorage.setItem('safety_participant_id',participant)}
-  suggestions.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;b.onclick=()=>answer.value=t;$('chips').appendChild(b)});
-  async function check(){try{await jsonFetch('/api/answers?room='+encodeURIComponent(roomId));setStatus(status,'Đã kết nối với lớp','ok');send.disabled=false}catch(e){setStatus(status,'Chưa kết nối – chạm Gửi để thử lại','bad');send.disabled=false}}
-  check();
-  form.onsubmit=async ev=>{ev.preventDefault();error.classList.add('hide');const n=name.value.trim(),a=answer.value.trim();if(!n||a.length<2)return;send.disabled=true;send.textContent='ĐANG GỬI…';try{await jsonFetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:roomId,participant,name:n,answer:a})});localStorage.setItem('safety_name',n);setStatus(status,'Đã gửi thành công','ok');form.classList.add('hide');success.classList.remove('hide')}catch(e){error.textContent='⚠ '+e.message+' — vui lòng thử lại.';error.classList.remove('hide');setStatus(status,'Gửi chưa thành công','bad')}finally{send.disabled=false;send.textContent='KẾT NỐI VÀO MẠNG LƯỚI 🧶'}};
-  $('edit').onclick=()=>{success.classList.add('hide');form.classList.remove('hide');send.textContent='CẬP NHẬT MẮT XÍCH 🧶'};
+
+  async function loadRoom(){
+    try{
+      const data=await jsonFetch('/api/room?room='+encodeURIComponent(roomId)+'&_='+Date.now());
+      if(!data.room||!data.room.question)throw new Error('Phòng chưa sẵn sàng');
+      question.textContent=data.room.question;prompt.classList.remove('hide');form.classList.remove('hide');setStatus(status,'Đã kết nối với lớp','ok');return data.room.question;
+    }catch(e){setStatus(status,'Không kết nối được với phòng','bad');form.classList.add('hide');error.textContent='⚠ '+e.message+'. Hãy quét lại QR trên màn hình người điều hành.';error.classList.remove('hide');throw e}
+  }
+  loadRoom().catch(()=>{});
+
+  form.onsubmit=async ev=>{
+    ev.preventDefault();error.classList.add('hide');const n=name.value.trim(),a=answer.value.trim();if(!n||a.length<2)return;
+    send.disabled=true;send.textContent='ĐANG GỬI…';
+    try{
+      await loadRoom();
+      await jsonFetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:roomId,participant,name:n,answer:a})});
+      localStorage.setItem('safety_name',n);setStatus(status,'Đã gửi thành công','ok');form.classList.add('hide');success.classList.remove('hide');
+    }catch(e){error.textContent='⚠ '+e.message+' — vui lòng thử lại.';error.classList.remove('hide');setStatus(status,'Gửi chưa thành công','bad')}
+    finally{send.disabled=false;send.textContent='GỬI CÂU TRẢ LỜI 🧶'}
+  };
+  $('edit').onclick=()=>{success.classList.add('hide');form.classList.remove('hide');send.textContent='CẬP NHẬT CÂU TRẢ LỜI 🧶'};
 }
 })();
 </script>
