@@ -2,40 +2,34 @@
 
 Mini app tương tác dành cho tập huấn **An toàn trên mạng và Bảo vệ trẻ em**.
 
-## Mục đích
+## Bản web online
 
-Học viên dùng điện thoại quét QR → nhập tên và chia sẻ **một người hoặc một hành động có thể giúp bảo vệ trẻ em** → câu trả lời xuất hiện ngay trên màn chiếu và tự tạo thành một mạng lưới kết nối.
+Repository đã có bản **Vercel-ready** ở `index.html`. Báo cáo viên mở trang web trên máy chiếu; hệ thống tự tạo một phòng và QR. Học viên quét QR, nhập tên và một người/hành động có thể giúp bảo vệ trẻ em. Câu trả lời được gửi trực tiếp từ trình duyệt học viên tới trình duyệt báo cáo viên bằng WebRTC/PeerJS và xuất hiện thành các nút của **mạng lưới an toàn**.
 
-## Điểm nổi bật
+### Đặc điểm
 
-- Không cần cài ứng dụng trên điện thoại.
-- Không cần Internet; chỉ cần laptop và điện thoại cùng một mạng Wi‑Fi/LAN.
-- Không cần tài khoản.
-- Dữ liệu chỉ lưu tạm trong bộ nhớ của laptop và mất khi tắt ứng dụng.
-- Báo cáo viên có thể bật toàn màn hình, ẩn/hiện nội dung và làm mới trò chơi.
-- QR tham gia được tạo ngay trên máy báo cáo viên.
+- Không cần học viên cài ứng dụng hay đăng nhập.
+- Không cần cơ sở dữ liệu.
+- Không lưu câu trả lời lên máy chủ của ứng dụng.
+- Mỗi lần mở trang báo cáo viên sẽ tạo một phòng mới.
+- Dữ liệu của lượt chơi nằm trong bộ nhớ trình duyệt báo cáo viên và mất khi tải lại trang.
+- Cần Internet để tải trang và dùng dịch vụ tín hiệu WebRTC PeerJS Cloud.
 
-## Chạy trên Windows
+## Triển khai Vercel
 
-1. Tải mã nguồn hoặc bản ZIP về máy và giải nén.
-2. Kết nối laptop và điện thoại học viên vào **cùng một Wi‑Fi**.
-3. Máy tính cần có **Python 3.9+**.
-4. Nhấp đúp `start.bat`.
-5. Nếu Windows Firewall hỏi quyền, chọn **Allow access / Cho phép trên Private network**.
-6. Trình duyệt sẽ mở màn hình dành cho báo cáo viên.
-7. Chiếu màn hình laptop lên máy chiếu/màn hình tương tác.
-8. Học viên quét QR để tham gia.
+Import repository này vào Vercel và deploy ở thư mục gốc. Không cần Build Command, không cần Environment Variables.
 
-Màn hình báo cáo viên mặc định:
+Vercel sẽ phục vụ trực tiếp `index.html` và `vercel.json`.
 
-`http://127.0.0.1:8765/?mode=host`
+## Bản dùng nội bộ không cần Internet
 
-## Khi điện thoại không mở được QR
+Repository vẫn giữ bản chạy LAN bằng Python:
 
-- Kiểm tra điện thoại và laptop cùng Wi‑Fi.
-- Đặt Windows Network Profile là **Private**.
-- Cho phép Python qua Windows Defender Firewall ở mạng Private.
-- Một số Wi‑Fi công cộng bật AP/Client Isolation. Khi đó nên dùng hotspot riêng hoặc router riêng cho lớp tập huấn.
+1. Laptop và điện thoại cùng Wi-Fi.
+2. Máy tính có Python 3.9+.
+3. Chạy `start.bat` trên Windows.
+4. Nếu Windows Firewall hỏi, chọn **Allow access / Private network**.
+5. Học viên quét QR trên màn hình báo cáo viên.
 
 ## Khẩu lệnh gợi ý
 
@@ -45,16 +39,6 @@ Màn hình báo cáo viên mặc định:
 ## Lời dẫn gợi ý
 
 > Mỗi thầy cô hãy quét QR. Khi nhận được màn hình, nhập tên mình và chia sẻ một người hoặc một hành động có thể giúp bảo vệ trẻ em. Khi nhấn Gửi, thầy cô sẽ trở thành một mắt xích của Mạng lưới an toàn trên màn hình của chúng ta.
-
-## Yêu cầu
-
-- Windows 10/11, macOS hoặc hệ điều hành có Python 3.9+
-- Chrome, Edge, Safari hoặc trình duyệt hiện đại
-- Không cần cài thêm thư viện Python: thư viện tạo QR tối thiểu đã được đóng gói trong thư mục `vendor`.
-
-## Dừng ứng dụng
-
-Đóng cửa sổ server hoặc nhấn `Ctrl+C`.
 
 ---
 
