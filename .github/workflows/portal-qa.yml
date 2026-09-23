@@ -31,7 +31,8 @@ jobs:
           test -s boc-tham/index.html
           test -s mang-luoi-an-toan/index.html
           grep -q "CỔNG CÔNG CỤ GIÁO VIÊN SỐ" index.html
-          grep -q "Cổng giáo viên" pose-quiz/index.html
+          test "$(git hash-object pose-quiz/index.html)" = "c0d29bf487c6ae4c63ecf965c4c3cf4bdc806dd1"
+          grep -q "ĐĂNG NHẬP" pose-quiz/index.html
           grep -q "Cổng giáo viên" boc-tham/index.html
           grep -q "Cổng giáo viên" mang-luoi-an-toan/index.html
 
