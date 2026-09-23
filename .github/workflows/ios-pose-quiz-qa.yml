@@ -6,6 +6,8 @@ on:
       - giaovien-portal
     paths:
       - 'qa/ios-pose-quiz.mjs'
+      - 'pose-quiz/**'
+      - 'server.py'
       - '.github/workflows/ios-pose-quiz-qa.yml'
   workflow_dispatch:
 
