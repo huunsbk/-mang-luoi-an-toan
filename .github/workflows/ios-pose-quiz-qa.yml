@@ -1,0 +1,36 @@
+name: iPhone Pose Quiz QA
+
+on:
+  push:
+    branches:
+      - giaovien-portal
+    paths:
+      - 'qa/ios-pose-quiz.mjs'
+      - '.github/workflows/ios-pose-quiz-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright WebKit
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps webkit
+      - name: Run iPhone WebKit production smoke
+        run: node qa/ios-pose-quiz.mjs
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-pose-quiz
+          path: ios-pose-quiz.png
+          if-no-files-found: ignore
