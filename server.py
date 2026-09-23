@@ -78,6 +78,7 @@ class Handler(BaseHTTPRequestHandler):
             "/pose-quiz/": ("pose-quiz/index.html", "text/html; charset=utf-8"),
             "/pose-quiz/index.html": ("pose-quiz/index.html", "text/html; charset=utf-8"),
             "/pose-quiz/supabase-config.js": ("pose-quiz/supabase-config.js", "application/javascript; charset=utf-8"),
+            "/supabase-config.js": ("pose-quiz/supabase-config.js", "application/javascript; charset=utf-8"),
             "/boc-tham": ("boc-tham/index.html", "text/html; charset=utf-8"),
             "/boc-tham/": ("boc-tham/index.html", "text/html; charset=utf-8"),
             "/boc-tham/index.html": ("boc-tham/index.html", "text/html; charset=utf-8"),
