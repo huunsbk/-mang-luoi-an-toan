@@ -6,6 +6,11 @@ on:
       - giaovien-portal
     paths:
       - '.github/workflows/deploy-giaovien.yml'
+      - 'server.py'
+      - 'index.html'
+      - 'pose-quiz/**'
+      - 'boc-tham/**'
+      - 'mang-luoi-an-toan/**'
   workflow_dispatch:
 
 permissions:
@@ -45,11 +50,33 @@ jobs:
           echo "Production URL: $URL"
 
       - name: Verify production routes
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         run: |
-          for path in / /pose-quiz/ /boc-tham/ /mang-luoi-an-toan/; do
-            echo "Checking https://giaovien.vercel.app$path"
-            curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien.vercel.app$path" -o /tmp/page.html
-            test -s /tmp/page.html
-          done
-          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien.vercel.app/api/health" -o /tmp/health.json
-          cat /tmp/health.json
+          echo "Deployment URL: $DEPLOY_URL"
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "$DEPLOY_URL/" -o /tmp/home.html
+          grep -q "CỔNG CÔNG CỤ GIÁO VIÊN SỐ" /tmp/home.html
+
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "$DEPLOY_URL/pose-quiz/" -o /tmp/pose.html
+          grep -q "AI POSE QUIZ" /tmp/pose.html
+
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "$DEPLOY_URL/boc-tham/" -o /tmp/boc.html
+          grep -qi "bốc thăm" /tmp/boc.html
+
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "$DEPLOY_URL/mang-luoi-an-toan/" -o /tmp/safety.html
+          grep -qi "mạng lưới" /tmp/safety.html
+
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "$DEPLOY_URL/api/health" -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True, d
+          print('DEPLOYMENT_HEALTH_OK')
+          PY
+
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien-psi.vercel.app/" -o /tmp/prod-home.html
+          grep -q "CỔNG CÔNG CỤ GIÁO VIÊN SỐ" /tmp/prod-home.html
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien-psi.vercel.app/pose-quiz/" | grep -q "AI POSE QUIZ"
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien-psi.vercel.app/boc-tham/" | grep -qi "bốc thăm"
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien-psi.vercel.app/mang-luoi-an-toan/" | grep -qi "mạng lưới"
+          echo "PRODUCTION_ALIAS_OK"
