@@ -26,4 +26,4 @@ jobs:
       - name: Link giaovien
         run: npx --yes vercel@59.19.1 link --yes --project giaovien --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
       - name: Disconnect automatic Git provider
-        run: npx --yes vercel@59.19.1 git disconnect github --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@59.19.1 git disconnect --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
