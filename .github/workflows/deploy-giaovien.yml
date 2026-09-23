@@ -60,7 +60,7 @@ jobs:
           grep -q "AI POSE QUIZ" /tmp/pose.html
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/pose-quiz/supabase-config.js" -o /tmp/config.js
-          grep -q "SUPABASE_URL" /tmp/config.js
+          grep -q "POSE_QUIZ_SUPABASE" /tmp/config.js
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/boc-tham/" -o /tmp/boc.html
           grep -qi "bốc thăm" /tmp/boc.html
