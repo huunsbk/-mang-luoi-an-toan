@@ -73,6 +73,36 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:self._json({"error":"Không tải được giao diện","detail":str(e)[:160]},500)
             return
 
+        static_routes = {
+            "/pose-quiz": ("pose-quiz/index.html", "text/html; charset=utf-8"),
+            "/pose-quiz/": ("pose-quiz/index.html", "text/html; charset=utf-8"),
+            "/pose-quiz/index.html": ("pose-quiz/index.html", "text/html; charset=utf-8"),
+            "/pose-quiz/supabase-config.js": ("pose-quiz/supabase-config.js", "application/javascript; charset=utf-8"),
+            "/boc-tham": ("boc-tham/index.html", "text/html; charset=utf-8"),
+            "/boc-tham/": ("boc-tham/index.html", "text/html; charset=utf-8"),
+            "/boc-tham/index.html": ("boc-tham/index.html", "text/html; charset=utf-8"),
+            "/mang-luoi-an-toan": ("mang-luoi-an-toan/index.html", "text/html; charset=utf-8"),
+            "/mang-luoi-an-toan/": ("mang-luoi-an-toan/index.html", "text/html; charset=utf-8"),
+            "/mang-luoi-an-toan/index.html": ("mang-luoi-an-toan/index.html", "text/html; charset=utf-8"),
+        }
+        if path in static_routes:
+            rel, content_type = static_routes[path]
+            try:
+                full = os.path.join(BASE_DIR, rel)
+                with open(full, "rb") as f:
+                    body = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+                self.end_headers()
+                self.wfile.write(body)
+            except Exception as e:
+                self._json({"error":"Không tải được mô-đun","detail":str(e)[:160]},500)
+            return
+
         if path=="/api/room":
             room=(query.get("room") or [""])[0]
             if not UUID_RE.match(room):return self._json({"error":"Mã phòng không hợp lệ"},400)
