@@ -9,8 +9,9 @@ await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
 
 await page.getByText('AI Pose Quiz', { exact: true }).first().click();
 await page.waitForURL('**/pose-quiz/');
-await page.getByText('Cổng giáo viên', { exact: false }).first().click();
-await page.waitForURL('http://127.0.0.1:4173/');
+await page.getByText('AI Pose Quiz', { exact: true }).first().waitFor();
+await page.getByText('ĐĂNG NHẬP', { exact: true }).first().waitFor();
+await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
 
 await page.getByRole('link', { name: /MỞ CÔNG CỤ BỐC THĂM/i }).click();
 await page.waitForURL('**/boc-tham/');
