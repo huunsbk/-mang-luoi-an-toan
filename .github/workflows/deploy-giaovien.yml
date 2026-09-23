@@ -1,0 +1,55 @@
+name: Deploy giaovien portal
+
+on:
+  push:
+    branches:
+      - giaovien-portal
+    paths:
+      - '.github/workflows/deploy-giaovien.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_SCOPE: huunsbks-projects
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Vercel credential
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not configured in this GitHub repository."
+            exit 2
+          fi
+          echo "Vercel credential is configured."
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Link or create Vercel project giaovien
+        run: |
+          npx --yes vercel@59.19.1 link --yes --project giaovien --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+      - name: Deploy production
+        id: deploy
+        run: |
+          URL=$(npx --yes vercel@59.19.1 deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Production URL: $URL"
+
+      - name: Verify production routes
+        run: |
+          for path in / /pose-quiz/ /boc-tham/ /mang-luoi-an-toan/; do
+            echo "Checking https://giaovien.vercel.app$path"
+            curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien.vercel.app$path" -o /tmp/page.html
+            test -s /tmp/page.html
+          done
+          curl --fail-with-body --location --retry 4 --retry-delay 3 -sS "https://giaovien.vercel.app/api/health" -o /tmp/health.json
+          cat /tmp/health.json
