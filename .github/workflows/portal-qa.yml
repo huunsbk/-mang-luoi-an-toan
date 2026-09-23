@@ -1,0 +1,98 @@
+name: Teacher portal QA
+
+on:
+  push:
+    branches:
+      - giaovien-portal
+    paths:
+      - 'index.html'
+      - 'pose-quiz/**'
+      - 'boc-tham/**'
+      - 'mang-luoi-an-toan/**'
+      - '.github/workflows/portal-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify portal files
+        run: |
+          test -s index.html
+          test -s pose-quiz/index.html
+          test -s pose-quiz/supabase-config.js
+          test -s boc-tham/index.html
+          test -s mang-luoi-an-toan/index.html
+          grep -q "CỔNG CÔNG CỤ GIÁO VIÊN SỐ" index.html
+          grep -q "Cổng giáo viên" pose-quiz/index.html
+          grep -q "Cổng giáo viên" boc-tham/index.html
+          grep -q "Cổng giáo viên" mang-luoi-an-toan/index.html
+
+      - name: Start static test server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/portal-http.log 2>&1 &
+          for i in {1..15}; do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/portal-http.log
+          exit 1
+
+      - name: Check all module routes
+        run: |
+          curl -fsS http://127.0.0.1:4173/ | grep -q "AI Pose Quiz"
+          curl -fsS http://127.0.0.1:4173/pose-quiz/ | grep -q "AI POSE QUIZ"
+          curl -fsS http://127.0.0.1:4173/boc-tham/ | grep -qi "bốc thăm"
+          curl -fsS http://127.0.0.1:4173/mang-luoi-an-toan/ | grep -qi "mạng lưới"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Browser navigation smoke
+        run: |
+          cat > /tmp/portal-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({headless:true});
+          const page = await browser.newPage();
+          const errors=[];
+          page.on('pageerror', e=>errors.push(String(e)));
+          await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
+          await page.getByText('AI Pose Quiz',{exact:true}).first().click();
+          await page.waitForURL('**/pose-quiz/');
+          await page.getByText('Cổng giáo viên',{exact:false}).first().click();
+          await page.waitForURL('http://127.0.0.1:4173/');
+          await page.getByText('Bốc thăm • Chia đội • Chia tổ',{exact:true}).click();
+          await page.waitForURL('**/boc-tham/');
+          await page.getByText('Cổng giáo viên',{exact:false}).first().click();
+          await page.waitForURL('http://127.0.0.1:4173/');
+          await page.getByText('Mạng lưới an toàn',{exact:true}).first().click();
+          await page.waitForURL('**/mang-luoi-an-toan/');
+          await page.getByText('Cổng giáo viên',{exact:false}).first().click();
+          await page.waitForURL('http://127.0.0.1:4173/');
+          if(errors.length) throw new Error(errors.join(' | '));
+          console.log('PORTAL_NAVIGATION_OK');
+          await browser.close();
+          EOF
+          node /tmp/portal-smoke.mjs
+
+      - name: Check existing safety backend
+        run: |
+          curl --fail-with-body --location --retry 3 -sS https://mang-luoi-an-toan.vercel.app/api/health | tee /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True, d
+          print('SAFETY_BACKEND_OK')
+          PY
