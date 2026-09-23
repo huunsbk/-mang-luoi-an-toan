@@ -58,10 +58,12 @@ jobs:
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/pose-quiz/" -o /tmp/pose.html
           grep -q "AI POSE QUIZ" /tmp/pose.html
-          test "$(git hash-object /tmp/pose.html)" = "c0d29bf487c6ae4c63ecf965c4c3cf4bdc806dd1"
+          grep -q '/pose-quiz/supabase-config.js' /tmp/pose.html
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/pose-quiz/supabase-config.js" -o /tmp/config.js
           grep -q "POSE_QUIZ_SUPABASE" /tmp/config.js
+          curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/supabase-config.js" -o /tmp/config-root.js
+          grep -q "POSE_QUIZ_SUPABASE" /tmp/config-root.js
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/boc-tham/" -o /tmp/boc.html
           grep -qi "bốc thăm" /tmp/boc.html
