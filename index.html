@@ -2,291 +2,73 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#e9f8ff">
-<title>Mạng lưới an toàn</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cổng công cụ giáo viên số</title>
+<meta name="description" content="Cổng công cụ giáo viên: AI Pose Quiz, Bốc thăm - chia đội - chia tổ, Mạng lưới an toàn.">
 <style>
-:root{--ink:#153a61;--muted:#60788f;--blue:#2f80ed;--pink:#ef476f}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}body{background:radial-gradient(circle at 12% 10%,#fff8c9 0 14%,transparent 30%),radial-gradient(circle at 90% 20%,#e9dcff 0 12%,transparent 30%),linear-gradient(145deg,#e8f8ff,#fdf7e5 55%,#f3edff);min-height:100vh}.hide{display:none!important}
-header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-spacing:.11em;font-weight:900;color:#6a7f91}.title{margin:2px;font-size:clamp(32px,4.2vw,62px);line-height:1;font-weight:950}.title b{color:var(--pink)}.sub{font-weight:800;color:#4e6f87;margin-top:8px}
-.host{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;max-width:1600px;margin:auto;padding:10px 16px 18px}.panel,.stage,.card{background:#fffffff0;border:1px solid #fff;border-radius:24px;box-shadow:0 14px 38px #244e7223}.stage{position:relative;min-height:700px;overflow:hidden}.stage svg{display:block;width:100%;height:700px}.side{display:flex;flex-direction:column;gap:10px}.panel{padding:14px}.questionBar{position:absolute;left:18px;right:18px;top:16px;z-index:3;background:#ffffffef;border:1px solid #dcebf4;border-radius:16px;padding:10px 14px;text-align:center;box-shadow:0 5px 18px #244e7215}.questionBar b{font-size:12px;color:var(--muted)}.questionBar div{font-weight:950;font-size:clamp(15px,1.5vw,21px);margin-top:3px}
-.qrbox{background:#fff;border-radius:18px;display:grid;place-items:center;min-height:230px;overflow:hidden}.qrbox img{width:230px;height:230px;display:block}.qrplaceholder{text-align:center;color:var(--muted);padding:30px}.url{font-size:11px;word-break:break-all;color:var(--muted);margin-top:8px;line-height:1.35}.code{font-size:17px;font-weight:950;letter-spacing:.08em}.count{font-size:44px;font-weight:950;color:var(--blue);line-height:1}.small{font-size:13px;line-height:1.45;color:var(--muted)}.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:900;padding:7px 10px;border-radius:999px;background:#fff6d9;color:#8b6500}.status.ok{background:#eaf9ef;color:#247444}.status.bad{background:#fff0f3;color:#a8344d}.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px}.btn{border:0;border-radius:12px;padding:10px 11px;font:inherit;font-weight:850;cursor:pointer;background:#edf6ff;color:var(--ink)}.btn.primary{background:var(--blue);color:#fff}.btn.danger{background:#fff0f3;color:#aa3450}.btn.suspense{background:#fff4d8;color:#805900}.btn.success{background:#eaf9ef;color:#247444}.controls .wide{grid-column:1/-1}.revealHint{position:absolute;z-index:5;left:50%;bottom:22px;transform:translateX(-50%);background:#173b6de8;color:#fff;border:2px solid #fff;border-radius:18px;padding:11px 18px;text-align:center;box-shadow:0 10px 28px #173b6d38;pointer-events:none;min-width:330px}.revealHint b{font-size:15px}.revealHint .small{color:#e7f3ff;margin-top:3px}.notice{background:#fff8df;border:1px solid #f3e4ab;border-radius:14px;padding:10px 12px;font-size:12px;line-height:1.45;color:#6f5a13}.wait{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);background:#fff;padding:22px 25px;border-radius:20px;text-align:center;box-shadow:0 12px 30px #244e7224;min-width:280px}.wait .emoji{font-size:46px}
-.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:900;margin-bottom:6px}input,textarea{width:100%;border:2px solid #d8e8f2;background:#fff;border-radius:13px;padding:12px;font:inherit;color:var(--ink);outline:0}input:focus,textarea:focus{border-color:#76adee;box-shadow:0 0 0 3px #2f80ed18}textarea{min-height:90px;resize:vertical}.hostQuestion{min-height:82px}.inline{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:end}.wordLimit input{text-align:center;font-weight:900}.wordCount{text-align:right;font-size:12px;font-weight:800;color:var(--muted);margin-top:5px}
-.centerLink{fill:none;stroke:#a9bfd0;stroke-width:2;opacity:.42}.keywordLink{fill:none;stroke-width:2.5;opacity:.9}.keywordNode{stroke:#fff;stroke-width:4;filter:drop-shadow(0 5px 10px #244e7235)}.personNode{stroke-width:2.2;filter:drop-shadow(0 3px 5px #244e721f)}.keywordText{font-weight:950;fill:#fff;letter-spacing:.02em}.keywordCount{font-size:12px;font-weight:950;fill:#fff}.personText{font-size:12px;font-weight:900}.keywordGroup.locked{cursor:pointer}.keywordGroup.locked .keywordNode{stroke-dasharray:7 5}.keywordGroup.locked:hover .keywordNode{stroke-width:6;filter:drop-shadow(0 7px 14px #244e7248)}.lockedText{font-size:24px;font-weight:950;fill:#fff}.lockedSub{font-size:11px;font-weight:900;fill:#fff}.personPlaceholder{font-size:17px;font-weight:900}.unlocking{transform-box:fill-box;transform-origin:center;animation:unlockPop .58s cubic-bezier(.2,.9,.25,1.25) both}.unlockFlash{pointer-events:none;animation:unlockFloat .72s ease-out forwards}.new{transform-origin:center;animation:pop .45s ease both}@keyframes pop{from{transform:scale(.35);opacity:0}to{transform:scale(1);opacity:1}}@keyframes unlockPop{0%{transform:scale(.82);opacity:.45}55%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes unlockFloat{0%{opacity:1;transform:translateY(0) scale(.75)}65%{opacity:1;transform:translateY(-22px) scale(1.15)}100%{opacity:0;transform:translateY(-42px) scale(1.35)}}
-.join{min-height:100vh;display:grid;place-items:center;padding:16px}.card{width:min(620px,100%);padding:22px}.center{text-align:center}.shield{font-size:56px}.card h1{font-size:30px;margin:4px 0 7px}.promptBox{margin:14px 0;background:#eef7ff;border:1px solid #cfe4f7;border-radius:16px;padding:14px}.promptBox .label{font-size:11px;font-weight:900;letter-spacing:.08em;color:#688198}.promptBox .question{font-size:18px;font-weight:950;line-height:1.35;margin-top:5px}.limitBadge{display:inline-block;margin-top:8px;background:#fff;border:1px solid #cfe4f7;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;color:#4a6c86}.send{width:100%;border:0;border-radius:14px;padding:14px;background:var(--blue);color:#fff;font-size:16px;font-weight:950;cursor:pointer}.send:disabled{opacity:.55;cursor:wait}.error{background:#fff0f3;color:#a8344d;padding:10px 12px;border-radius:12px;margin-top:10px;font-size:13px;font-weight:750}.success{text-align:center;padding:18px}.success .big{font-size:58px}.privacy{margin-top:12px;border-top:1px dashed #d9e6ef;padding-top:10px;font-size:11.5px;color:#71879a}
-@media(max-width:960px){.host{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.stage,.stage svg{height:620px;min-height:620px}}@media(max-width:650px){.side{grid-template-columns:1fr}.card{padding:18px}.title{font-size:38px}.stage,.stage svg{height:560px;min-height:560px}.inline{grid-template-columns:1fr}}
+:root{--bg:#f4f7fb;--ink:#13213c;--muted:#64748b;--card:#fff;--line:#e6ebf2;--blue:#2563eb;--violet:#7c3aed;--emerald:#059669;--amber:#d97706}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:radial-gradient(circle at 15% 0,#dbeafe 0,transparent 33%),radial-gradient(circle at 90% 5%,#ede9fe 0,transparent 28%),var(--bg);color:var(--ink);min-height:100vh}
+.wrap{max-width:1180px;margin:auto;padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0 26px}.brand{display:flex;align-items:center;gap:12px;font-weight:950}.logo{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;display:grid;place-items:center;font-size:24px;box-shadow:0 10px 24px #2563eb30}.topnav{display:flex;gap:8px;flex-wrap:wrap}.topnav a{text-decoration:none;color:#334155;font-size:13px;font-weight:800;padding:10px 13px;border-radius:12px;background:#ffffffb8;border:1px solid #ffffff;box-shadow:0 4px 14px #0f172a0b}.hero{background:linear-gradient(135deg,#0f172a,#1e3a8a 58%,#5b21b6);border-radius:32px;color:white;padding:36px;box-shadow:0 24px 60px #0f172a22;position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:280px;height:280px;border-radius:50%;right:-90px;top:-120px;background:#ffffff12}.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:900;color:#bfdbfe}.hero h1{font-size:clamp(32px,5vw,58px);line-height:1.02;margin:10px 0 14px;max-width:800px}.hero p{max-width:760px;color:#dbeafe;font-size:17px;line-height:1.65;margin:0}.hero-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.pill{padding:9px 12px;border-radius:999px;background:#ffffff13;border:1px solid #ffffff24;font-weight:800;font-size:12px}
+.section-title{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:34px 0 15px}.section-title h2{margin:0;font-size:24px}.section-title p{margin:0;color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:24px;box-shadow:0 14px 34px #0f172a0c;display:flex;flex-direction:column;min-height:330px;transition:.2s ease}.card:hover{transform:translateY(-4px);box-shadow:0 22px 46px #0f172a16}.icon{width:62px;height:62px;border-radius:20px;display:grid;place-items:center;font-size:31px;margin-bottom:20px}.blue{background:#dbeafe}.amber{background:#fef3c7}.green{background:#d1fae5}.card h3{font-size:22px;margin:0 0 8px}.card p{color:var(--muted);line-height:1.6;font-size:14px;margin:0 0 16px}.features{display:grid;gap:8px;margin:0 0 22px;padding:0;list-style:none;color:#475569;font-weight:700;font-size:13px}.features li:before{content:"✓";color:var(--emerald);font-weight:950;margin-right:8px}.open{margin-top:auto;display:flex;align-items:center;justify-content:space-between;text-decoration:none;color:white;font-weight:950;padding:14px 16px;border-radius:15px}.open.blue-btn{background:linear-gradient(135deg,#2563eb,#1d4ed8)}.open.amber-btn{background:linear-gradient(135deg,#f59e0b,#d97706)}.open.green-btn{background:linear-gradient(135deg,#059669,#047857)}.info{margin-top:22px;display:grid;grid-template-columns:1.2fr .8fr;gap:18px}.panel{background:#ffffffb8;border:1px solid white;border-radius:24px;padding:22px;box-shadow:0 10px 30px #0f172a0a}.panel h3{margin:0 0 10px}.panel p{margin:0;color:var(--muted);line-height:1.6;font-size:14px}.footer{padding:30px 2px 10px;color:#64748b;font-size:12px;text-align:center}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.info{grid-template-columns:1fr}.card{min-height:auto}.top{align-items:flex-start;flex-direction:column}.hero{padding:28px 24px}}
 </style>
 </head>
 <body>
-
-<section id="hostView" class="hide">
-<header><div class="eyebrow">TẬP HUẤN BẢO VỆ TRẺ EM</div><div class="title">MẠNG LƯỚI <b>AN TOÀN</b></div><div class="sub">Người điều hành đặt câu hỏi – từ khóa nổi bật theo mức độ đồng thuận</div></header>
-<main class="host">
-  <div class="stage">
-    <div id="questionBar" class="questionBar hide"><b>CÂU HỎI CỦA NGƯỜI ĐIỀU HÀNH</b><div id="hostQuestionDisplay"></div></div>
-    <svg id="net" viewBox="0 0 1160 720" aria-label="Mạng lưới từ khóa và người tham gia"></svg>
-    <div id="revealHint" class="revealHint hide"><b>🔒 CHẾ ĐỘ HỒI HỘP</b><div id="revealProgress" class="small">Nhấp trực tiếp vào ổ khóa muốn mở.</div></div>
-    <div id="wait" class="wait"><div class="emoji">🧶</div><b id="waitTitle">Hãy đặt câu hỏi để bắt đầu</b><div id="waitText" class="small">QR tham gia sẽ xuất hiện sau khi người điều hành lưu câu hỏi.</div></div>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><div class="logo">🎓</div><div><div>CỔNG CÔNG CỤ GIÁO VIÊN SỐ</div><div style="font-size:12px;color:#64748b;font-weight:700;margin-top:2px">Một địa chỉ • nhiều công cụ • dùng trên máy tính và điện thoại</div></div></div>
+    <div class="topnav">
+      <a href="/pose-quiz/">AI Pose Quiz</a>
+      <a href="/boc-tham/">Bốc thăm</a>
+      <a href="/mang-luoi-an-toan/">Mạng lưới an toàn</a>
+    </div>
   </div>
-  <aside class="side">
-    <div class="panel">
-      <div class="field" style="margin-top:0"><label for="operatorQuestion">Câu hỏi của người điều hành</label><textarea id="operatorQuestion" class="hostQuestion" maxlength="300" placeholder="Nhập câu hỏi dành cho học viên…"></textarea></div>
-      <div class="inline">
-        <div class="small">Học viên sẽ trả lời bằng một từ khóa hoặc cụm từ ngắn. Không có đáp án gợi ý.</div>
-        <div class="field wordLimit" style="margin:0"><label for="wordLimit">Giới hạn số từ</label><input id="wordLimit" type="number" min="1" max="20" value="3"></div>
-      </div>
-      <button id="startQuestion" class="btn primary" style="width:100%;margin-top:10px">▶ BẮT ĐẦU CÂU HỎI</button>
-    </div>
-    <div class="panel">
-      <div id="hostStatus" class="status"><span class="dot"></span><span>Chưa mở phòng</span></div>
-      <div id="qrbox" class="qrbox" style="margin-top:10px"><div class="qrplaceholder">QR sẽ xuất hiện sau khi câu hỏi được lưu.</div></div>
-      <div style="margin-top:8px"><b>Quét QR để tham gia</b></div>
-      <div class="small">Mã phòng: <span id="roomCode" class="code">—</span></div>
-      <div id="joinUrl" class="url"></div>
-      <button id="copy" class="btn hide" style="width:100%;margin-top:8px">📋 Sao chép link tham gia</button>
-    </div>
-    <div class="panel"><div id="cnt" class="count">0</div><b>NGƯỜI ĐÃ KẾT NỐI</b><div id="clusters" class="small">0 từ khóa khác nhau</div><div id="sync" class="small">Chưa bắt đầu.</div></div>
-    <div class="panel controls">
-      <button id="fs" class="btn primary">⛶ Toàn màn hình</button>
-      <button id="toggle" class="btn">👁 Ẩn tên người</button>
-      <button id="hideAll" class="btn suspense">🔒 Khóa nội dung</button>
-      <button id="showAll" class="btn success">🔓 Mở tất cả</button>
-      <button id="reset" class="btn danger wide">＋ Câu hỏi mới</button>
-    </div>
-    <div class="notice"><b>Cách đọc màn hình:</b> khi khóa nội dung, toàn bộ cụm vẫn hiện để thấy số lượng ý kiến. Nhấp trực tiếp vào từng 🔒 để mở từ khóa và tên người lựa chọn; hoặc bấm <b>Mở tất cả</b>.</div>
-  </aside>
-</main>
-</section>
 
-<section id="joinView" class="join hide">
-<div class="card">
-  <div class="center">
-    <div class="shield">🛡️❤️</div>
-    <h1>Mạng lưới an toàn</h1>
-    <div id="joinStatus" class="status"><span class="dot"></span><span>Đang kết nối…</span></div>
-  </div>
-  <div id="promptBox" class="promptBox hide"><div class="label">CÂU HỎI CỦA NGƯỜI ĐIỀU HÀNH</div><div id="participantQuestion" class="question"></div><div id="participantLimit" class="limitBadge"></div></div>
-  <form id="form" class="hide">
-    <div class="field"><label for="name">Tên của thầy/cô</label><input id="name" maxlength="50" autocomplete="name" placeholder="Nhập tên của thầy/cô" required></div>
-    <div class="field"><label for="answer">Từ khóa / cụm từ</label><textarea id="answer" maxlength="180" placeholder="Nhập từ khóa hoặc cụm từ ngắn…" required></textarea><div id="wordCount" class="wordCount">0 từ</div></div>
-    <button id="send" class="send" type="submit">GỬI TỪ KHÓA 🧶</button>
-    <div id="error" class="error hide"></div>
-  </form>
-  <div id="success" class="success hide"><div class="big">🎉</div><h2>Đã kết nối thành công!</h2><p>Từ khóa của thầy/cô đã xuất hiện trong mạng lưới chung.</p><button id="edit" class="btn">✏️ Sửa từ khóa</button></div>
-  <div class="privacy">Không chia sẻ thông tin nhận diện của trẻ hoặc tình huống xâm hại có thật. Câu trả lời của lượt chơi không còn được hiển thị sau 24 giờ.</div>
+  <section class="hero">
+    <div class="eyebrow">Teacher Digital Toolkit</div>
+    <h1>Một cổng chung cho các công cụ dạy học và tập huấn.</h1>
+    <p>Truy cập nhanh AI Pose Quiz, công cụ bốc thăm/chia đội/chia tổ và hoạt động Mạng lưới an toàn trong cùng một website, với điều hướng thống nhất và tối ưu cho lớp học.</p>
+    <div class="hero-meta">
+      <span class="pill">⚡ Không cần cài đặt</span>
+      <span class="pill">📱 Tương thích điện thoại</span>
+      <span class="pill">🖥️ Dùng tốt trên máy chiếu</span>
+      <span class="pill">🔐 Pose Quiz có tài khoản & cloud</span>
+    </div>
+  </section>
+
+  <div class="section-title"><div><h2>Công cụ</h2><p>Chọn mô-đun cần sử dụng.</p></div><p>Phiên bản hợp nhất thử nghiệm</p></div>
+  <main class="grid">
+    <article class="card">
+      <div class="icon blue">🙋</div>
+      <h3>AI Pose Quiz</h3>
+      <p>Trắc nghiệm tương tác bằng tư thế cơ thể, hỗ trợ bài dạy cloud, media, kho câu hỏi và nhóm chia sẻ.</p>
+      <ul class="features"><li>Nhận diện tư thế bằng camera</li><li>Ảnh, âm thanh, nhạc nền</li><li>Cloud & kho câu hỏi</li><li>Hồ sơ/tài khoản giáo viên</li></ul>
+      <a class="open blue-btn" href="/pose-quiz/"><span>MỞ AI POSE QUIZ</span><span>→</span></a>
+    </article>
+
+    <article class="card">
+      <div class="icon amber">🎲</div>
+      <h3>Bốc thăm • Chia đội • Chia tổ</h3>
+      <p>Công cụ tổ chức lớp học nhanh: bốc thăm ngẫu nhiên, chia đội, ghép đôi và chia tổ học sinh.</p>
+      <ul class="features"><li>Bốc thăm nhanh</li><li>Chia đội ngẫu nhiên</li><li>Ghép đôi khác bảng</li><li>Chia tổ cân bằng</li></ul>
+      <a class="open amber-btn" href="/boc-tham/"><span>MỞ CÔNG CỤ BỐC THĂM</span><span>→</span></a>
+    </article>
+
+    <article class="card">
+      <div class="icon green">🛡️</div>
+      <h3>Mạng lưới an toàn</h3>
+      <p>Hoạt động tương tác cho tập huấn: người điều hành đặt câu hỏi, người tham gia quét QR và gửi từ khóa realtime.</p>
+      <ul class="features"><li>QR tham gia nhanh</li><li>Phản hồi thời gian thực</li><li>Nhóm từ khóa trực quan</li><li>Phù hợp tập huấn đông người</li></ul>
+      <a class="open green-btn" href="/mang-luoi-an-toan/"><span>MỞ MẠNG LƯỚI AN TOÀN</span><span>→</span></a>
+    </article>
+  </main>
+
+  <section class="info">
+    <div class="panel"><h3>🔄 Điều hướng thống nhất</h3><p>Mỗi mô-đun đều có nút <b>“Cổng giáo viên”</b> cố định để quay lại trang chủ. Các ứng dụng gốc vẫn được giữ nguyên trên website hiện tại trong thời gian thử nghiệm.</p></div>
+    <div class="panel"><h3>🧪 Trạng thái</h3><p>Cổng này được xây trên nhánh riêng <b>giaovien-portal</b>. Chỉ sau khi kiểm thử đầy đủ mới sử dụng làm bản chính.</p></div>
+  </section>
+
+  <div class="footer">Cổng công cụ giáo viên số • Phiên bản hợp nhất</div>
 </div>
-</section>
-
-<script>
-(()=>{
-const $=id=>document.getElementById(id);
-const qs=new URLSearchParams(location.search);
-const room=qs.get('room');
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function uuid(){if(crypto.randomUUID)return crypto.randomUUID();return'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16))}
-function setStatus(el,text,kind=''){el.className='status'+(kind?' '+kind:'');el.innerHTML='<span class="dot"></span><span>'+text+'</span>'}
-function escapeXml(v){return String(v).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]))}
-function cleanKeyword(raw){return String(raw||'').normalize('NFC').toLocaleUpperCase('vi-VN').replace(/[\p{P}\p{S}]+/gu,' ').replace(/\s+/g,' ').trim()}
-function keywordKey(raw){return cleanKeyword(raw).replace(/\s+/g,'')}
-function wordCount(raw){const c=cleanKeyword(raw);return c?c.split(/\s+/).length:0}
-async function jsonFetch(url,options={}){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),10000);try{const r=await fetch(url,{cache:'no-store',...options,signal:ctl.signal});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:text||('HTTP '+r.status)}}if(!r.ok)throw new Error(data.error||data.message||('HTTP '+r.status));return data}finally{clearTimeout(t)}}
-
-if(room)joinMode(room);else hostMode();
-
-function hostMode(){
-  $('hostView').classList.remove('hide');
-  let currentRoom=uuid(),hostToken=uuid(),roomReady=false,responses=[],showPeople=true,lastSignature='',seen=new Set(),pollTimer=null,failCount=0,currentQuestion='',currentLimit=3,revealMode=false,revealedKeys=new Set(),justUnlocked='';
-  const colorMap=new Map();let colorIndex=0;
-  function colorFor(key){
-    if(!colorMap.has(key)){const hue=Math.round((18+colorIndex*137.508)%360);colorMap.set(key,hue);colorIndex++}
-    const h=colorMap.get(key);
-    return{h,main:`hsl(${h} 72% 50%)`,light:`hsl(${h} 76% 91%)`,dark:`hsl(${h} 63% 27%)`};
-  }
-  function resetLocal(clearQuestion=true){
-    if(pollTimer){clearTimeout(pollTimer);pollTimer=null}
-    currentRoom=uuid();hostToken=uuid();roomReady=false;responses=[];lastSignature='';seen.clear();currentQuestion='';currentLimit=3;colorMap.clear();colorIndex=0;revealMode=false;revealedKeys.clear();justUnlocked='';showPeople=true;
-    $('toggle').textContent='👁 Ẩn tên người';$('revealHint').classList.add('hide');
-    $('cnt').textContent='0';$('clusters').textContent='0 từ khóa khác nhau';$('roomCode').textContent='—';$('joinUrl').textContent='';$('copy').classList.add('hide');
-    $('qrbox').innerHTML='<div class="qrplaceholder">QR sẽ xuất hiện sau khi câu hỏi được lưu.</div>';
-    $('questionBar').classList.add('hide');setStatus($('hostStatus'),'Chưa mở phòng');$('sync').textContent='Chưa bắt đầu.';
-    $('wait').classList.remove('hide');$('waitTitle').textContent='Hãy đặt câu hỏi để bắt đầu';$('waitText').textContent='QR tham gia sẽ xuất hiện sau khi người điều hành lưu câu hỏi.';
-    if(clearQuestion){$('operatorQuestion').value='';$('wordLimit').value='3'}
-    draw();
-  }
-  async function saveQuestion(){
-    const q=$('operatorQuestion').value.trim(),limit=parseInt($('wordLimit').value,10);
-    if(q.length<5){alert('Vui lòng nhập câu hỏi ít nhất 5 ký tự.');$('operatorQuestion').focus();return}
-    if(!Number.isInteger(limit)||limit<1||limit>20){alert('Giới hạn số từ phải từ 1 đến 20.');$('wordLimit').focus();return}
-    if(roomReady&&responses.length>0){if(!confirm('Lượt hiện tại đã có câu trả lời. Bắt đầu câu hỏi mới sẽ tạo một phòng mới. Tiếp tục?'))return;resetLocal(false)}
-    $('startQuestion').disabled=true;$('startQuestion').textContent='ĐANG LƯU…';
-    try{
-      await jsonFetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:currentRoom,host_token:hostToken,question:q,word_limit:limit})});
-      currentQuestion=q;currentLimit=limit;roomReady=true;
-      $('hostQuestionDisplay').textContent=q;$('questionBar').classList.remove('hide');
-      const join=new URL(location.href);join.search='';join.searchParams.set('room',currentRoom);
-      $('joinUrl').textContent=join.href;$('roomCode').textContent=currentRoom.slice(0,8).toUpperCase();
-      $('qrbox').innerHTML='<img id="qr" alt="Mã QR tham gia trò chơi">';
-      $('qr').src='/api/qr?text='+encodeURIComponent(join.href)+'&v='+Date.now();
-      $('qr').onerror=()=>setStatus($('hostStatus'),'Không tạo được QR – dùng link bên dưới','bad');
-      $('copy').classList.remove('hide');$('waitTitle').textContent='Đang chờ từ khóa đầu tiên…';$('waitText').textContent='Mời thầy cô quét QR và gửi từ khóa.';
-      setStatus($('hostStatus'),'Phòng đã mở – giới hạn '+limit+' từ','ok');$('sync').textContent='Đang đồng bộ dữ liệu…';
-      if(pollTimer)clearTimeout(pollTimer);poll();
-    }catch(e){setStatus($('hostStatus'),'Không mở được phòng','bad');alert('Không lưu được câu hỏi: '+e.message)}
-    finally{$('startQuestion').disabled=false;$('startQuestion').textContent=roomReady?'✓ CẬP NHẬT CÂU HỎI':'▶ BẮT ĐẦU CÂU HỎI'}
-  }
-  async function poll(){
-    if(!roomReady)return;
-    try{
-      const data=await jsonFetch('/api/answers?room='+encodeURIComponent(currentRoom)+'&_='+Date.now());
-      failCount=0;setStatus($('hostStatus'),'Hệ thống trực tuyến – giới hạn '+currentLimit+' từ','ok');
-      const list=Array.isArray(data.answers)?data.answers:[];
-      const sig=list.map(x=>x.id+':'+x.created_at+':'+x.answer).join('|');
-      if(sig!==lastSignature){responses=list;lastSignature=sig;draw()}
-      $('sync').textContent='Đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN');
-    }catch(e){failCount++;setStatus($('hostStatus'),'Mất kết nối dữ liệu – đang thử lại','bad');$('sync').textContent='Lỗi: '+e.message}
-    finally{if(roomReady)pollTimer=setTimeout(poll,failCount?1800:800)}
-  }
-  function groups(){
-    const map=new Map();
-    for(const r of responses){
-      const label=cleanKeyword(r.answer),key=keywordKey(label);
-      if(!key)continue;
-      if(!map.has(key))map.set(key,{key,label,people:[],color:colorFor(key)});
-      map.get(key).people.push(r);
-    }
-    return Array.from(map.values());
-  }
-  function updateRevealHint(gs){
-    const hint=$('revealHint');
-    if(!revealMode||!gs.length){hint.classList.add('hide');return}
-    hint.classList.remove('hide');
-    const opened=gs.filter(g=>revealedKeys.has(g.key)).length;
-    const locked=gs.length-opened;
-    $('revealProgress').textContent=locked>0
-      ? 'Đã mở '+opened+' / '+gs.length+' từ khóa • Chọn trực tiếp một ổ khóa để mở'
-      : 'Đã mở '+opened+' / '+gs.length+' từ khóa • Các câu trả lời mới vẫn sẽ được khóa';
-  }
-  function hideAllResults(){
-    const gs=groups();
-    if(!gs.length){alert('Chưa có từ khóa nào để khóa.');return}
-    revealMode=true;revealedKeys.clear();justUnlocked='';seen.clear();showPeople=true;$('toggle').textContent='👁 Ẩn tên người';
-    draw();
-  }
-  function showAllResults(){
-    revealMode=false;revealedKeys.clear();justUnlocked='';seen.clear();showPeople=true;$('toggle').textContent='👁 Ẩn tên người';$('revealHint').classList.add('hide');draw();
-  }
-  function unlockKey(key){
-    if(!revealMode||revealedKeys.has(key))return;
-    revealedKeys.add(key);justUnlocked=key;draw();
-    setTimeout(()=>{if(justUnlocked===key){justUnlocked='';draw()}},760);
-  }
-  function centerFor(i,n){
-    if(n===1)return{x:580,y:185};
-    let perRing=n<=6?[n]:n<=14?[6,n-6]:[6,8,n-14],radii=[225,355,455],idx=i,ring=0;
-    while(ring<perRing.length&&idx>=perRing[ring]){idx-=perRing[ring];ring++}
-    const total=Math.max(1,perRing[ring]||1),a=-Math.PI/2+(Math.PI*2*idx/total)+(ring*.17),r=radii[ring]||455;
-    return{x:580+Math.cos(a)*r,y:375+Math.sin(a)*r*.62};
-  }
-  function personPositions(cx,cy,count){
-    const out=[];
-    for(let i=0;i<count;i++){
-      const ring=i<6?0:1,idx=ring===0?i:i-6,total=ring===0?Math.min(count,6):Math.max(1,count-6),rad=ring===0?86:138;
-      const a=-Math.PI/2+Math.PI*2*idx/total+(ring?.28:0);
-      out.push({x:cx+Math.cos(a)*rad,y:cy+Math.sin(a)*rad*.72});
-    }
-    return out;
-  }
-  function draw(){
-    const gs=groups();$('cnt').textContent=responses.length;$('clusters').textContent=gs.length+' từ khóa khác nhau';$('wait').classList.toggle('hide',roomReady&&responses.length>0);
-    const svg=$('net'),shield={x:580,y:385};let h='';
-    gs.forEach((g,i)=>{
-      const c=centerFor(i,gs.length),p=personPositions(c.x,c.y,g.people.length),col=g.color;
-      h+='<path class="centerLink" d="M'+shield.x+','+shield.y+' Q'+((shield.x+c.x)/2)+','+(((shield.y+c.y)/2)-12)+' '+c.x+','+c.y+'"/>';
-      if(showPeople)g.people.forEach((r,j)=>{const pp=p[j];h+='<path class="keywordLink" stroke="'+col.main+'" d="M'+c.x+','+c.y+' L'+pp.x+','+pp.y+'"/>'});
-    });
-    h+='<g><path d="M580 282C620 297 650 300 682 300v74c0 80-44 123-102 148-58-25-102-68-102-148v-74c32 0 62-3 102-18z" fill="#2f80ed" stroke="#fff" stroke-width="8"/><text x="580" y="362" text-anchor="middle" font-size="40">❤️</text><text x="580" y="402" text-anchor="middle" font-size="22" font-weight="950" fill="#fff">MẠNG LƯỚI</text></g>';
-    gs.forEach((g,i)=>{
-      const c=centerFor(i,gs.length),p=personPositions(c.x,c.y,g.people.length),col=g.color,count=g.people.length;
-      const fs=Math.min(36,18+Math.max(0,count-1)*3),w=Math.min(300,Math.max(150,70+g.label.length*(fs*.53))),height=58;
-      const x=c.x-w/2,y=c.y-height/2,locked=revealMode&&!revealedKeys.has(g.key),opening=justUnlocked===g.key;
-      const klass='keywordGroup '+(locked?'locked ':'')+(opening?'unlocking ':(g.people.some(r=>!seen.has(r.id))&&!locked?'new ':''));
-      h+='<g class="'+klass+'" data-key="'+escapeXml(g.key)+'">';
-      h+='<rect class="keywordNode" x="'+x+'" y="'+y+'" width="'+w+'" height="'+height+'" rx="20" fill="'+col.main+'"/>';
-      if(locked){
-        h+='<text class="lockedText" x="'+c.x+'" y="'+(c.y+2)+'" text-anchor="middle">🔒</text>';
-        h+='<text class="lockedSub" x="'+c.x+'" y="'+(c.y+20)+'" text-anchor="middle">'+count+' NGƯỜI</text>';
-      }else{
-        h+='<text class="keywordText" x="'+c.x+'" y="'+(c.y+5)+'" text-anchor="middle" font-size="'+fs+'">'+escapeXml(g.label)+'</text>';
-        if(count>1)h+='<circle cx="'+(x+w-14)+'" cy="'+(y+14)+'" r="13" fill="#ffffff33" stroke="#fff" stroke-width="1.5"/><text class="keywordCount" x="'+(x+w-14)+'" y="'+(y+18)+'" text-anchor="middle">×'+count+'</text>';
-        if(opening)h+='<text class="unlockFlash" x="'+c.x+'" y="'+(c.y-22)+'" text-anchor="middle" font-size="30">🔓</text>';
-      }
-      h+='</g>';
-      if(!locked)g.people.forEach(r=>seen.add(r.id));
-      if(showPeople)g.people.forEach((r,j)=>{
-        const pp=p[j],name=String(r.participant_name||'').slice(0,22),pw=Math.min(145,Math.max(88,38+name.length*6.4)),ph=34,px=pp.x-pw/2,py=pp.y-ph/2;
-        h+='<g><rect class="personNode" x="'+px+'" y="'+py+'" width="'+pw+'" height="'+ph+'" rx="14" fill="'+col.light+'" stroke="'+col.main+'"/>';
-        if(locked)h+='<text class="personPlaceholder" x="'+pp.x+'" y="'+(pp.y+6)+'" text-anchor="middle" fill="'+col.dark+'">👤</text>';
-        else h+='<text class="personText" x="'+pp.x+'" y="'+(pp.y+4)+'" text-anchor="middle" fill="'+col.dark+'">'+escapeXml(name)+'</text>';
-        h+='</g>';
-      });
-    });
-    svg.innerHTML=h;updateRevealHint(gs);
-  }
-  $('startQuestion').onclick=saveQuestion;
-  $('operatorQuestion').addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')saveQuestion()});
-  $('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
-  $('toggle').onclick=()=>{showPeople=!showPeople;$('toggle').textContent=showPeople?'👁 Ẩn tên người':'👁 Hiện tên người';draw()};
-  $('hideAll').onclick=hideAllResults;
-  $('showAll').onclick=showAllResults;
-  $('net').addEventListener('click',e=>{
-    if(!revealMode)return;
-    const group=e.target.closest?e.target.closest('[data-key]'):null;
-    if(!group)return;
-    const key=group.getAttribute('data-key');
-    if(key)unlockKey(key);
-  });
-  $('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('joinUrl').textContent);$('copy').textContent='✅ Đã sao chép';setTimeout(()=>$('copy').textContent='📋 Sao chép link tham gia',1600)}catch{$('copy').textContent='Hãy sao chép link bên trên'}};
-  $('reset').onclick=()=>{if(roomReady||$('operatorQuestion').value.trim()){if(!confirm('Tạo câu hỏi mới? Lượt hiện tại trên màn hình sẽ được kết thúc.'))return}resetLocal(true);$('operatorQuestion').focus()};
-  resetLocal(false);
-}
-
-function joinMode(roomId){
-  $('joinView').classList.remove('hide');
-  const status=$('joinStatus'),form=$('form'),success=$('success'),error=$('error'),send=$('send'),name=$('name'),answer=$('answer'),prompt=$('promptBox'),question=$('participantQuestion'),limitBadge=$('participantLimit'),countEl=$('wordCount');
-  let limit=3;
-  if(!UUID.test(roomId)){setStatus(status,'QR không hợp lệ','bad');error.textContent='Mã phòng không hợp lệ. Hãy quét lại QR trên màn hình người điều hành.';error.classList.remove('hide');return}
-  name.value=localStorage.getItem('safety_name')||'';
-  let participant=localStorage.getItem('safety_participant_id');if(!UUID.test(participant||'')){participant=uuid();localStorage.setItem('safety_participant_id',participant)}
-  function refreshCount(){
-    answer.value=answer.value.toLocaleUpperCase('vi-VN');
-    const n=wordCount(answer.value);countEl.textContent=n+' / '+limit+' từ';countEl.style.color=n>limit?'#a8344d':'var(--muted)';
-  }
-  answer.addEventListener('input',refreshCount);
-  async function loadRoom(){
-    try{
-      const data=await jsonFetch('/api/room?room='+encodeURIComponent(roomId)+'&_='+Date.now());
-      if(!data.room||!data.room.question)throw new Error('Phòng chưa sẵn sàng');
-      limit=Number(data.room.word_limit)||3;question.textContent=data.room.question;limitBadge.textContent='Tối đa '+limit+' từ';prompt.classList.remove('hide');form.classList.remove('hide');setStatus(status,'Đã kết nối với lớp','ok');refreshCount();return data.room;
-    }catch(e){setStatus(status,'Không kết nối được với phòng','bad');form.classList.add('hide');error.textContent='⚠ '+e.message+'. Hãy quét lại QR trên màn hình người điều hành.';error.classList.remove('hide');throw e}
-  }
-  loadRoom().catch(()=>{});
-  form.onsubmit=async ev=>{
-    ev.preventDefault();error.classList.add('hide');const n=name.value.trim(),clean=cleanKeyword(answer.value),wc=wordCount(clean);
-    if(!n||!clean)return;
-    if(wc>limit){error.textContent='⚠ Từ khóa chỉ được tối đa '+limit+' từ.';error.classList.remove('hide');answer.focus();return}
-    answer.value=clean;refreshCount();send.disabled=true;send.textContent='ĐANG GỬI…';
-    try{
-      await loadRoom();
-      await jsonFetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:roomId,participant,name:n,answer:clean})});
-      localStorage.setItem('safety_name',n);setStatus(status,'Đã gửi thành công','ok');form.classList.add('hide');success.classList.remove('hide');
-    }catch(e){error.textContent='⚠ '+e.message+' — vui lòng thử lại.';error.classList.remove('hide');setStatus(status,'Gửi chưa thành công','bad')}
-    finally{send.disabled=false;send.textContent='GỬI TỪ KHÓA 🧶'}
-  };
-  $('edit').onclick=()=>{success.classList.add('hide');form.classList.remove('hide');send.textContent='CẬP NHẬT TỪ KHÓA 🧶';refreshCount()};
-}
-})();
-</script>
 </body>
 </html>
