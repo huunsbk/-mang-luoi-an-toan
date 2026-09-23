@@ -9,6 +9,7 @@ on:
       - 'pose-quiz/**'
       - 'boc-tham/**'
       - 'mang-luoi-an-toan/**'
+      - 'qa/**'
       - '.github/workflows/portal-qa.yml'
   workflow_dispatch:
 
