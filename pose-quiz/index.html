@@ -73,6 +73,7 @@
             if (file) {
                 const form = new FormData();
                 form.append('file', file);
+                if (payload && Object.keys(payload).length) form.append('payload', JSON.stringify(payload));
                 options.body = form;
                 options.headers['x-pose-action'] = action;
             } else {
@@ -99,6 +100,39 @@
             RAISE_RIGHT: { label: 'Giơ tay phải', icon: '🙋‍♀️' },
             BOTH_UP: { label: 'Giơ hai tay', icon: '🙌' },
             CROSS_ARMS: { label: 'Khoanh tay', icon: '🙅' }
+        };
+
+        let sharedAudioContext = null;
+        const unlockAudio = () => {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return null;
+                if (!sharedAudioContext) sharedAudioContext = new AudioCtx();
+                if (sharedAudioContext.state === 'suspended') sharedAudioContext.resume().catch(() => {});
+                return sharedAudioContext;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const playDefaultFeedbackTone = (isCorrect, volume = 0.9) => {
+            const ctx = unlockAudio();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const now = ctx.currentTime;
+                osc.type = isCorrect ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(isCorrect ? 660 : 220, now);
+                if (isCorrect) osc.frequency.exponentialRampToValueAtTime(990, now + 0.16);
+                else osc.frequency.exponentialRampToValueAtTime(150, now + 0.22);
+                gain.gain.setValueAtTime(Math.max(0.02, Math.min(1, volume)) * 0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (isCorrect ? 0.28 : 0.38));
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + (isCorrect ? 0.3 : 0.4));
+            } catch (_) {}
         };
 
         const analyzePose = (landmarks) => {
@@ -667,7 +701,16 @@
                     audio: {
                         correct: { data: null, name: "" },
                         wrong: { data: null, name: "" },
-                        bgm: { data: null, name: "" }
+                        bgm: { data: null, name: "" },
+                        bgmVolume: 0.3,
+                        feedbackVolume: 0.9,
+                        questionVolume: 1,
+                        defaultFeedback: true
+                    },
+                    theme: {
+                        background: null,
+                        overlay: 0.68,
+                        fit: "cover"
                     }
                 };
             });
@@ -780,7 +823,16 @@
                     audio: {
                         correct: { data: null, name: '' },
                         wrong: { data: null, name: '' },
-                        bgm: { data: null, name: '' }
+                        bgm: { data: null, name: '' },
+                        bgmVolume: 0.3,
+                        feedbackVolume: 0.9,
+                        questionVolume: 1,
+                        defaultFeedback: true
+                    },
+                    theme: {
+                        background: null,
+                        overlay: 0.68,
+                        fit: 'cover'
                     }
                 });
                 setScreen('EDITOR');
@@ -828,7 +880,7 @@
                 <h1 className="text-6xl font-black mb-2 tracking-tighter uppercase">AI POSE QUIZ</h1>
                 <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V9.9 Cloud</p>
                 <div className="flex flex-col gap-3 w-[34rem] max-w-full">
-                    <button onClick={() => setScreen('GAME')} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
+                    <button onClick={() => { unlockAudio(); setScreen('GAME'); }} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
                     <div className="grid grid-cols-2 gap-3">
                         <button onClick={() => setScreen('EDITOR')} className="bg-white/10 hover:bg-white/20 py-3.5 rounded-2xl text-base font-black backdrop-blur-md border border-white/30 transition-all uppercase">✏️ Soạn bài</button>
                         <button onClick={() => setScreen('BANK')} className="bg-violet-500/90 hover:bg-violet-400 py-3.5 rounded-2xl text-base font-black shadow-lg transition-all uppercase">📚 Kho câu hỏi</button>
@@ -861,6 +913,9 @@
             const isMounted = useRef(true);
 
             const currentQuestion = settings.questions[qIndex];
+            const lessonBackground = mediaSrc(settings.theme?.background);
+            const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
+            const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
 
             const getPoseVisual = (poseId) => {
                 if (mediaSrc(settings.poseAssets?.[poseId])) {
@@ -905,7 +960,15 @@
                         questionAudioRef.current.currentTime = 0;
                     }
                     const audioSrc = mediaSrc(isCorrect ? settings.audio.correct?.data : settings.audio.wrong?.data);
-                    if (audioSrc && !isMuted) new Audio(audioSrc).play().catch(() => {});
+                    if (!isMuted && audioSrc) {
+                        const feedbackAudio = new Audio(audioSrc);
+                        feedbackAudio.volume = Math.min(1, Math.max(0, Number(settings.audio.feedbackVolume ?? 0.9)));
+                        feedbackAudio.play().catch(() => {
+                            if (settings.audio.defaultFeedback !== false) playDefaultFeedbackTone(isCorrect, settings.audio.feedbackVolume ?? 0.9);
+                        });
+                    } else if (!isMuted && settings.audio.defaultFeedback !== false) {
+                        playDefaultFeedbackTone(isCorrect, settings.audio.feedbackVolume ?? 0.9);
+                    }
 
                     setTimeout(() => {
                         if (!isMounted.current) return;
@@ -941,7 +1004,7 @@
                 if (settings.audio.bgm?.data && !isMuted) {
                     bgmRef.current = new Audio(mediaSrc(settings.audio.bgm.data));
                     bgmRef.current.loop = true;
-                    bgmRef.current.volume = 0.3;
+                    bgmRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.bgmVolume ?? 0.3)));
                     bgmRef.current.play().catch(() => {});
                 }
                 return () => {
@@ -950,7 +1013,7 @@
                         bgmRef.current = null;
                     }
                 };
-            }, [isMuted, settings.audio.bgm?.data]);
+            }, [isMuted, settings.audio.bgm?.data, settings.audio.bgmVolume]);
 
             useEffect(() => {
                 if (questionAudioRef.current) {
@@ -960,7 +1023,7 @@
                 const questionAudio = mediaSrc(currentQuestion?.audio?.data);
                 if (questionAudio && !isMuted && !feedback) {
                     questionAudioRef.current = new Audio(questionAudio);
-                    questionAudioRef.current.volume = 1;
+                    questionAudioRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.questionVolume ?? 1)));
                     questionAudioRef.current.play().catch(() => {});
                 }
                 return () => {
@@ -969,7 +1032,7 @@
                         questionAudioRef.current = null;
                     }
                 };
-            }, [qIndex, currentQuestion?.audio?.data, isMuted]);
+            }, [qIndex, currentQuestion?.audio?.data, isMuted, settings.audio.questionVolume]);
 
             useEffect(() => {
                 if (!gameReady) return;
@@ -1071,8 +1134,17 @@
                     </div>
 
                     <div className="flex-1 flex overflow-hidden">
-                        <div className="w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2">
-                            <div className="flex-[5] bg-indigo-50/30 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                        <div
+                            className="w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2 relative overflow-hidden"
+                            style={lessonBackground ? {
+                                backgroundImage: `url("${lessonBackground}")`,
+                                backgroundSize: lessonBackgroundFit,
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'no-repeat'
+                            } : undefined}
+                        >
+                            {lessonBackground && <div className="absolute inset-0 pointer-events-none" style={{backgroundColor: `rgba(248,250,252,${lessonOverlay})`}}></div>}
+                            <div className="flex-[5] bg-indigo-50/60 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden z-10">
                                 <h2 className="text-3xl font-black text-slate-800 mb-4 text-center leading-tight">{currentQuestion.text}</h2>
                                 {currentQuestion.image ? (
                                     <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
@@ -1085,7 +1157,7 @@
                                 )}
                             </div>
                             
-                            <div className="flex-[3] grid grid-cols-2 gap-2">
+                            <div className="flex-[3] grid grid-cols-2 gap-2 relative z-10">
                                 {currentQuestion.answers.slice(0, settings.numAnswers).map((ans, idx) => (
                                     <div key={idx} className={`answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
                                         <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 rounded-2xl mr-3 text-white text-2xl font-black shadow-md">{String.fromCharCode(65 + idx)}</div>
