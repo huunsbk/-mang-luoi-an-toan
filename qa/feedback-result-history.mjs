@@ -11,7 +11,7 @@ async function run(browserType,name){
   host.on('pageerror',e=>errors.push('host: '+String(e)));
 
   await host.goto(MODULE,{waitUntil:'domcontentloaded',timeout:60000});
-  await host.getByText('BẢN ĐỒ PHẢN HỒI',{exact:false}).waitFor();
+  await host.locator('.title').filter({hasText:'BẢN ĐỒ PHẢN HỒI'}).waitFor();
 
   const question='Điều gì giúp buổi học trở nên hiệu quả hơn?';
   await host.locator('#operatorQuestion').fill(question);
