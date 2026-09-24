@@ -109,9 +109,7 @@ async function run(browserType, name, contextOptions = {}) {
     'D. Máy in',
     'Đáp án: B'
   ].join('\n');
-  await page.locator('textarea').filter({ has: page.locator('') }).first().fill(pasted).catch(async () => {
-    await page.locator('textarea[placeholder*="Câu 1"]').fill(pasted);
-  });
+  await page.locator('textarea[placeholder*="Câu 1"]').fill(pasted);
   await page.getByRole('button', { name: /PHÂN TÍCH NỘI DUNG DÁN/i }).click();
   await page.getByText('2 câu', { exact: true }).waitFor();
   await page.getByText('Câu nhập nhanh số 1').waitFor();
