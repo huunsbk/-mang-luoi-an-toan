@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#e9f8ff">
-<title>Mạng lưới an toàn</title>
+<title>Bản đồ phản hồi</title>
 <style>
 :root{--ink:#153a61;--muted:#60788f;--blue:#2f80ed;--pink:#ef476f}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}body{background:radial-gradient(circle at 12% 10%,#fff8c9 0 14%,transparent 30%),radial-gradient(circle at 90% 20%,#e9dcff 0 12%,transparent 30%),linear-gradient(145deg,#e8f8ff,#fdf7e5 55%,#f3edff);min-height:100vh}.hide{display:none!important}
@@ -28,19 +28,19 @@ header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-sp
 <a class="portal-home-fab" href="/" title="Về Cổng công cụ giáo viên">🏠 Cổng giáo viên</a>
 
 <section id="hostView" class="hide">
-<header><div class="eyebrow">TẬP HUẤN BẢO VỆ TRẺ EM</div><div class="title">MẠNG LƯỚI <b>AN TOÀN</b></div><div class="sub">Người điều hành đặt câu hỏi – từ khóa nổi bật theo mức độ đồng thuận</div></header>
+<header><div class="eyebrow">THU THẬP • KẾT NỐI • TRỰC QUAN HÓA Ý KIẾN</div><div class="title">BẢN ĐỒ <b>PHẢN HỒI</b></div><div class="sub">Người điều hành đặt câu hỏi – phản hồi được nhóm và hiển thị trực quan theo thời gian thực</div></header>
 <main class="host">
   <div class="stage">
     <div id="questionBar" class="questionBar hide"><b>CÂU HỎI CỦA NGƯỜI ĐIỀU HÀNH</b><div id="hostQuestionDisplay"></div></div>
-    <svg id="net" viewBox="0 0 1160 720" aria-label="Mạng lưới từ khóa và người tham gia"></svg>
+    <svg id="net" viewBox="0 0 1160 720" aria-label="Bản đồ phản hồi từ khóa và người tham gia"></svg>
     <div id="revealHint" class="revealHint hide"><b>🔒 CHẾ ĐỘ HỒI HỘP</b><div id="revealProgress" class="small">Nhấp trực tiếp vào ổ khóa muốn mở.</div></div>
     <div id="wait" class="wait"><div class="emoji">🧶</div><b id="waitTitle">Hãy đặt câu hỏi để bắt đầu</b><div id="waitText" class="small">QR tham gia sẽ xuất hiện sau khi người điều hành lưu câu hỏi.</div></div>
   </div>
   <aside class="side">
     <div class="panel">
-      <div class="field" style="margin-top:0"><label for="operatorQuestion">Câu hỏi của người điều hành</label><textarea id="operatorQuestion" class="hostQuestion" maxlength="300" placeholder="Nhập câu hỏi dành cho học viên…"></textarea></div>
+      <div class="field" style="margin-top:0"><label for="operatorQuestion">Câu hỏi của người điều hành</label><textarea id="operatorQuestion" class="hostQuestion" maxlength="300" placeholder="Nhập câu hỏi dành cho người tham gia…"></textarea></div>
       <div class="inline">
-        <div class="small">Học viên sẽ trả lời bằng một từ khóa hoặc cụm từ ngắn. Không có đáp án gợi ý.</div>
+        <div class="small">Người tham gia sẽ trả lời bằng một từ khóa hoặc cụm từ ngắn. Không có đáp án gợi ý.</div>
         <div class="field wordLimit" style="margin:0"><label for="wordLimit">Giới hạn số từ</label><input id="wordLimit" type="number" min="1" max="20" value="3"></div>
       </div>
       <button id="startQuestion" class="btn primary" style="width:100%;margin-top:10px">▶ BẮT ĐẦU CÂU HỎI</button>
@@ -69,19 +69,19 @@ header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-sp
 <section id="joinView" class="join hide">
 <div class="card">
   <div class="center">
-    <div class="shield">🛡️❤️</div>
-    <h1>Mạng lưới an toàn</h1>
+    <div class="shield">💬🗺️</div>
+    <h1>Bản đồ phản hồi</h1>
     <div id="joinStatus" class="status"><span class="dot"></span><span>Đang kết nối…</span></div>
   </div>
   <div id="promptBox" class="promptBox hide"><div class="label">CÂU HỎI CỦA NGƯỜI ĐIỀU HÀNH</div><div id="participantQuestion" class="question"></div><div id="participantLimit" class="limitBadge"></div></div>
   <form id="form" class="hide">
-    <div class="field"><label for="name">Tên của thầy/cô</label><input id="name" maxlength="50" autocomplete="name" placeholder="Nhập tên của thầy/cô" required></div>
+    <div class="field"><label for="name">Tên người tham gia</label><input id="name" maxlength="50" autocomplete="name" placeholder="Nhập tên người tham gia" required></div>
     <div class="field"><label for="answer">Từ khóa / cụm từ</label><textarea id="answer" maxlength="180" placeholder="Nhập từ khóa hoặc cụm từ ngắn…" required></textarea><div id="wordCount" class="wordCount">0 từ</div></div>
     <button id="send" class="send" type="submit">GỬI TỪ KHÓA 🧶</button>
     <div id="error" class="error hide"></div>
   </form>
-  <div id="success" class="success hide"><div class="big">🎉</div><h2>Đã kết nối thành công!</h2><p>Từ khóa của thầy/cô đã xuất hiện trong mạng lưới chung.</p><button id="edit" class="btn">✏️ Sửa từ khóa</button></div>
-  <div class="privacy">Không chia sẻ thông tin nhận diện của trẻ hoặc tình huống xâm hại có thật. Câu trả lời của lượt chơi không còn được hiển thị sau 24 giờ.</div>
+  <div id="success" class="success hide"><div class="big">🎉</div><h2>Đã gửi phản hồi!</h2><p>Phản hồi của bạn đã xuất hiện trên bản đồ chung.</p><button id="edit" class="btn">✏️ Sửa phản hồi</button></div>
+  <div class="privacy">Không chia sẻ thông tin cá nhân nhạy cảm hoặc nội dung riêng tư. Phản hồi của phiên không còn được hiển thị sau 24 giờ.</div>
 </div>
 </section>
 
@@ -137,7 +137,7 @@ function hostMode(){
       $('qrbox').innerHTML='<img id="qr" alt="Mã QR tham gia trò chơi">';
       $('qr').src='/api/qr?text='+encodeURIComponent(join.href)+'&v='+Date.now();
       $('qr').onerror=()=>setStatus($('hostStatus'),'Không tạo được QR – dùng link bên dưới','bad');
-      $('copy').classList.remove('hide');$('waitTitle').textContent='Đang chờ từ khóa đầu tiên…';$('waitText').textContent='Mời thầy cô quét QR và gửi từ khóa.';
+      $('copy').classList.remove('hide');$('waitTitle').textContent='Đang chờ từ khóa đầu tiên…';$('waitText').textContent='Mời người tham gia quét QR và gửi phản hồi.';
       setStatus($('hostStatus'),'Phòng đã mở – giới hạn '+limit+' từ','ok');$('sync').textContent='Đang đồng bộ dữ liệu…';
       if(pollTimer)clearTimeout(pollTimer);poll();
     }catch(e){setStatus($('hostStatus'),'Không mở được phòng','bad');alert('Không lưu được câu hỏi: '+e.message)}
@@ -307,7 +307,7 @@ function hostMode(){
       });
     });
 
-    h+='<g class="centerShield" transform="translate(0,-165)"><path d="M580 282C620 297 650 300 682 300v74c0 80-44 123-102 148-58-25-102-68-102-148v-74c32 0 62-3 102-18z" fill="#2f80ed" stroke="#fff" stroke-width="8"/><text x="580" y="362" text-anchor="middle" font-size="40">❤️</text><text x="580" y="402" text-anchor="middle" font-size="22" font-weight="950" fill="#fff">MẠNG LƯỚI</text></g>';
+    h+='<g class="centerShield" transform="translate(0,-165)"><path d="M580 282C620 297 650 300 682 300v74c0 80-44 123-102 148-58-25-102-68-102-148v-74c32 0 62-3 102-18z" fill="#2f80ed" stroke="#fff" stroke-width="8"/><text x="580" y="362" text-anchor="middle" font-size="40">❤️</text><text x="580" y="402" text-anchor="middle" font-size="22" font-weight="950" fill="#fff">PHẢN HỒI</text></g>';
 
     layout.layouts.forEach(item=>{
       const g=item.g,m=item.metrics,col=g.color,count=g.people.length,cx=item.x,kw=m.keyword;
