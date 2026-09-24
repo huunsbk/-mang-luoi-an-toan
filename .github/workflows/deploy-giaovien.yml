@@ -90,3 +90,31 @@ jobs:
           assert d.get('qr') == 'ok', d
           print('PRODUCTION_ALIAS_OK')
           PY
+
+          grep -q "Lưu kết quả" /tmp/safety.html
+          grep -q "Kết quả đã lưu" /tmp/safety.html
+
+          # Real production lifecycle for persisted feedback results.
+          QA_ROOM="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          QA_HOST="cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          QA_LIBRARY="eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+
+          curl --fail-with-body -sS -X POST "$BASE/api/results/save"             -H "Content-Type: application/json"             -d "{\"room\":\"$QA_ROOM\",\"host_token\":\"$QA_HOST\",\"library_token\":\"$QA_LIBRARY\",\"title\":\"QA Production Feedback Result\",\"display_settings\":{\"show_people\":true,\"reveal_mode\":false}}"             -o /tmp/result-save.json
+          jq -e '.ok == true and (.participant_count | tonumber) >= 1 and (.id | type == "string")' /tmp/result-save.json >/dev/null
+          RESULT_ID=$(jq -r '.id' /tmp/result-save.json)
+
+          curl --fail-with-body -sS "$BASE/api/results?library_token=$QA_LIBRARY" -o /tmp/result-list.json
+          jq -e --arg id "$RESULT_ID" '.ok == true and any(.results[]; .id == $id and .title == "QA Production Feedback Result")' /tmp/result-list.json >/dev/null
+
+          curl --fail-with-body -sS "$BASE/api/results/item?library_token=$QA_LIBRARY&result_id=$RESULT_ID" -o /tmp/result-item.json
+          jq -e '.ok == true and .result.participant_count >= 1 and (.result.responses | length) >= 1' /tmp/result-item.json >/dev/null
+
+          curl --fail-with-body -sS -X POST "$BASE/api/results/rename"             -H "Content-Type: application/json"             -d "{\"library_token\":\"$QA_LIBRARY\",\"result_id\":\"$RESULT_ID\",\"title\":\"QA Production Renamed\"}"             -o /tmp/result-rename.json
+          jq -e '.ok == true' /tmp/result-rename.json >/dev/null
+
+          curl --fail-with-body -sS -X POST "$BASE/api/results/delete"             -H "Content-Type: application/json"             -d "{\"library_token\":\"$QA_LIBRARY\",\"result_id\":\"$RESULT_ID\"}"             -o /tmp/result-delete.json
+          jq -e '.ok == true' /tmp/result-delete.json >/dev/null
+
+          curl --fail-with-body -sS "$BASE/api/results?library_token=$QA_LIBRARY" -o /tmp/result-after-delete.json
+          jq -e --arg id "$RESULT_ID" '.ok == true and all(.results[]; .id != $id)' /tmp/result-after-delete.json >/dev/null
+          echo "PRODUCTION_RESULT_HISTORY_OK"

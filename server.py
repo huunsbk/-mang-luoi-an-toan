@@ -120,9 +120,27 @@ class Handler(BaseHTTPRequestHandler):
             try:return self._json({"ok":True,"answers":rpc("safety_get_answers",{"p_room_id":room}) or []})
             except Exception as e:return self._json({"error":"Không đọc được dữ liệu lớp học","detail":str(e)[:180]},502)
 
+        if path=="/api/results":
+            library_token=(query.get("library_token") or [""])[0]
+            if not UUID_RE.match(library_token):return self._json({"error":"Mã thư viện không hợp lệ"},400)
+            try:
+                rows=rpc("feedback_list_results",{"p_library_token":library_token}) or []
+                return self._json({"ok":True,"results":rows})
+            except Exception as e:return self._json({"error":"Không đọc được lịch sử kết quả","detail":str(e)[:180]},502)
+
+        if path=="/api/results/item":
+            library_token=(query.get("library_token") or [""])[0]
+            result_id=(query.get("result_id") or [""])[0]
+            if not UUID_RE.match(library_token) or not UUID_RE.match(result_id):return self._json({"error":"Mã kết quả không hợp lệ"},400)
+            try:
+                rows=rpc("feedback_get_result",{"p_library_token":library_token,"p_result_id":result_id}) or []
+                if not rows:return self._json({"error":"Không tìm thấy kết quả đã lưu"},404)
+                return self._json({"ok":True,"result":rows[0]})
+            except Exception as e:return self._json({"error":"Không mở được kết quả đã lưu","detail":str(e)[:180]},502)
+
         if path=="/api/health":
             room="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";token="cccccccc-cccc-4ccc-8ccc-cccccccccccc";person="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-            question="Theo thầy cô điều gì giúp trẻ em an toàn hơn";limit=3;base="https://mang-luoi-an-toan.vercel.app"
+            question="Điều gì giúp một hoạt động tương tác hiệu quả hơn";limit=3;base="https://mang-luoi-an-toan.vercel.app"
             try:
                 set_room=self._post_json_url(base+"/api/room",{"room":room,"host_token":token,"question":question,"word_limit":limit})
                 room_data=self._get_json_url(base+"/api/room?room="+room)
@@ -169,6 +187,40 @@ class Handler(BaseHTTPRequestHandler):
                 rpc("safety_set_room",{"p_room_id":room,"p_host_token":token,"p_question":question,"p_word_limit":word_limit})
                 return self._json({"ok":True})
             except Exception as e:return self._json({"error":"Không lưu được câu hỏi","detail":str(e)[:180]},502)
+
+        if parsed.path=="/api/results/save":
+            room=str(body.get("room",""));host_token=str(body.get("host_token",""));library_token=str(body.get("library_token",""));title=str(body.get("title","")).strip()
+            display_settings=body.get("display_settings",{})
+            if not UUID_RE.match(room) or not UUID_RE.match(host_token) or not UUID_RE.match(library_token):return self._json({"error":"Mã lưu kết quả không hợp lệ"},400)
+            if not (1<=len(title)<=120):return self._json({"error":"Tên kết quả phải có từ 1 đến 120 ký tự"},400)
+            if not isinstance(display_settings,dict):return self._json({"error":"Thiết lập hiển thị không hợp lệ"},400)
+            try:
+                saved=rpc("feedback_save_result",{
+                    "p_room_id":room,
+                    "p_host_token":host_token,
+                    "p_library_token":library_token,
+                    "p_title":title,
+                    "p_display_settings":display_settings
+                }) or {}
+                return self._json(saved if isinstance(saved,dict) else {"ok":True,"result":saved})
+            except Exception as e:return self._json({"error":"Không lưu được kết quả","detail":str(e)[:180]},502)
+
+        if parsed.path=="/api/results/rename":
+            library_token=str(body.get("library_token",""));result_id=str(body.get("result_id",""));title=str(body.get("title","")).strip()
+            if not UUID_RE.match(library_token) or not UUID_RE.match(result_id):return self._json({"error":"Mã kết quả không hợp lệ"},400)
+            if not (1<=len(title)<=120):return self._json({"error":"Tên kết quả phải có từ 1 đến 120 ký tự"},400)
+            try:
+                renamed=rpc("feedback_rename_result",{"p_library_token":library_token,"p_result_id":result_id,"p_title":title}) or {}
+                return self._json(renamed if isinstance(renamed,dict) else {"ok":True})
+            except Exception as e:return self._json({"error":"Không đổi được tên kết quả","detail":str(e)[:180]},502)
+
+        if parsed.path=="/api/results/delete":
+            library_token=str(body.get("library_token",""));result_id=str(body.get("result_id",""))
+            if not UUID_RE.match(library_token) or not UUID_RE.match(result_id):return self._json({"error":"Mã kết quả không hợp lệ"},400)
+            try:
+                deleted=rpc("feedback_delete_result",{"p_library_token":library_token,"p_result_id":result_id}) or {}
+                return self._json(deleted if isinstance(deleted,dict) else {"ok":True})
+            except Exception as e:return self._json({"error":"Không xóa được kết quả","detail":str(e)[:180]},502)
 
         if parsed.path=="/api/submit":
             room=str(body.get("room",""));participant=str(body.get("participant",""));name=str(body.get("name","")).strip();answer=clean_keyword(body.get("answer",""))

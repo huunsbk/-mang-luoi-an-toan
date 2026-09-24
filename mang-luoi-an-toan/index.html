@@ -21,7 +21,14 @@ header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-sp
 <style>
 .portal-home-fab{position:fixed;top:14px;left:14px;z-index:2147483647;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(15,23,42,.92);color:#fff!important;text-decoration:none;font:800 13px/1.1 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}
 .portal-home-fab:hover{transform:translateY(-1px);background:#0f172a}
-@media(max-width:640px){.portal-home-fab{top:8px;left:8px;padding:8px 11px;font-size:12px}}
+.result-modal{position:fixed;inset:0;z-index:2147483646;background:#0f172ab8;backdrop-filter:blur(6px);display:grid;place-items:center;padding:18px}
+.result-dialog{width:min(900px,96vw);max-height:90vh;background:#f8fbff;border:1px solid #fff;border-radius:26px;box-shadow:0 30px 80px #0f172a55;overflow:hidden;display:flex;flex-direction:column}
+.result-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:17px 20px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff}
+.result-head h2{margin:0;font-size:22px}.result-head .small{color:#e8edff}.result-close{width:38px;height:38px;border:0;border-radius:50%;background:#ffffff22;color:#fff;font-size:20px;font-weight:950;cursor:pointer}
+.result-list{padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.result-item{background:#fff;border:1px solid #dbe7f1;border-radius:18px;padding:13px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.result-item h3{margin:0 0 5px;font-size:16px}.result-meta{font-size:11px;color:#6b8296;font-weight:800}.result-question{font-size:12px;color:#38546d;line-height:1.4;margin-top:5px}.result-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.result-actions button{border:0;border-radius:10px;padding:8px 10px;font-size:11px;font-weight:900;cursor:pointer}.result-open{background:#e8f1ff;color:#1d4ed8}.result-rename{background:#fff4d8;color:#805900}.result-delete{background:#fff0f3;color:#a8344d}.result-empty{text-align:center;padding:36px 18px;color:#6b8296;font-weight:800}.result-foot{padding:10px 16px 14px;border-top:1px solid #e4edf5;font-size:11px;color:#71879a;background:#fff}.saved-view-note{font-size:11px;font-weight:900;color:#6d4ac9;margin-top:5px}
+@media(max-width:640px){.portal-home-fab{top:8px;left:8px;padding:8px 11px;font-size:12px}.result-item{grid-template-columns:1fr}.result-actions{justify-content:flex-start}.result-dialog{max-height:94vh}}
 </style>
 </head>
 <body>
@@ -59,12 +66,25 @@ header{text-align:center;padding:14px 12px 5px}.eyebrow{font-size:12px;letter-sp
       <button id="toggle" class="btn">👁 Ẩn tên người</button>
       <button id="hideAll" class="btn suspense">🔒 Khóa nội dung</button>
       <button id="showAll" class="btn success">🔓 Mở tất cả</button>
+      <button id="saveResult" class="btn primary">💾 Lưu kết quả</button>
+      <button id="history" class="btn">📚 Kết quả đã lưu</button>
       <button id="reset" class="btn danger wide">＋ Câu hỏi mới</button>
     </div>
     <div class="notice"><b>Cách đọc màn hình:</b> khi khóa nội dung, toàn bộ cụm vẫn hiện để thấy số lượng ý kiến. Nhấp trực tiếp vào từng 🔒 để mở từ khóa và tên người lựa chọn; hoặc bấm <b>Mở tất cả</b>.</div>
   </aside>
 </main>
 </section>
+
+<div id="historyModal" class="result-modal hide" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+  <div class="result-dialog">
+    <div class="result-head">
+      <div><h2 id="historyTitle">📚 Kết quả đã lưu</h2><div class="small">Mở lại các phiên phản hồi đã lưu trên đám mây.</div></div>
+      <button id="historyClose" class="result-close" aria-label="Đóng">✕</button>
+    </div>
+    <div id="historyList" class="result-list"><div class="result-empty">Đang tải lịch sử…</div></div>
+    <div class="result-foot">Kết quả đã lưu chứa tên người tham gia và phản hồi. Thư viện này được liên kết với trình duyệt người điều hành hiện tại.</div>
+  </div>
+</div>
 
 <section id="joinView" class="join hide">
 <div class="card">
@@ -104,7 +124,9 @@ if(room)joinMode(room);else hostMode();
 
 function hostMode(){
   $('hostView').classList.remove('hide');
-  let currentRoom=uuid(),hostToken=uuid(),roomReady=false,responses=[],showPeople=true,lastSignature='',seen=new Set(),pollTimer=null,failCount=0,currentQuestion='',currentLimit=3,revealMode=false,revealedKeys=new Set(),justUnlocked='';
+  let currentRoom=uuid(),hostToken=uuid(),roomReady=false,responses=[],showPeople=true,lastSignature='',seen=new Set(),pollTimer=null,failCount=0,currentQuestion='',currentLimit=3,revealMode=false,revealedKeys=new Set(),justUnlocked='',archiveMode=false,activeSavedResultId='',resultSaved=false;
+  let libraryToken=localStorage.getItem('feedback_library_token')||'';
+  if(!UUID.test(libraryToken)){libraryToken=uuid();localStorage.setItem('feedback_library_token',libraryToken)}
   const colorMap=new Map();let colorIndex=0;
   function colorFor(key){
     if(!colorMap.has(key)){const hue=Math.round((18+colorIndex*137.508)%360);colorMap.set(key,hue);colorIndex++}
@@ -113,7 +135,7 @@ function hostMode(){
   }
   function resetLocal(clearQuestion=true){
     if(pollTimer){clearTimeout(pollTimer);pollTimer=null}
-    currentRoom=uuid();hostToken=uuid();roomReady=false;responses=[];lastSignature='';seen.clear();currentQuestion='';currentLimit=3;colorMap.clear();colorIndex=0;revealMode=false;revealedKeys.clear();justUnlocked='';showPeople=true;
+    currentRoom=uuid();hostToken=uuid();roomReady=false;responses=[];lastSignature='';seen.clear();currentQuestion='';currentLimit=3;colorMap.clear();colorIndex=0;revealMode=false;revealedKeys.clear();justUnlocked='';showPeople=true;archiveMode=false;activeSavedResultId='';resultSaved=false;
     $('toggle').textContent='👁 Ẩn tên người';$('revealHint').classList.add('hide');
     $('cnt').textContent='0';$('clusters').textContent='0 từ khóa khác nhau';$('roomCode').textContent='—';$('joinUrl').textContent='';$('copy').classList.add('hide');
     $('qrbox').innerHTML='<div class="qrplaceholder">QR sẽ xuất hiện sau khi câu hỏi được lưu.</div>';
@@ -126,7 +148,14 @@ function hostMode(){
     const q=$('operatorQuestion').value.trim(),limit=parseInt($('wordLimit').value,10);
     if(q.length<5){alert('Vui lòng nhập câu hỏi ít nhất 5 ký tự.');$('operatorQuestion').focus();return}
     if(!Number.isInteger(limit)||limit<1||limit>20){alert('Giới hạn số từ phải từ 1 đến 20.');$('wordLimit').focus();return}
-    if(roomReady&&responses.length>0){if(!confirm('Lượt hiện tại đã có câu trả lời. Bắt đầu câu hỏi mới sẽ tạo một phòng mới. Tiếp tục?'))return;resetLocal(false)}
+    if(roomReady&&responses.length>0){
+      const warning=resultSaved
+        ? 'Lượt hiện tại đã có câu trả lời và đã được lưu. Bắt đầu câu hỏi mới sẽ tạo một phòng mới. Tiếp tục?'
+        : '⚠ Kết quả hiện tại CHƯA được lưu. Nếu tiếp tục, bạn có thể mất kết quả khỏi màn hình. Vẫn tạo câu hỏi mới?';
+      if(!confirm(warning))return;
+      resetLocal(false)
+    }
+    if(archiveMode){archiveMode=false;activeSavedResultId='';responses=[];lastSignature='';seen.clear();colorMap.clear();colorIndex=0;}
     $('startQuestion').disabled=true;$('startQuestion').textContent='ĐANG LƯU…';
     try{
       await jsonFetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:currentRoom,host_token:hostToken,question:q,word_limit:limit})});
@@ -150,7 +179,7 @@ function hostMode(){
       failCount=0;setStatus($('hostStatus'),'Hệ thống trực tuyến – giới hạn '+currentLimit+' từ','ok');
       const list=Array.isArray(data.answers)?data.answers:[];
       const sig=list.map(x=>x.id+':'+x.created_at+':'+x.answer).join('|');
-      if(sig!==lastSignature){responses=list;lastSignature=sig;draw()}
+      if(sig!==lastSignature){responses=list;lastSignature=sig;resultSaved=false;draw()}
       $('sync').textContent='Đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN');
     }catch(e){failCount++;setStatus($('hostStatus'),'Mất kết nối dữ liệu – đang thử lại','bad');$('sync').textContent='Lỗi: '+e.message}
     finally{if(roomReady)pollTimer=setTimeout(poll,failCount?1800:800)}
@@ -292,7 +321,7 @@ function hostMode(){
     return{layouts,height:Math.max(700,Math.ceil(y+25))};
   }
   function draw(){
-    const gs=groups();$('cnt').textContent=responses.length;$('clusters').textContent=gs.length+' từ khóa khác nhau';$('wait').classList.toggle('hide',roomReady&&responses.length>0);
+    const gs=groups();$('cnt').textContent=responses.length;$('clusters').textContent=gs.length+' từ khóa khác nhau';$('wait').classList.toggle('hide',(roomReady||archiveMode)&&responses.length>0);
     const svg=$('net'),stage=svg.closest('.stage'),layout=layoutClusters(gs),shield={x:580,y:300};let h='';
     svg.setAttribute('viewBox','0 0 1160 '+layout.height);
     svg.style.height=layout.height+'px';
@@ -337,12 +366,114 @@ function hostMode(){
     });
     svg.innerHTML=h;updateRevealHint(gs);
   }
+  function defaultResultTitle(){
+    const base=(currentQuestion||$('operatorQuestion').value.trim()||'Phiên phản hồi').replace(/\s+/g,' ').trim();
+    return base.length>90?base.slice(0,87)+'…':base;
+  }
+  async function saveCurrentResult(){
+    if(archiveMode){alert('Đây là kết quả đã lưu. Hãy mở Lịch sử để đổi tên hoặc xóa.');return}
+    if(!roomReady){alert('Hãy bắt đầu một câu hỏi trước khi lưu kết quả.');return}
+    if(!responses.length){alert('Chưa có phản hồi nào để lưu.');return}
+    const title=prompt('Tên kết quả đã lưu:',defaultResultTitle());
+    if(title===null)return;
+    const cleanTitle=title.trim();
+    if(!cleanTitle){alert('Tên kết quả không được để trống.');return}
+    const btn=$('saveResult');const old=btn.textContent;btn.disabled=true;btn.textContent='ĐANG LƯU…';
+    try{
+      const saved=await jsonFetch('/api/results/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        room:currentRoom,
+        host_token:hostToken,
+        library_token:libraryToken,
+        title:cleanTitle,
+        display_settings:{show_people:showPeople,reveal_mode:revealMode}
+      })});
+      activeSavedResultId=saved.id||activeSavedResultId;resultSaved=true;
+      btn.textContent='✅ ĐÃ LƯU';setTimeout(()=>{btn.textContent=old},1600);
+    }catch(e){alert('Không lưu được kết quả: '+e.message);btn.textContent=old}
+    finally{btn.disabled=false}
+  }
+  function formatSavedDate(value){
+    try{return new Date(value).toLocaleString('vi-VN')}catch{return String(value||'')}
+  }
+  async function loadHistory(){
+    const list=$('historyList');list.innerHTML='<div class="result-empty">Đang tải lịch sử…</div>';
+    try{
+      const data=await jsonFetch('/api/results?library_token='+encodeURIComponent(libraryToken)+'&_='+Date.now());
+      const items=Array.isArray(data.results)?data.results:[];
+      if(!items.length){list.innerHTML='<div class="result-empty">Chưa có kết quả nào được lưu.<br><span class="small">Khi có phản hồi, bấm “💾 Lưu kết quả”.</span></div>';return}
+      list.innerHTML=items.map(item=>
+        '<div class="result-item" data-result-id="'+escapeXml(item.id)+'">'+
+          '<div><h3>'+escapeXml(item.title)+'</h3>'+
+          '<div class="result-meta">'+Number(item.participant_count||0)+' người tham gia • '+escapeXml(formatSavedDate(item.updated_at||item.created_at))+'</div>'+
+          '<div class="result-question">'+escapeXml(item.question)+'</div></div>'+
+          '<div class="result-actions">'+
+            '<button class="result-open" data-action="open" data-id="'+escapeXml(item.id)+'">▶ Mở lại</button>'+
+            '<button class="result-rename" data-action="rename" data-id="'+escapeXml(item.id)+'" data-title="'+escapeXml(item.title)+'">✏️ Đổi tên</button>'+
+            '<button class="result-delete" data-action="delete" data-id="'+escapeXml(item.id)+'">🗑 Xóa</button>'+
+          '</div></div>'
+      ).join('');
+    }catch(e){list.innerHTML='<div class="result-empty">⚠ Không tải được lịch sử: '+escapeXml(e.message)+'</div>'}
+  }
+  async function openHistory(){
+    $('historyModal').classList.remove('hide');
+    await loadHistory();
+  }
+  function closeHistory(){$('historyModal').classList.add('hide')}
+  async function openSavedResult(id){
+    try{
+      const data=await jsonFetch('/api/results/item?library_token='+encodeURIComponent(libraryToken)+'&result_id='+encodeURIComponent(id)+'&_='+Date.now());
+      const item=data.result;if(!item)throw new Error('Không tìm thấy kết quả');
+      if(pollTimer){clearTimeout(pollTimer);pollTimer=null}
+      currentRoom=uuid();hostToken=uuid();roomReady=false;archiveMode=true;activeSavedResultId=item.id;resultSaved=true;
+      currentQuestion=item.question||'';currentLimit=Number(item.word_limit)||3;
+      responses=Array.isArray(item.responses)?item.responses:[];lastSignature='';seen.clear();colorMap.clear();colorIndex=0;
+      revealMode=false;revealedKeys.clear();justUnlocked='';showPeople=item.display_settings?.show_people!==false;
+      $('toggle').textContent=showPeople?'👁 Ẩn tên người':'👁 Hiện tên người';
+      $('operatorQuestion').value=currentQuestion;$('wordLimit').value=String(currentLimit);
+      $('hostQuestionDisplay').textContent=currentQuestion;$('questionBar').classList.remove('hide');
+      $('roomCode').textContent='ĐÃ LƯU';$('joinUrl').textContent='';$('copy').classList.add('hide');
+      $('qrbox').innerHTML='<div class="qrplaceholder"><b>📚 '+escapeXml(item.title)+'</b><div class="saved-view-note">Đang xem bản kết quả đã lưu • '+responses.length+' người tham gia</div></div>';
+      setStatus($('hostStatus'),'Đang xem kết quả đã lưu','ok');
+      $('sync').textContent='Lưu gần nhất: '+formatSavedDate(item.updated_at||item.created_at);
+      $('startQuestion').textContent='▶ DÙNG LẠI CÂU HỎI';
+      closeHistory();draw();
+    }catch(e){alert('Không mở được kết quả: '+e.message)}
+  }
+  async function renameSavedResult(id,currentTitle){
+    const title=prompt('Đổi tên kết quả:',currentTitle||'');
+    if(title===null)return;
+    const cleanTitle=title.trim();if(!cleanTitle){alert('Tên kết quả không được để trống.');return}
+    try{
+      await jsonFetch('/api/results/rename',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({library_token:libraryToken,result_id:id,title:cleanTitle})});
+      await loadHistory();
+    }catch(e){alert('Không đổi được tên: '+e.message)}
+  }
+  async function deleteSavedResult(id){
+    if(!confirm('Xóa vĩnh viễn kết quả đã lưu này?'))return;
+    try{
+      await jsonFetch('/api/results/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({library_token:libraryToken,result_id:id})});
+      if(activeSavedResultId===id)resetLocal(true);
+      await loadHistory();
+    }catch(e){alert('Không xóa được kết quả: '+e.message)}
+  }
+
   $('startQuestion').onclick=saveQuestion;
   $('operatorQuestion').addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')saveQuestion()});
   $('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
   $('toggle').onclick=()=>{showPeople=!showPeople;$('toggle').textContent=showPeople?'👁 Ẩn tên người':'👁 Hiện tên người';draw()};
   $('hideAll').onclick=hideAllResults;
   $('showAll').onclick=showAllResults;
+  $('saveResult').onclick=saveCurrentResult;
+  $('history').onclick=openHistory;
+  $('historyClose').onclick=closeHistory;
+  $('historyModal').addEventListener('click',e=>{if(e.target===$('historyModal'))closeHistory()});
+  $('historyList').addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-action]');if(!btn)return;
+    const id=btn.getAttribute('data-id'),action=btn.getAttribute('data-action');
+    if(action==='open')openSavedResult(id);
+    if(action==='rename')renameSavedResult(id,btn.getAttribute('data-title')||'');
+    if(action==='delete')deleteSavedResult(id);
+  });
   $('net').addEventListener('click',e=>{
     if(!revealMode)return;
     const group=e.target.closest?e.target.closest('[data-key]'):null;
@@ -351,7 +482,15 @@ function hostMode(){
     if(key)unlockKey(key);
   });
   $('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('joinUrl').textContent);$('copy').textContent='✅ Đã sao chép';setTimeout(()=>$('copy').textContent='📋 Sao chép link tham gia',1600)}catch{$('copy').textContent='Hãy sao chép link bên trên'}};
-  $('reset').onclick=()=>{if(roomReady||$('operatorQuestion').value.trim()){if(!confirm('Tạo câu hỏi mới? Lượt hiện tại trên màn hình sẽ được kết thúc.'))return}resetLocal(true);$('operatorQuestion').focus()};
+  $('reset').onclick=()=>{
+    if(roomReady||archiveMode||$('operatorQuestion').value.trim()){
+      const warning=roomReady&&responses.length&&!resultSaved
+        ? '⚠ Kết quả hiện tại CHƯA được lưu. Tạo câu hỏi mới và rời kết quả này?'
+        : 'Tạo câu hỏi mới? Lượt hiện tại trên màn hình sẽ được kết thúc.';
+      if(!confirm(warning))return
+    }
+    resetLocal(true);$('operatorQuestion').focus()
+  };
   resetLocal(false);
 }
 
