@@ -19,7 +19,7 @@ await page.waitForURL('**/boc-tham/');
 await page.getByText('Cổng giáo viên', { exact: false }).first().click();
 await page.waitForURL('http://127.0.0.1:4173/');
 
-await page.getByRole('link', { name: /MỞ MẠNG LƯỚI AN TOÀN/i }).click();
+await page.getByRole('link', { name: /MỞ BẢN ĐỒ PHẢN HỒI/i }).click();
 await page.waitForURL('**/mang-luoi-an-toan/');
 await page.getByText('Cổng giáo viên', { exact: false }).first().click();
 await page.waitForURL('http://127.0.0.1:4173/');
