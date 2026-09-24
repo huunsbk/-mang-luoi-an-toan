@@ -73,6 +73,7 @@
             if (file) {
                 const form = new FormData();
                 form.append('file', file);
+                if (payload && Object.keys(payload).length) form.append('payload', JSON.stringify(payload));
                 options.body = form;
                 options.headers['x-pose-action'] = action;
             } else {
@@ -99,6 +100,39 @@
             RAISE_RIGHT: { label: 'Giơ tay phải', icon: '🙋‍♀️' },
             BOTH_UP: { label: 'Giơ hai tay', icon: '🙌' },
             CROSS_ARMS: { label: 'Khoanh tay', icon: '🙅' }
+        };
+
+        let sharedAudioContext = null;
+        const unlockAudio = () => {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return null;
+                if (!sharedAudioContext) sharedAudioContext = new AudioCtx();
+                if (sharedAudioContext.state === 'suspended') sharedAudioContext.resume().catch(() => {});
+                return sharedAudioContext;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const playDefaultFeedbackTone = (isCorrect, volume = 0.9) => {
+            const ctx = unlockAudio();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const now = ctx.currentTime;
+                osc.type = isCorrect ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(isCorrect ? 660 : 220, now);
+                if (isCorrect) osc.frequency.exponentialRampToValueAtTime(990, now + 0.16);
+                else osc.frequency.exponentialRampToValueAtTime(150, now + 0.22);
+                gain.gain.setValueAtTime(Math.max(0.02, Math.min(1, volume)) * 0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (isCorrect ? 0.28 : 0.38));
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + (isCorrect ? 0.3 : 0.4));
+            } catch (_) {}
         };
 
         const analyzePose = (landmarks) => {
@@ -667,7 +701,16 @@
                     audio: {
                         correct: { data: null, name: "" },
                         wrong: { data: null, name: "" },
-                        bgm: { data: null, name: "" }
+                        bgm: { data: null, name: "" },
+                        bgmVolume: 0.3,
+                        feedbackVolume: 0.9,
+                        questionVolume: 1,
+                        defaultFeedback: true
+                    },
+                    theme: {
+                        background: null,
+                        overlay: 0.68,
+                        fit: "cover"
                     }
                 };
             });
@@ -780,7 +823,16 @@
                     audio: {
                         correct: { data: null, name: '' },
                         wrong: { data: null, name: '' },
-                        bgm: { data: null, name: '' }
+                        bgm: { data: null, name: '' },
+                        bgmVolume: 0.3,
+                        feedbackVolume: 0.9,
+                        questionVolume: 1,
+                        defaultFeedback: true
+                    },
+                    theme: {
+                        background: null,
+                        overlay: 0.68,
+                        fit: 'cover'
                     }
                 });
                 setScreen('EDITOR');
@@ -828,7 +880,7 @@
                 <h1 className="text-6xl font-black mb-2 tracking-tighter uppercase">AI POSE QUIZ</h1>
                 <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V9.9 Cloud</p>
                 <div className="flex flex-col gap-3 w-[34rem] max-w-full">
-                    <button onClick={() => setScreen('GAME')} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
+                    <button onClick={() => { unlockAudio(); setScreen('GAME'); }} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
                     <div className="grid grid-cols-2 gap-3">
                         <button onClick={() => setScreen('EDITOR')} className="bg-white/10 hover:bg-white/20 py-3.5 rounded-2xl text-base font-black backdrop-blur-md border border-white/30 transition-all uppercase">✏️ Soạn bài</button>
                         <button onClick={() => setScreen('BANK')} className="bg-violet-500/90 hover:bg-violet-400 py-3.5 rounded-2xl text-base font-black shadow-lg transition-all uppercase">📚 Kho câu hỏi</button>
@@ -861,6 +913,9 @@
             const isMounted = useRef(true);
 
             const currentQuestion = settings.questions[qIndex];
+            const lessonBackground = mediaSrc(settings.theme?.background);
+            const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
+            const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
 
             const getPoseVisual = (poseId) => {
                 if (mediaSrc(settings.poseAssets?.[poseId])) {
@@ -905,7 +960,15 @@
                         questionAudioRef.current.currentTime = 0;
                     }
                     const audioSrc = mediaSrc(isCorrect ? settings.audio.correct?.data : settings.audio.wrong?.data);
-                    if (audioSrc && !isMuted) new Audio(audioSrc).play().catch(() => {});
+                    if (!isMuted && audioSrc) {
+                        const feedbackAudio = new Audio(audioSrc);
+                        feedbackAudio.volume = Math.min(1, Math.max(0, Number(settings.audio.feedbackVolume ?? 0.9)));
+                        feedbackAudio.play().catch(() => {
+                            if (settings.audio.defaultFeedback !== false) playDefaultFeedbackTone(isCorrect, settings.audio.feedbackVolume ?? 0.9);
+                        });
+                    } else if (!isMuted && settings.audio.defaultFeedback !== false) {
+                        playDefaultFeedbackTone(isCorrect, settings.audio.feedbackVolume ?? 0.9);
+                    }
 
                     setTimeout(() => {
                         if (!isMounted.current) return;
@@ -941,7 +1004,7 @@
                 if (settings.audio.bgm?.data && !isMuted) {
                     bgmRef.current = new Audio(mediaSrc(settings.audio.bgm.data));
                     bgmRef.current.loop = true;
-                    bgmRef.current.volume = 0.3;
+                    bgmRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.bgmVolume ?? 0.3)));
                     bgmRef.current.play().catch(() => {});
                 }
                 return () => {
@@ -950,7 +1013,7 @@
                         bgmRef.current = null;
                     }
                 };
-            }, [isMuted, settings.audio.bgm?.data]);
+            }, [isMuted, settings.audio.bgm?.data, settings.audio.bgmVolume]);
 
             useEffect(() => {
                 if (questionAudioRef.current) {
@@ -960,7 +1023,7 @@
                 const questionAudio = mediaSrc(currentQuestion?.audio?.data);
                 if (questionAudio && !isMuted && !feedback) {
                     questionAudioRef.current = new Audio(questionAudio);
-                    questionAudioRef.current.volume = 1;
+                    questionAudioRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.questionVolume ?? 1)));
                     questionAudioRef.current.play().catch(() => {});
                 }
                 return () => {
@@ -969,7 +1032,7 @@
                         questionAudioRef.current = null;
                     }
                 };
-            }, [qIndex, currentQuestion?.audio?.data, isMuted]);
+            }, [qIndex, currentQuestion?.audio?.data, isMuted, settings.audio.questionVolume]);
 
             useEffect(() => {
                 if (!gameReady) return;
@@ -1071,8 +1134,17 @@
                     </div>
 
                     <div className="flex-1 flex overflow-hidden">
-                        <div className="w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2">
-                            <div className="flex-[5] bg-indigo-50/30 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                        <div
+                            className="w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2 relative overflow-hidden"
+                            style={lessonBackground ? {
+                                backgroundImage: `url("${lessonBackground}")`,
+                                backgroundSize: lessonBackgroundFit,
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'no-repeat'
+                            } : undefined}
+                        >
+                            {lessonBackground && <div className="absolute inset-0 pointer-events-none" style={{backgroundColor: `rgba(248,250,252,${lessonOverlay})`}}></div>}
+                            <div className="flex-[5] bg-indigo-50/60 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden z-10">
                                 <h2 className="text-3xl font-black text-slate-800 mb-4 text-center leading-tight">{currentQuestion.text}</h2>
                                 {currentQuestion.image ? (
                                     <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
@@ -1085,7 +1157,7 @@
                                 )}
                             </div>
                             
-                            <div className="flex-[3] grid grid-cols-2 gap-2">
+                            <div className="flex-[3] grid grid-cols-2 gap-2 relative z-10">
                                 {currentQuestion.answers.slice(0, settings.numAnswers).map((ans, idx) => (
                                     <div key={idx} className={`answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
                                         <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 rounded-2xl mr-3 text-white text-2xl font-black shadow-md">{String.fromCharCode(65 + idx)}</div>
@@ -1138,9 +1210,142 @@
             );
         };
 
+        const FastImportModal = ({
+            open, onClose, importText, setImportText, busy, preview,
+            onAnalyzePaste, onExcel, importMode, setImportMode,
+            poseMapping, onPoseChange, onApply
+        }) => {
+            if (!open) return null;
+            const poseOptions = ['RAISE_LEFT', 'RAISE_RIGHT', 'BOTH_UP', 'CROSS_ARMS'];
+            return (
+                <div className="fixed inset-0 z-[100000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-[min(1100px,96vw)] max-h-[94vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+                        <div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase">⚡ Nhập nhanh câu hỏi</h3>
+                                <p className="text-white/85 text-sm font-semibold">Dán từ Word / Excel / Google Sheets hoặc chọn file Excel.</p>
+                            </div>
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 font-black text-xl">✕</button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 grid lg:grid-cols-[1fr_1.15fr] gap-6">
+                            <div className="space-y-5">
+                                <section className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                    <div className="font-black text-slate-700 mb-2">1. Mapping đáp án → tư thế</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['A','B','C','D'].map(letter => (
+                                            <label key={letter} className="bg-white border border-slate-200 rounded-xl p-2 text-xs font-black text-slate-500">
+                                                <span className="block mb-1 text-indigo-600">Đáp án {letter}</span>
+                                                <select value={poseMapping[letter]} onChange={(e) => onPoseChange(letter, e.target.value)} className="w-full p-2 rounded-lg bg-slate-50 border border-slate-100 font-bold text-slate-700">
+                                                    {poseOptions.map(poseId => <option key={poseId} value={poseId}>{DEFAULT_POSE_CONFIG[poseId].label}</option>)}
+                                                </select>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mt-2">Mỗi A–D nên dùng một tư thế khác nhau. Mapping áp dụng cho toàn bộ câu vừa nhập.</p>
+                                </section>
+
+                                <section className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4">
+                                    <div className="font-black text-indigo-800 mb-2">2A. Dán nhanh</div>
+                                    <textarea
+                                        value={importText}
+                                        onChange={(e) => setImportText(e.target.value)}
+                                        placeholder={"Câu 1. Thiết bị nào dùng để nhập văn bản?\nA. Chuột\nB. Bàn phím\nC. Loa\nD. Máy in\nĐáp án: B"}
+                                        className="w-full min-h-[210px] p-3 bg-white rounded-xl border-2 border-indigo-100 outline-none focus:border-indigo-300 text-sm"
+                                    />
+                                    <button disabled={busy || !importText.trim()} onClick={onAnalyzePaste} className="mt-3 w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white py-3 rounded-xl font-black">
+                                        {busy ? 'ĐANG PHÂN TÍCH...' : '🔎 PHÂN TÍCH NỘI DUNG DÁN'}
+                                    </button>
+                                </section>
+
+                                <section className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4">
+                                    <div className="font-black text-emerald-800 mb-2">2B. Hoặc chọn Excel</div>
+                                    <p className="text-xs text-emerald-700 mb-3">6 cột: <b>Câu hỏi | A | B | C | D | Đáp án</b>. Có thể thêm cột STT ở đầu.</p>
+                                    <label className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black text-center cursor-pointer">
+                                        📊 CHỌN EXCEL .XLSX / .XLS
+                                        <input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="hidden" onChange={onExcel} />
+                                    </label>
+                                </section>
+                            </div>
+
+                            <div className="space-y-4">
+                                <section className="bg-white border-2 border-slate-100 rounded-2xl p-4 min-h-[240px]">
+                                    <div className="flex items-center justify-between gap-3 mb-3">
+                                        <div className="font-black text-slate-700">3. Kiểm tra trước khi nhập</div>
+                                        {preview && (
+                                            <div className="flex gap-2 text-xs font-black">
+                                                <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600">{preview.total || 0} câu</span>
+                                                <span className="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ {preview.valid_count || 0}</span>
+                                                <span className="px-2 py-1 rounded-lg bg-red-100 text-red-700">⚠ {preview.invalid_count || 0}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {!preview && <div className="grid place-items-center h-[190px] text-slate-400 font-bold text-center">Dán nội dung hoặc chọn Excel rồi bấm phân tích.<br/>Dữ liệu chưa được thêm vào bài cho đến khi thầy/cô xác nhận.</div>}
+
+                                    {preview && (
+                                        <>
+                                            {(preview.mapping_errors || []).map((msg, i) => <div key={'m'+i} className="mb-2 p-2 rounded-lg bg-red-50 text-red-700 text-xs font-bold">⚠ {msg}</div>)}
+                                            {(preview.errors || []).map((msg, i) => <div key={'e'+i} className="mb-2 p-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold">ℹ {msg}</div>)}
+                                            <div className="max-h-[390px] overflow-auto border border-slate-100 rounded-xl">
+                                                <table className="w-full text-xs">
+                                                    <thead className="sticky top-0 bg-slate-100 text-slate-600">
+                                                        <tr><th className="p-2 text-left">Dòng</th><th className="p-2 text-left">Câu hỏi</th><th className="p-2 text-left">Đáp án</th><th className="p-2 text-left">Trạng thái</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(preview.items || []).slice(0, 100).map((item, idx) => (
+                                                            <tr key={idx} className={item.valid ? 'border-t border-slate-100' : 'border-t border-red-100 bg-red-50'}>
+                                                                <td className="p-2 font-black">{item.row}</td>
+                                                                <td className="p-2 font-bold text-slate-700">{item.question?.text}</td>
+                                                                <td className="p-2 text-slate-500">{(item.question?.answers || []).map(a => a.text).join(' • ')}</td>
+                                                                <td className="p-2">
+                                                                    {item.valid ? <span className="text-emerald-600 font-black">Hợp lệ</span> : <span className="text-red-600 font-bold">{(item.errors || []).join(' ')}</span>}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {(preview.items || []).length > 100 && <div className="text-[11px] text-slate-400 mt-2 text-center">Đang hiển thị 100 dòng đầu; toàn bộ câu hợp lệ vẫn sẽ được nhập.</div>}
+                                        </>
+                                    )}
+                                </section>
+
+                                <section className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                    <div className="font-black text-slate-700 mb-2">4. Cách đưa vào bài hiện tại</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => setImportMode('replace')} className={'p-3 rounded-xl font-black border-2 ' + (importMode === 'replace' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500')}>Thay toàn bộ câu</button>
+                                        <button onClick={() => setImportMode('append')} className={'p-3 rounded-xl font-black border-2 ' + (importMode === 'append' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500')}>Thêm vào cuối bài</button>
+                                    </div>
+                                    <button
+                                        disabled={busy || !preview || !preview.valid_count || (preview.mapping_errors || []).length > 0}
+                                        onClick={onApply}
+                                        className="mt-3 w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-40 text-white py-3.5 rounded-xl font-black text-lg shadow-lg"
+                                    >
+                                        ✓ NHẬP {preview?.valid_count || 0} CÂU HỢP LỆ
+                                    </button>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const Editor = ({ settings, setSettings, setScreen, usage, onSaveCloud, onOpenCloud, onOpenBank, onSaveQuestionsToBank, onImported, cloudId }) => {
             const [qIdx, setQIdx] = useState(0);
             const [shareGroups, setShareGroups] = useState([]);
+            const [importOpen, setImportOpen] = useState(false);
+            const [importText, setImportText] = useState('');
+            const [importBusy, setImportBusy] = useState(false);
+            const [importPreview, setImportPreview] = useState(null);
+            const [importMode, setImportMode] = useState('append');
+            const [poseMapping, setPoseMapping] = useState({
+                A: 'RAISE_LEFT',
+                B: 'RAISE_RIGHT',
+                C: 'BOTH_UP',
+                D: 'CROSS_ARMS'
+            });
             const q = settings.questions[qIdx] || settings.questions[0];
 
             useEffect(() => {
@@ -1160,6 +1365,88 @@
                 } finally {
                     e.target.value = '';
                 }
+            };
+
+            const openFastImport = () => {
+                const onlyOne = (settings.questions || []).length === 1;
+                const text = String(settings.questions?.[0]?.text || '');
+                const looksLikeStarter = onlyOne && (/Nhập nội dung câu hỏi|Em hãy tạo dáng/i.test(text));
+                setImportMode(looksLikeStarter ? 'replace' : 'append');
+                setImportPreview(null);
+                setImportOpen(true);
+            };
+
+            const closeFastImport = () => {
+                if (importBusy) return;
+                setImportOpen(false);
+            };
+
+            const analyzeImportPaste = async () => {
+                setImportBusy(true);
+                try {
+                    const result = await backendRequest('questions.import.preview', {
+                        text: importText,
+                        pose_mapping: poseMapping
+                    });
+                    setImportPreview(result);
+                } catch (err) {
+                    alert('Không phân tích được nội dung: ' + err.message);
+                } finally {
+                    setImportBusy(false);
+                }
+            };
+
+            const analyzeImportExcel = async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImportBusy(true);
+                try {
+                    const result = await backendRequest('questions.import.preview', {
+                        pose_mapping: poseMapping
+                    }, file);
+                    setImportPreview(result);
+                } catch (err) {
+                    alert('Không đọc được Excel: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                    setImportBusy(false);
+                }
+            };
+
+            const changeImportPose = (letter, pose) => {
+                setPoseMapping(prev => ({...prev, [letter]: pose}));
+                setImportPreview(null);
+            };
+
+            const applyImportedQuestions = () => {
+                const imported = (importPreview?.items || []).filter(item => item.valid).map(item => item.question);
+                if (!imported.length) return alert('Không có câu hợp lệ để nhập.');
+                if ((importPreview?.mapping_errors || []).length) return alert(importPreview.mapping_errors.join('\n'));
+                const previousCount = (settings.questions || []).length;
+                const nextQuestions = importMode === 'replace'
+                    ? imported
+                    : [...(settings.questions || []), ...imported];
+                setSettings({...settings, questions: nextQuestions});
+                setQIdx(importMode === 'replace' ? 0 : previousCount);
+                setImportOpen(false);
+                setImportPreview(null);
+                setImportText('');
+                alert('Đã nhập ' + imported.length + ' câu hỏi hợp lệ vào bài.');
+            };
+
+            const previewConfiguredAudio = (type) => {
+                const src = mediaSrc(settings.audio?.[type]?.data);
+                if (!src) {
+                    if (type === 'correct' || type === 'wrong') {
+                        playDefaultFeedbackTone(type === 'correct', settings.audio?.feedbackVolume ?? 0.9);
+                    }
+                    return;
+                }
+                const audio = new Audio(src);
+                audio.volume = type === 'bgm'
+                    ? Math.min(1, Math.max(0, Number(settings.audio?.bgmVolume ?? 0.3)))
+                    : Math.min(1, Math.max(0, Number(settings.audio?.feedbackVolume ?? 0.9)));
+                audio.play().catch(() => {});
             };
 
             const updateQuestion = (data) => {
@@ -1206,6 +1493,21 @@
 
             return (
                 <div className="w-full h-full flex flex-col bg-slate-50 text-slate-800">
+                    <FastImportModal
+                        open={importOpen}
+                        onClose={closeFastImport}
+                        importText={importText}
+                        setImportText={setImportText}
+                        busy={importBusy}
+                        preview={importPreview}
+                        onAnalyzePaste={analyzeImportPaste}
+                        onExcel={analyzeImportExcel}
+                        importMode={importMode}
+                        setImportMode={setImportMode}
+                        poseMapping={poseMapping}
+                        onPoseChange={changeImportPose}
+                        onApply={applyImportedQuestions}
+                    />
                     <div className="bg-white border-b-2 border-slate-200 p-4 flex justify-between items-center px-8 shadow-sm">
                         <div className="flex flex-col">
                             <h2 className="text-2xl font-black text-indigo-600 uppercase tracking-tighter">THIẾT LẬP BÀI DẠY V9.9 CLOUD</h2>
@@ -1218,6 +1520,7 @@
                             </div>
                         </div>
                         <div className="flex gap-2 flex-wrap justify-end">
+                            <button onClick={openFastImport} className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase hover:bg-orange-400 shadow-md">⚡ Nhập nhanh</button>
                             <button onClick={onOpenBank} className="bg-violet-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-violet-700 shadow-md">📚 Kho câu hỏi</button>
                             <button onClick={() => setScreen('GROUPS')} className="bg-fuchsia-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-fuchsia-700 shadow-md">👥 Nhóm</button>
                             <button onClick={onOpenCloud} className="bg-sky-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-sky-600 shadow-md">☁️ Thư viện</button>
@@ -1275,23 +1578,78 @@
                             </section>
                             
                             <section>
-                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎵 Âm thanh</h3>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎨 Nền bài dạy</h3>
+                                <div className="space-y-3">
+                                    <div className="relative aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                                        {settings.theme?.background ? (
+                                            <>
+                                                <img src={mediaSrc(settings.theme.background)} className="absolute inset-0 w-full h-full object-cover" />
+                                                <div className="absolute inset-0" style={{backgroundColor: 'rgba(248,250,252,' + (settings.theme?.overlay ?? 0.68) + ')'}}></div>
+                                                <span className="relative z-10 text-[10px] font-black text-slate-600 bg-white/80 px-2 py-1 rounded-lg">XEM TRƯỚC NỀN</span>
+                                            </>
+                                        ) : <span className="text-xs font-bold text-slate-400">Chưa chọn ảnh nền</span>}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                                            onChange={(e) => handleFile(e, (data) => setSettings({...settings, theme: {...(settings.theme || {}), background: data, overlay: settings.theme?.overlay ?? 0.68, fit: settings.theme?.fit || 'cover'}}))}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <select value={settings.theme?.fit || 'cover'} onChange={(e) => setSettings({...settings, theme: {...(settings.theme || {}), fit: e.target.value}})} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black">
+                                            <option value="cover">Phủ kín nền</option>
+                                            <option value="contain">Hiện đủ ảnh</option>
+                                        </select>
+                                        {settings.theme?.background && <button onClick={() => setSettings({...settings, theme: {...(settings.theme || {}), background: null}})} className="px-3 rounded-xl bg-red-50 text-red-600 text-[9px] font-black">XÓA NỀN</button>}
+                                    </div>
+                                    <label className="block text-[9px] font-black text-slate-500 uppercase">
+                                        Độ phủ trắng: {Math.round((settings.theme?.overlay ?? 0.68) * 100)}%
+                                        <input type="range" min="20" max="95" value={Math.round((settings.theme?.overlay ?? 0.68) * 100)} onChange={(e) => setSettings({...settings, theme: {...(settings.theme || {}), overlay: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎵 Âm thanh toàn bài</h3>
                                 <div className="space-y-2">
                                     {['bgm', 'correct', 'wrong'].map(type => (
                                         <div key={type} className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-[10px]">
                                             <label className="font-bold text-slate-500 block mb-1 uppercase">{type === 'bgm' ? 'Nhạc nền' : type === 'correct' ? 'Âm Đúng' : 'Âm Sai'}</label>
-                                            <div className="relative h-7 border border-dashed border-slate-300 rounded-lg flex items-center justify-center font-bold text-slate-400 cursor-pointer overflow-hidden">
-                                                {settings.audio[type]?.name ? settings.audio[type].name : '+ Chọn file'}
+                                            <div className="relative h-8 border border-dashed border-slate-300 rounded-lg flex items-center justify-center font-bold text-slate-400 cursor-pointer overflow-hidden px-1 text-center">
+                                                {settings.audio?.[type]?.name
+                                                    ? settings.audio[type].name
+                                                    : type === 'bgm'
+                                                        ? '+ Chọn nhạc nền'
+                                                        : 'Âm mặc định • bấm để thay'}
                                                 <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFile(e, (data, name) => setSettings({...settings, audio: {...settings.audio, [type]: {data, name}}}))} />
                                             </div>
-                                            {settings.audio[type]?.data && (
-                                                <div className="flex gap-2 mt-1">
-                                                    <button type="button" onClick={() => new Audio(mediaSrc(settings.audio[type].data)).play().catch(() => {})} className="text-[8px] font-black text-indigo-500 uppercase">▶ Nghe thử</button>
-                                                    <button type="button" onClick={() => setSettings({...settings, audio: {...settings.audio, [type]: {data: null, name: ""}}})} className="text-[8px] font-black text-red-500 uppercase">Xóa</button>
-                                                </div>
-                                            )}
+                                            <div className="flex gap-2 mt-1">
+                                                {(settings.audio?.[type]?.data || (type !== 'bgm' && settings.audio?.defaultFeedback !== false)) && (
+                                                    <button type="button" onClick={() => previewConfiguredAudio(type)} className="text-[8px] font-black text-indigo-500 uppercase">▶ Nghe thử</button>
+                                                )}
+                                                {settings.audio?.[type]?.data && (
+                                                    <button type="button" onClick={() => setSettings({...settings, audio: {...settings.audio, [type]: {data: null, name: ""}}})} className="text-[8px] font-black text-red-500 uppercase">Dùng mặc định</button>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
+
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Nhạc nền: {Math.round((settings.audio?.bgmVolume ?? 0.3) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.bgmVolume ?? 0.3) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, bgmVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Đúng / sai: {Math.round((settings.audio?.feedbackVolume ?? 0.9) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.feedbackVolume ?? 0.9) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, feedbackVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Âm câu hỏi: {Math.round((settings.audio?.questionVolume ?? 1) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.questionVolume ?? 1) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, questionVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="flex items-center gap-2 bg-amber-50 border border-amber-100 p-2 rounded-xl text-[9px] font-black text-amber-700 uppercase cursor-pointer">
+                                        <input type="checkbox" checked={settings.audio?.defaultFeedback !== false} onChange={(e) => setSettings({...settings, audio: {...settings.audio, defaultFeedback: e.target.checked}})} />
+                                        Dùng âm đúng/sai mặc định khi chưa tải file
+                                    </label>
                                 </div>
                             </section>
 
