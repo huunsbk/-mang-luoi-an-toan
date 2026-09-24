@@ -25,9 +25,13 @@
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
+    .portal-home-fab{position:fixed;top:12px;left:12px;z-index:99999;padding:9px 12px;border-radius:12px;background:rgba(15,23,42,.92);color:#fff!important;text-decoration:none;font:800 13px/1.1 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}
+.portal-home-fab:hover{transform:translateY(-1px);background:#0f172a}
+@media(max-width:640px){.portal-home-fab{top:8px;left:8px;padding:8px 11px;font-size:12px}}
+</style>
 </head>
 <body>
+    <a class="portal-home-fab" href="/" title="Về Cổng công cụ giáo viên">🏠 Cổng giáo viên</a>
     <div id="root"></div>
 
     <script type="text/babel">
