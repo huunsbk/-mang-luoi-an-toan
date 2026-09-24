@@ -1434,6 +1434,21 @@
                 alert('Đã nhập ' + imported.length + ' câu hỏi hợp lệ vào bài.');
             };
 
+            const previewConfiguredAudio = (type) => {
+                const src = mediaSrc(settings.audio?.[type]?.data);
+                if (!src) {
+                    if (type === 'correct' || type === 'wrong') {
+                        playDefaultFeedbackTone(type === 'correct', settings.audio?.feedbackVolume ?? 0.9);
+                    }
+                    return;
+                }
+                const audio = new Audio(src);
+                audio.volume = type === 'bgm'
+                    ? Math.min(1, Math.max(0, Number(settings.audio?.bgmVolume ?? 0.3)))
+                    : Math.min(1, Math.max(0, Number(settings.audio?.feedbackVolume ?? 0.9)));
+                audio.play().catch(() => {});
+            };
+
             const updateQuestion = (data) => {
                 const nq = [...settings.questions];
                 nq[qIdx] = { ...nq[qIdx], ...data };
@@ -1563,23 +1578,78 @@
                             </section>
                             
                             <section>
-                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎵 Âm thanh</h3>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎨 Nền bài dạy</h3>
+                                <div className="space-y-3">
+                                    <div className="relative aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                                        {settings.theme?.background ? (
+                                            <>
+                                                <img src={mediaSrc(settings.theme.background)} className="absolute inset-0 w-full h-full object-cover" />
+                                                <div className="absolute inset-0" style={{backgroundColor: 'rgba(248,250,252,' + (settings.theme?.overlay ?? 0.68) + ')'}}></div>
+                                                <span className="relative z-10 text-[10px] font-black text-slate-600 bg-white/80 px-2 py-1 rounded-lg">XEM TRƯỚC NỀN</span>
+                                            </>
+                                        ) : <span className="text-xs font-bold text-slate-400">Chưa chọn ảnh nền</span>}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                                            onChange={(e) => handleFile(e, (data) => setSettings({...settings, theme: {...(settings.theme || {}), background: data, overlay: settings.theme?.overlay ?? 0.68, fit: settings.theme?.fit || 'cover'}}))}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <select value={settings.theme?.fit || 'cover'} onChange={(e) => setSettings({...settings, theme: {...(settings.theme || {}), fit: e.target.value}})} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black">
+                                            <option value="cover">Phủ kín nền</option>
+                                            <option value="contain">Hiện đủ ảnh</option>
+                                        </select>
+                                        {settings.theme?.background && <button onClick={() => setSettings({...settings, theme: {...(settings.theme || {}), background: null}})} className="px-3 rounded-xl bg-red-50 text-red-600 text-[9px] font-black">XÓA NỀN</button>}
+                                    </div>
+                                    <label className="block text-[9px] font-black text-slate-500 uppercase">
+                                        Độ phủ trắng: {Math.round((settings.theme?.overlay ?? 0.68) * 100)}%
+                                        <input type="range" min="20" max="95" value={Math.round((settings.theme?.overlay ?? 0.68) * 100)} onChange={(e) => setSettings({...settings, theme: {...(settings.theme || {}), overlay: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎵 Âm thanh toàn bài</h3>
                                 <div className="space-y-2">
                                     {['bgm', 'correct', 'wrong'].map(type => (
                                         <div key={type} className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-[10px]">
                                             <label className="font-bold text-slate-500 block mb-1 uppercase">{type === 'bgm' ? 'Nhạc nền' : type === 'correct' ? 'Âm Đúng' : 'Âm Sai'}</label>
-                                            <div className="relative h-7 border border-dashed border-slate-300 rounded-lg flex items-center justify-center font-bold text-slate-400 cursor-pointer overflow-hidden">
-                                                {settings.audio[type]?.name ? settings.audio[type].name : '+ Chọn file'}
+                                            <div className="relative h-8 border border-dashed border-slate-300 rounded-lg flex items-center justify-center font-bold text-slate-400 cursor-pointer overflow-hidden px-1 text-center">
+                                                {settings.audio?.[type]?.name
+                                                    ? settings.audio[type].name
+                                                    : type === 'bgm'
+                                                        ? '+ Chọn nhạc nền'
+                                                        : 'Âm mặc định • bấm để thay'}
                                                 <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFile(e, (data, name) => setSettings({...settings, audio: {...settings.audio, [type]: {data, name}}}))} />
                                             </div>
-                                            {settings.audio[type]?.data && (
-                                                <div className="flex gap-2 mt-1">
-                                                    <button type="button" onClick={() => new Audio(mediaSrc(settings.audio[type].data)).play().catch(() => {})} className="text-[8px] font-black text-indigo-500 uppercase">▶ Nghe thử</button>
-                                                    <button type="button" onClick={() => setSettings({...settings, audio: {...settings.audio, [type]: {data: null, name: ""}}})} className="text-[8px] font-black text-red-500 uppercase">Xóa</button>
-                                                </div>
-                                            )}
+                                            <div className="flex gap-2 mt-1">
+                                                {(settings.audio?.[type]?.data || (type !== 'bgm' && settings.audio?.defaultFeedback !== false)) && (
+                                                    <button type="button" onClick={() => previewConfiguredAudio(type)} className="text-[8px] font-black text-indigo-500 uppercase">▶ Nghe thử</button>
+                                                )}
+                                                {settings.audio?.[type]?.data && (
+                                                    <button type="button" onClick={() => setSettings({...settings, audio: {...settings.audio, [type]: {data: null, name: ""}}})} className="text-[8px] font-black text-red-500 uppercase">Dùng mặc định</button>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
+
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Nhạc nền: {Math.round((settings.audio?.bgmVolume ?? 0.3) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.bgmVolume ?? 0.3) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, bgmVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Đúng / sai: {Math.round((settings.audio?.feedbackVolume ?? 0.9) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.feedbackVolume ?? 0.9) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, feedbackVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Âm câu hỏi: {Math.round((settings.audio?.questionVolume ?? 1) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.questionVolume ?? 1) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, questionVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="flex items-center gap-2 bg-amber-50 border border-amber-100 p-2 rounded-xl text-[9px] font-black text-amber-700 uppercase cursor-pointer">
+                                        <input type="checkbox" checked={settings.audio?.defaultFeedback !== false} onChange={(e) => setSettings({...settings, audio: {...settings.audio, defaultFeedback: e.target.checked}})} />
+                                        Dùng âm đúng/sai mặc định khi chưa tải file
+                                    </label>
                                 </div>
                             </section>
 
