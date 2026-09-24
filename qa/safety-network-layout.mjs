@@ -80,9 +80,18 @@ async function run(browserType,name){
         content:g.querySelector('.personText')?.textContent||''
       };
     });
+    const clusterDetails=[...document.querySelectorAll('.clusterGroup')].map(cluster=>{
+      const keyword=cluster.querySelector('.keywordNode')?.getBBox();
+      const people=[...cluster.querySelectorAll('.personNode')].map(node=>node.getBBox());
+      return{
+        keyword:keyword?{x:keyword.x,y:keyword.y,width:keyword.width,height:keyword.height}:null,
+        people:people.map(b=>({x:b.x,y:b.y,width:b.width,height:b.height}))
+      };
+    });
     return{
       viewHeight:svg.viewBox.baseVal.height,
       clusters:[...document.querySelectorAll('.clusterGroup')].map(boxInfo),
+      clusterDetails,
       keywordChecks,
       peopleChecks,
       keywordCount:document.querySelectorAll('.keywordGroup').length,
@@ -114,6 +123,20 @@ async function run(browserType,name){
     for(let j=i+1;j<report.clusters.length;j++){
       if(intersect(report.clusters[i],report.clusters[j],3)){
         throw new Error(name+': cluster overlap '+i+' / '+j+' '+JSON.stringify([report.clusters[i],report.clusters[j]]));
+      }
+    }
+  }
+
+  for(let i=0;i<report.clusterDetails.length;i++){
+    const detail=report.clusterDetails[i];
+    if(!detail.keyword) continue;
+    for(let j=0;j<detail.people.length;j++){
+      if(intersect(detail.keyword,detail.people[j],0)){
+        throw new Error(name+': participant frame overlaps its keyword frame in cluster '+i+' person '+j);
+      }
+      const verticalGap=detail.people[j].y-(detail.keyword.y+detail.keyword.height);
+      if(verticalGap<18){
+        throw new Error(name+': keyword/person spacing too tight in cluster '+i+': '+verticalGap);
       }
     }
   }
