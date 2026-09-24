@@ -90,7 +90,9 @@ async function run(browserType,name){
     };
   });
 
-  if(report.keywordCount!==12) throw new Error(name+': expected 12 keyword groups, got '+report.keywordCount);
+  console.log('LAYOUT_REPORT_'+name.toUpperCase(), JSON.stringify(report));
+  await page.screenshot({path:'qa-safety-layout-'+name+'-precheck.png',fullPage:true});
+    if(report.keywordCount!==12) throw new Error(name+': expected 12 keyword groups, got '+report.keywordCount);
   if(report.personCount!==18) throw new Error(name+': expected 18 participant boxes, got '+report.personCount);
   if(report.viewHeight<=700) throw new Error(name+': SVG did not grow for dense content: '+report.viewHeight);
 
