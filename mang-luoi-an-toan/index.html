@@ -151,7 +151,7 @@ function hostMode(){
     if(roomReady&&responses.length>0){
       const warning=resultSaved
         ? 'Lượt hiện tại đã có câu trả lời và đã được lưu. Bắt đầu câu hỏi mới sẽ tạo một phòng mới. Tiếp tục?'
-        : '⚠ Kết quả hiện tại CHƯA được lưu. Nếu tiếp tục, thầy/cô có thể mất kết quả khỏi màn hình. Vẫn tạo câu hỏi mới?';
+        : '⚠ Kết quả hiện tại CHƯA được lưu. Nếu tiếp tục, bạn có thể mất kết quả khỏi màn hình. Vẫn tạo câu hỏi mới?';
       if(!confirm(warning))return;
       resetLocal(false)
     }
