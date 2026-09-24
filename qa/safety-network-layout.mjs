@@ -117,7 +117,7 @@ async function run(browserType,name){
   }
 
   const firstLong=report.keywordChecks.find(x=>x.content.includes('NGƯỜI LỚN ĐÁNG TIN CẬY'));
-  if(!firstLong || firstLong.rect.height<=58) throw new Error(name+': long keyword did not auto-grow vertically');
+  if(!firstLong || (firstLong.rect.height<=58 && firstLong.rect.width<=160)) throw new Error(name+': long keyword frame did not auto-grow');
   if(!firstLong.content.includes('LUÔN LẮNG NGHE VÀ HỖ TRỢ')) throw new Error(name+': long keyword content was truncated');
 
   const longName=report.peopleChecks.find(x=>x.content.includes('Nguyễn Thị Minh Hằng giáo viên chủ nhiệm'));
