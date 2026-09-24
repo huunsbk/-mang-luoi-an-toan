@@ -20,6 +20,27 @@ const session = {
   }
 };
 
+async function assertNoHorizontalOverflow(page, label) {
+  const metrics = await page.evaluate(() => ({
+    innerWidth: window.innerWidth,
+    docWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth
+  }));
+  if (metrics.docWidth > metrics.innerWidth + 3 || metrics.bodyWidth > metrics.innerWidth + 3) {
+    throw new Error(label + ' horizontal overflow: ' + JSON.stringify(metrics));
+  }
+}
+
+async function assertInsideViewport(page, selector, label) {
+  const box = await page.locator(selector).first().boundingBox();
+  if (!box) throw new Error(label + ' is not visible');
+  const viewport = page.viewportSize();
+  if (!viewport) return;
+  if (box.x < -2 || box.x + box.width > viewport.width + 2) {
+    throw new Error(label + ' is clipped horizontally: ' + JSON.stringify({box, viewport}));
+  }
+}
+
 function importQuestion(text, correctIndex = 1) {
   const poses = ['RAISE_LEFT','RAISE_RIGHT','BOTH_UP','CROSS_ARMS'];
   return {
@@ -97,9 +118,13 @@ async function run(browserType, name, contextOptions = {}) {
   await page.goto(APP_URL, { waitUntil: 'networkidle', timeout: 60000 });
   await page.getByRole('button', { name: /Soạn bài/i }).click();
   await page.getByText('THIẾT LẬP BÀI DẠY V9.9 CLOUD').waitFor();
+  await assertNoHorizontalOverflow(page, name + ' editor');
+  await assertInsideViewport(page, 'button:has-text("Nhập nhanh")', name + ' import button');
 
   await page.getByRole('button', { name: /Nhập nhanh/i }).click();
   await page.getByText('NHẬP NHANH CÂU HỎI', { exact: false }).waitFor();
+  await assertNoHorizontalOverflow(page, name + ' import modal');
+  await page.screenshot({ path: 'qa-pose-import-modal-' + name + '.png', fullPage: true });
 
   const pasted = [
     'Câu 1. Thiết bị nào dùng để nhập văn bản?',
@@ -149,6 +174,10 @@ async function run(browserType, name, contextOptions = {}) {
   await page.getByRole('button', { name: /^Xong$/i }).click();
   await page.getByRole('button', { name: /^Bắt đầu$/i }).click();
   await page.getByText('CÂU 1', { exact: true }).waitFor({ timeout: 30000 });
+  await assertNoHorizontalOverflow(page, name + ' game');
+  await assertInsideViewport(page, '.pose-game-check', name + ' check button');
+  await assertInsideViewport(page, '.pose-game-content', name + ' question panel');
+  await assertInsideViewport(page, '.pose-camera-panel', name + ' camera panel');
 
   await page.screenshot({ path: 'qa-pose-import-' + name + '.png', fullPage: true });
 
