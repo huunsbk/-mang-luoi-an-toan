@@ -27,11 +27,52 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .portal-home-fab{position:fixed;top:12px;left:12px;z-index:99999;padding:9px 12px;border-radius:12px;background:rgba(15,23,42,.92);color:#fff!important;text-decoration:none;font:800 13px/1.1 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}
 .portal-home-fab:hover{transform:translateY(-1px);background:#0f172a}
-@media(max-width:640px){.portal-home-fab{top:8px;left:8px;padding:8px 11px;font-size:12px}}
+@media(max-width:640px){.portal-home-fab{top:8px;left:8px;padding:8px 10px;font-size:12px}.portal-home-label{display:none}}
+@media(max-width:768px){
+  .pose-game-header{padding:6px 6px 6px 52px!important;gap:4px!important;min-height:58px}
+  .pose-game-header-left{gap:4px!important}
+  .pose-game-question-no{font-size:12px!important;padding:5px 7px!important;border-radius:9px!important}
+  .pose-game-mute{width:30px!important;height:30px!important;font-size:16px!important}
+  .pose-game-header-right{gap:5px!important}
+  .pose-game-timer{padding-right:5px!important}
+  .pose-game-timer-label{font-size:7px!important;letter-spacing:.06em!important}
+  .pose-game-timer-value{font-size:20px!important}
+  .pose-game-check{padding:7px 10px!important;font-size:13px!important;border-radius:12px!important;white-space:nowrap}
+  .pose-game-main{flex-direction:column!important}
+  .pose-game-content{width:100%!important;height:64%!important;min-height:0!important;border-right:0!important;border-bottom:2px solid #e2e8f0!important;padding:5px!important}
+  .pose-question-panel{padding:6px!important;border-radius:18px!important;min-height:0!important}
+  .pose-question-text{font-size:18px!important;margin-bottom:4px!important;line-height:1.12!important}
+  .pose-question-visual{width:92px!important;height:92px!important}
+  .pose-answers-grid{gap:5px!important;min-height:0!important}
+  .pose-answer-card{padding:4px!important;border-width:2px!important;border-radius:15px!important;min-width:0!important;overflow:hidden}
+  .pose-answer-letter{width:34px!important;height:34px!important;margin-right:5px!important;font-size:17px!important;border-radius:11px!important}
+  .pose-answer-text{font-size:11px!important;line-height:1.05!important;padding-right:2px!important}
+  .pose-answer-visual{width:40px!important;height:40px!important;border-radius:10px!important;border-width:1px!important}
+  .pose-camera-panel{width:100%!important;height:36%!important;min-height:0!important}
+  .pose-camera-status{left:6px!important;right:6px!important;bottom:6px!important;padding:6px!important;border-radius:12px!important}
+  .pose-camera-status-icon{width:34px!important;height:34px!important}
+  .pose-camera-status-name{font-size:13px!important}
+  .pose-camera-scan{display:none!important}
+
+  .pose-editor{height:100vh!important;overflow-y:auto!important}
+  .pose-editor-header{position:sticky!important;top:0;z-index:60;flex-direction:column!important;align-items:stretch!important;padding:10px 12px 10px 52px!important;gap:8px!important}
+  .pose-editor-title{font-size:17px!important}
+  .pose-editor-title-fields{flex-wrap:wrap!important}
+  .pose-editor-title-fields input{width:100%!important}
+  .pose-editor-actions{justify-content:flex-start!important;gap:5px!important}
+  .pose-editor-actions button,.pose-editor-actions label{padding:7px 9px!important;font-size:9px!important}
+  .pose-editor-body{display:block!important;overflow:visible!important}
+  .pose-editor-sidebar{width:100%!important;overflow:visible!important;padding:12px!important;box-shadow:none!important}
+  .pose-editor-content{padding:10px!important;overflow:visible!important}
+  .pose-editor-question-card{padding:12px!important;border-radius:20px!important}
+  .pose-editor-question-head{flex-direction:column!important;gap:10px!important}
+  .pose-editor-question-image{width:120px!important;align-self:center}
+  .pose-editor-answers{grid-template-columns:1fr!important;gap:8px!important}
+}
 </style>
 </head>
 <body>
-    <a class="portal-home-fab" href="/" title="Về Cổng công cụ giáo viên">🏠 Cổng giáo viên</a>
+    <a class="portal-home-fab" href="/" title="Về Cổng công cụ giáo viên">🏠 <span class="portal-home-label">Cổng giáo viên</span></a>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -1115,27 +1156,27 @@
 
             return (
                 <div className="w-full h-full flex flex-col bg-slate-100 overflow-hidden">
-                    <div className="bg-indigo-700 px-6 py-1.5 text-white flex justify-between items-center shadow-lg z-20">
-                        <div className="flex items-center gap-4">
-                            <span className="text-xl font-black bg-white/20 px-5 py-1 rounded-xl">CÂU {qIndex + 1}</span>
-                            <button onClick={() => setIsMuted(!isMuted)} className="text-xl w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-all">{isMuted ? '🔇' : '🔊'}</button>
+                    <div className="pose-game-header bg-indigo-700 px-6 py-1.5 text-white flex justify-between items-center shadow-lg z-20">
+                        <div className="pose-game-header-left flex items-center gap-4">
+                            <span className="pose-game-question-no text-xl font-black bg-white/20 px-5 py-1 rounded-xl">CÂU {qIndex + 1}</span>
+                            <button onClick={() => setIsMuted(!isMuted)} className="pose-game-mute text-xl w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-all">{isMuted ? '🔇' : '🔊'}</button>
                         </div>
-                        <div className="flex items-center gap-6">
-                            <div className="flex flex-col items-center border-r border-white/20 pr-6">
-                                <span className="text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Quét sau</span>
-                                <span className="text-3xl font-black text-yellow-400 leading-none">{checkTimer}s</span>
+                        <div className="pose-game-header-right flex items-center gap-6">
+                            <div className="pose-game-timer flex flex-col items-center border-r border-white/20 pr-6">
+                                <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Quét sau</span>
+                                <span className="pose-game-timer-value text-3xl font-black text-yellow-400 leading-none">{checkTimer}s</span>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Thời gian còn</span>
-                                <span className={`text-4xl font-black leading-none ${timeLeft < 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</span>
+                                <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Thời gian còn</span>
+                                <span className={`pose-game-timer-value text-4xl font-black leading-none ${timeLeft < 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</span>
                             </div>
-                            <button onClick={handleManualCheck} className="bg-yellow-400 text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
+                            <button onClick={handleManualCheck} className="pose-game-check bg-yellow-400 text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
                         </div>
                     </div>
 
-                    <div className="flex-1 flex overflow-hidden">
+                    <div className="pose-game-main flex-1 flex overflow-hidden">
                         <div
-                            className="w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2 relative overflow-hidden"
+                            className="pose-game-content w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2 relative overflow-hidden"
                             style={lessonBackground ? {
                                 backgroundImage: `url("${lessonBackground}")`,
                                 backgroundSize: lessonBackgroundFit,
@@ -1144,27 +1185,27 @@
                             } : undefined}
                         >
                             {lessonBackground && <div className="absolute inset-0 pointer-events-none" style={{backgroundColor: `rgba(248,250,252,${lessonOverlay})`}}></div>}
-                            <div className="flex-[5] bg-indigo-50/60 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden z-10">
-                                <h2 className="text-3xl font-black text-slate-800 mb-4 text-center leading-tight">{currentQuestion.text}</h2>
+                            <div className="pose-question-panel flex-[5] bg-indigo-50/60 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden z-10">
+                                <h2 className="pose-question-text text-3xl font-black text-slate-800 mb-4 text-center leading-tight">{currentQuestion.text}</h2>
                                 {currentQuestion.image ? (
                                     <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
                                         <img src={mediaSrc(currentQuestion.image)} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-4 border-white" alt="Câu hỏi" />
                                     </div>
                                 ) : (
-                                    <div className="w-64 h-64 flex items-center justify-center character-bounce">
+                                    <div className="pose-question-visual w-64 h-64 flex items-center justify-center character-bounce">
                                          {getPoseVisual(currentQuestion.answers.find(a=>a.isCorrect)?.pose)}
                                     </div>
                                 )}
                             </div>
                             
-                            <div className="flex-[3] grid grid-cols-2 gap-2 relative z-10">
+                            <div className="pose-answers-grid flex-[3] grid grid-cols-2 gap-2 relative z-10">
                                 {currentQuestion.answers.slice(0, settings.numAnswers).map((ans, idx) => (
-                                    <div key={idx} className={`answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
-                                        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 rounded-2xl mr-3 text-white text-2xl font-black shadow-md">{String.fromCharCode(65 + idx)}</div>
+                                    <div key={idx} className={`pose-answer-card answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
+                                        <div className="pose-answer-letter flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 rounded-2xl mr-3 text-white text-2xl font-black shadow-md">{String.fromCharCode(65 + idx)}</div>
                                         <div className="flex-1 min-w-0 pr-2">
-                                            <span className="text-lg font-bold text-slate-700 leading-tight block line-clamp-2">{ans.text}</span>
+                                            <span className="pose-answer-text text-lg font-bold text-slate-700 leading-tight block line-clamp-2">{ans.text}</span>
                                         </div>
-                                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center bg-white rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">
+                                        <div className="pose-answer-visual flex-shrink-0 w-20 h-20 flex items-center justify-center bg-white rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">
                                             {ans.image ? <img src={mediaSrc(ans.image)} className="w-full h-full object-contain" /> : getPoseVisual(ans.pose)}
                                         </div>
                                     </div>
@@ -1172,21 +1213,21 @@
                             </div>
                         </div>
 
-                        <div className="w-[38%] relative bg-slate-900 overflow-hidden flex flex-col">
+                        <div className="pose-camera-panel w-[38%] relative bg-slate-900 overflow-hidden flex flex-col">
                             <div className="relative flex-1 bg-black">
                                 <video ref={videoRef} playsInline className="camera-flip w-full h-full object-cover opacity-90" />
                                 <canvas ref={canvasRef} className="camera-flip absolute inset-0 w-full h-full" />
-                                <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between shadow-2xl border border-white/50">
+                                <div className="pose-camera-status absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between shadow-2xl border border-white/50">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-inner overflow-hidden border border-slate-200">
+                                        <div className="pose-camera-status-icon w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-inner overflow-hidden border border-slate-200">
                                             {getPoseVisual(detectedPose)}
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Bạn đang:</span>
-                                            <span className="text-xl font-black text-indigo-700 uppercase italic leading-none">{DEFAULT_POSE_CONFIG[detectedPose].label}</span>
+                                            <span className="pose-camera-status-name text-xl font-black text-indigo-700 uppercase italic leading-none">{DEFAULT_POSE_CONFIG[detectedPose].label}</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="pose-camera-scan flex items-center gap-2">
                                          <div className="text-right mr-2">
                                             <div className="text-[8px] font-bold text-slate-400 uppercase leading-none">Scanning</div>
                                             <div className="text-[10px] font-black text-indigo-500">{checkTimer}s</div>
@@ -1492,7 +1533,7 @@
             };
 
             return (
-                <div className="w-full h-full flex flex-col bg-slate-50 text-slate-800">
+                <div className="pose-editor w-full h-full flex flex-col bg-slate-50 text-slate-800">
                     <FastImportModal
                         open={importOpen}
                         onClose={closeFastImport}
@@ -1508,10 +1549,10 @@
                         onPoseChange={changeImportPose}
                         onApply={applyImportedQuestions}
                     />
-                    <div className="bg-white border-b-2 border-slate-200 p-4 flex justify-between items-center px-8 shadow-sm">
+                    <div className="pose-editor-header bg-white border-b-2 border-slate-200 p-4 flex justify-between items-center px-8 shadow-sm">
                         <div className="flex flex-col">
-                            <h2 className="text-2xl font-black text-indigo-600 uppercase tracking-tighter">THIẾT LẬP BÀI DẠY V9.9 CLOUD</h2>
-                            <div className="flex gap-2 mt-1">
+                            <h2 className="pose-editor-title text-2xl font-black text-indigo-600 uppercase tracking-tighter">THIẾT LẬP BÀI DẠY V9.9 CLOUD</h2>
+                            <div className="pose-editor-title-fields flex gap-2 mt-1">
                                 <input value={settings.subject || ''} onChange={(e) => setSettings({...settings, subject: e.target.value})} placeholder="Môn học (VD: Tin học)" className="w-48 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold outline-none focus:border-indigo-300" />
                                 <input value={settings.title || ''} onChange={(e) => setSettings({...settings, title: e.target.value})} placeholder="Tên bài dạy" className="w-80 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold outline-none focus:border-indigo-300" />
                             </div>
@@ -1519,7 +1560,7 @@
                                 <span className="text-[10px] font-bold text-emerald-600">☁️ {usage} media đang tham chiếu • Storage riêng tư</span>
                             </div>
                         </div>
-                        <div className="flex gap-2 flex-wrap justify-end">
+                        <div className="pose-editor-actions flex gap-2 flex-wrap justify-end">
                             <button onClick={openFastImport} className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase hover:bg-orange-400 shadow-md">⚡ Nhập nhanh</button>
                             <button onClick={onOpenBank} className="bg-violet-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-violet-700 shadow-md">📚 Kho câu hỏi</button>
                             <button onClick={() => setScreen('GROUPS')} className="bg-fuchsia-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-fuchsia-700 shadow-md">👥 Nhóm</button>
@@ -1534,8 +1575,8 @@
                         </div>
                     </div>
 
-                    <div className="flex-1 flex overflow-hidden">
-                        <div className="w-80 bg-white border-r border-slate-200 p-5 overflow-y-auto flex flex-col gap-6 shadow-inner">
+                    <div className="pose-editor-body flex-1 flex overflow-hidden">
+                        <div className="pose-editor-sidebar w-80 bg-white border-r border-slate-200 p-5 overflow-y-auto flex flex-col gap-6 shadow-inner">
                             <section>
                                 <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">⚙️ Thiết lập chung</h3>
                                 <div className="space-y-4 mb-6">
@@ -1681,10 +1722,10 @@
                             </section>
                         </div>
 
-                        <div className="flex-1 p-6 overflow-y-auto bg-slate-50">
+                        <div className="pose-editor-content flex-1 p-6 overflow-y-auto bg-slate-50">
                             {q && (
-                                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm space-y-6 max-w-5xl mx-auto border border-slate-200">
-                                    <div className="flex gap-6">
+                                <div className="pose-editor-question-card bg-white p-6 rounded-[2.5rem] shadow-sm space-y-6 max-w-5xl mx-auto border border-slate-200">
+                                    <div className="pose-editor-question-head flex gap-6">
                                         <div className="flex-1">
                                             <label className="text-xs font-black text-slate-400 uppercase block mb-1 tracking-widest">Câu hỏi</label>
                                             <textarea value={q.text} onChange={(e) => updateQuestion({text: e.target.value})} className="w-full border-2 border-slate-50 p-4 rounded-[1.5rem] text-xl font-black bg-slate-50 outline-none focus:border-indigo-300 min-h-[100px]" />
@@ -1701,7 +1742,7 @@
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="w-40 flex flex-col gap-2">
+                                        <div className="pose-editor-question-image w-40 flex flex-col gap-2">
                                             <label className="text-xs font-black text-slate-400 uppercase block tracking-widest text-center">Ảnh minh họa</label>
                                             <div className="relative aspect-square bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 overflow-hidden flex flex-col items-center justify-center">
                                                 {q.image ? <><img src={mediaSrc(q.image)} className="w-full h-full object-contain" /><button type="button" onClick={() => updateQuestion({image: null})} className="absolute top-1 right-1 z-20 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-lg">✕</button></> : <span className="text-2xl opacity-30 font-black">🖼️</span>}
@@ -1710,7 +1751,7 @@
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="pose-editor-answers grid grid-cols-2 gap-4">
                                         {q.answers.slice(0, settings.numAnswers).map((ans, idx) => (
                                             <div key={idx} className={`p-4 rounded-3xl border-2 transition-all ${ans.isCorrect ? 'border-green-500 bg-green-50/20 shadow-md ring-4 ring-green-50' : 'border-slate-100 bg-white'}`}>
                                                 <div className="flex justify-between items-center mb-2">
