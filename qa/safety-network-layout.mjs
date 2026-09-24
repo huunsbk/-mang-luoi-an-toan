@@ -1,6 +1,6 @@
 import { chromium, webkit } from 'playwright';
 
-const APP_URL='http://127.0.0.1:4173/mang-luoi-an-toan/';
+const APP_URL=process.env.APP_URL||'http://127.0.0.1:4173/mang-luoi-an-toan/';
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9WlZkAAAAASUVORK5CYII=','base64');
 
 const rows=[
