@@ -65,6 +65,23 @@ jobs:
           grep -q "Nền bài dạy" /tmp/pose.html
           grep -q "defaultFeedback" /tmp/pose.html
           grep -q "bgmVolume" /tmp/pose.html
+          if grep -Fq "options.headers['x-pose-action']" /tmp/pose.html; then
+            echo "Redundant x-pose-action header is still present in production frontend"
+            exit 1
+          fi
+
+          # Verify the exact browser preflight that previously blocked media/audio uploads.
+          curl -sS -D /tmp/pose-cors.headers -o /tmp/pose-cors.body -X OPTIONS \
+            "https://exfnarddchxzfewlztwb.supabase.co/functions/v1/pose-quiz-api?action=media.upload" \
+            -H "Origin: $BASE" \
+            -H "Access-Control-Request-Method: POST" \
+            -H "Access-Control-Request-Headers: authorization,apikey,x-pose-action"
+          grep -Eqi '^access-control-allow-origin: *\*' /tmp/pose-cors.headers
+          grep -Eqi '^access-control-allow-methods:.*POST' /tmp/pose-cors.headers
+          grep -Eqi '^access-control-allow-headers:.*authorization' /tmp/pose-cors.headers
+          grep -Eqi '^access-control-allow-headers:.*apikey' /tmp/pose-cors.headers
+          grep -Eqi '^access-control-allow-headers:.*x-pose-action' /tmp/pose-cors.headers
+          echo "POSE_MEDIA_CORS_PREFLIGHT_OK"
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/pose-quiz/supabase-config.js" -o /tmp/config.js
           grep -q "POSE_QUIZ_SUPABASE" /tmp/config.js
