@@ -1,11 +1,11 @@
-import { chromium, webkit } from 'playwright';
+import { chromium, webkit, devices } from 'playwright';
 
 const BASE='http://127.0.0.1:4180';
 const MODULE=BASE+'/mang-luoi-an-toan/';
 
-async function run(browserType,name){
+async function run(browserType,name,contextOptions={}){
   const browser=await browserType.launch({headless:true});
-  const context=await browser.newContext({locale:'vi-VN'});
+  const context=await browser.newContext({locale:'vi-VN',...contextOptions});
   const host=await context.newPage();
   const errors=[];
   host.on('pageerror',e=>errors.push('host: '+String(e)));
@@ -76,4 +76,4 @@ async function run(browserType,name){
 }
 
 await run(chromium,'chromium');
-await run(webkit,'webkit');
+await run(webkit,'iphone-webkit',devices['iPhone 13']);
