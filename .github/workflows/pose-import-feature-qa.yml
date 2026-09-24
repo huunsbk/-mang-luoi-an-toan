@@ -1,0 +1,70 @@
+name: Pose Import Feature QA
+
+on:
+  push:
+    branches:
+      - pose-import-v1
+    paths:
+      - 'pose-quiz/**'
+      - 'qa/pose-import-feature.mjs'
+      - '.github/workflows/pose-import-feature-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enforce backend-only business access
+        run: |
+          if grep -En "supabaseClient[[:space:]]*\.[[:space:]]*(from|rpc|storage)[[:space:]]*\(" pose-quiz/index.html; then
+            echo "Direct database/RPC/Storage access found in frontend"
+            exit 1
+          fi
+          if grep -En "localStorage\.(setItem|getItem).*pose_game" pose-quiz/index.html; then
+            echo "Business data persistence found in localStorage"
+            exit 1
+          fi
+          grep -q "questions.import.preview" pose-quiz/index.html
+          grep -q "Nhập nhanh" pose-quiz/index.html
+          grep -q "Nền bài dạy" pose-quiz/index.html
+          grep -q "defaultFeedback" pose-quiz/index.html
+          grep -q "bgmVolume" pose-quiz/index.html
+          grep -q "/pose-quiz/supabase-config.js" pose-quiz/index.html
+          echo "Static guards: PASS"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Start local portal
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/pose-import-http.log 2>&1 &
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/pose-quiz/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/pose-import-http.log
+          exit 1
+
+      - name: Run Chromium and iPhone WebKit feature flow
+        run: node qa/pose-import-feature.mjs
+
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pose-import-feature-qa
+          path: qa-pose-import-*.png
+          if-no-files-found: ignore
+          retention-days: 7
