@@ -116,7 +116,6 @@
                 form.append('file', file);
                 if (payload && Object.keys(payload).length) form.append('payload', JSON.stringify(payload));
                 options.body = form;
-                options.headers['x-pose-action'] = action;
             } else {
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify({ action, ...payload });
