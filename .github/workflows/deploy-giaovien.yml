@@ -60,6 +60,11 @@ jobs:
           grep -q "AI POSE QUIZ" /tmp/pose.html
           grep -q '/pose-quiz/supabase-config.js' /tmp/pose.html
           grep -q 'href="/"' /tmp/pose.html
+          grep -q "questions.import.preview" /tmp/pose.html
+          grep -q "Nhập nhanh" /tmp/pose.html
+          grep -q "Nền bài dạy" /tmp/pose.html
+          grep -q "defaultFeedback" /tmp/pose.html
+          grep -q "bgmVolume" /tmp/pose.html
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/pose-quiz/supabase-config.js" -o /tmp/config.js
           grep -q "POSE_QUIZ_SUPABASE" /tmp/config.js
