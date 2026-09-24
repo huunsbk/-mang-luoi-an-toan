@@ -54,7 +54,7 @@ jobs:
           curl -fsS http://127.0.0.1:4173/ | grep -q "AI Pose Quiz"
           curl -fsS http://127.0.0.1:4173/pose-quiz/ | grep -q "AI POSE QUIZ"
           curl -fsS http://127.0.0.1:4173/boc-tham/ | grep -qi "bốc thăm"
-          curl -fsS http://127.0.0.1:4173/mang-luoi-an-toan/ | grep -qi "mạng lưới"
+          curl -fsS http://127.0.0.1:4173/mang-luoi-an-toan/ | grep -qi "bản đồ phản hồi"
 
       - uses: actions/setup-node@v4
         with:
