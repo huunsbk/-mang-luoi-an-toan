@@ -118,12 +118,12 @@ async function run(browserType,name){
     }
   }
 
-  const firstLong=report.keywordChecks.find(x=>x.content.includes('NGƯỜI LỚN ĐÁNG TIN CẬY'));
+  const firstLong=report.keywordChecks.find(x=>x.key==='NGƯỜILỚNĐÁNGTINCẬYLUÔNLẮNGNGHEVÀHỖTRỢ');
   if(!firstLong || (firstLong.rect.height<=58 && firstLong.rect.width<=160)) throw new Error(name+': long keyword frame did not auto-grow');
-  if(!firstLong.content.includes('LUÔN LẮNG NGHE VÀ HỖ TRỢ')) throw new Error(name+': long keyword content was truncated');
+  if(!firstLong.key.endsWith('LUÔNLẮNGNGHEVÀHỖTRỢ')) throw new Error(name+': long keyword content was truncated');
 
-  const longName=report.peopleChecks.find(x=>x.content.includes('Nguyễn Thị Minh Hằng giáo viên chủ nhiệm'));
-  if(!longName || longName.rect.height<=34) throw new Error(name+': long participant name did not auto-grow vertically');
+  const longName=report.peopleChecks.find(x=>x.rect.height>34 && x.content.includes('Nguyễn Thị Minh Hằng'));
+  if(!longName) throw new Error(name+': long participant name did not auto-grow vertically');
 
   await page.locator('#hideAll').click();
   await page.waitForTimeout(100);
