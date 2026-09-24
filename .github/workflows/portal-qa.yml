@@ -33,6 +33,9 @@ jobs:
           grep -q "CỔNG CÔNG CỤ GIÁO VIÊN SỐ" index.html
           grep -q "ĐĂNG NHẬP" pose-quiz/index.html
           grep -q '/pose-quiz/supabase-config.js' pose-quiz/index.html
+          grep -q 'href="/"' pose-quiz/index.html
+          grep -q 'href="/"' boc-tham/index.html
+          grep -q 'href="/"' mang-luoi-an-toan/index.html
           grep -q "Cổng giáo viên" boc-tham/index.html
           grep -q "Cổng giáo viên" mang-luoi-an-toan/index.html
 
