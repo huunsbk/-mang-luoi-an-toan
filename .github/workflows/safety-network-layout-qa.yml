@@ -43,6 +43,11 @@ jobs:
       - name: Run dense adaptive layout QA
         run: node qa/safety-network-layout.mjs
 
+      - name: Run the same layout QA against production
+        env:
+          APP_URL: https://giaovien-psi.vercel.app/mang-luoi-an-toan/?qa_layout=1
+        run: node qa/safety-network-layout.mjs
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
