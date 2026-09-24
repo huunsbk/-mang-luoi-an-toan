@@ -1264,7 +1264,7 @@
                         <div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-between">
                             <div>
                                 <h3 className="text-2xl font-black uppercase">⚡ Nhập nhanh câu hỏi</h3>
-                                <p className="text-white/85 text-sm font-semibold">Dán từ Word / Excel / Google Sheets hoặc chọn file Excel.</p>
+                                <p className="text-white/85 text-sm font-semibold">Dán từ Word / Excel / Google Sheets hoặc chọn file Excel .xlsx.</p>
                             </div>
                             <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 font-black text-xl">✕</button>
                         </div>
@@ -1303,8 +1303,8 @@
                                     <div className="font-black text-emerald-800 mb-2">2B. Hoặc chọn Excel</div>
                                     <p className="text-xs text-emerald-700 mb-3">6 cột: <b>Câu hỏi | A | B | C | D | Đáp án</b>. Có thể thêm cột STT ở đầu.</p>
                                     <label className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black text-center cursor-pointer">
-                                        📊 CHỌN EXCEL .XLSX / .XLS
-                                        <input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="hidden" onChange={onExcel} />
+                                        📊 CHỌN EXCEL .XLSX
+                                        <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={onExcel} />
                                     </label>
                                 </section>
                             </div>
