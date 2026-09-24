@@ -8,17 +8,24 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 
-SUPABASE_URL="https://ykckqcykxfhpfqptckxk.supabase.co"
-API_KEY="sb_publishable_2pfQHPjlGmtgOgGO0qaHXA_zGrwUZwT"
+FEEDBACK_MAP_API_URL="https://exfnarddchxzfewlztwb.supabase.co/functions/v1/feedback-map-api"
 UUID_RE=re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",re.I)
 BASE_DIR=os.path.dirname(os.path.abspath(__file__))
 
 def rpc(name,payload,timeout=8):
-    data=json.dumps(payload,ensure_ascii=False).encode("utf-8")
-    req=urllib.request.Request(f"{SUPABASE_URL}/rest/v1/rpc/{name}",data=data,method="POST",headers={"Content-Type":"application/json","apikey":API_KEY,"User-Agent":"mang-luoi-an-toan/4.0"})
+    data=json.dumps({"rpc":name,"payload":payload},ensure_ascii=False).encode("utf-8")
+    req=urllib.request.Request(
+        FEEDBACK_MAP_API_URL,
+        data=data,
+        method="POST",
+        headers={"Content-Type":"application/json","User-Agent":"giaovien-psi-feedback-map/1.0"}
+    )
     with urllib.request.urlopen(req,timeout=timeout) as r:
         raw=r.read().decode("utf-8")
-        return json.loads(raw) if raw else None
+        result=json.loads(raw) if raw else {}
+        if result.get("error"):
+            raise RuntimeError(result.get("error"))
+        return result.get("data")
 
 def clean_keyword(value):
     value=unicodedata.normalize("NFC",str(value or "")).upper()
