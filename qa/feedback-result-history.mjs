@@ -16,8 +16,11 @@ async function run(browserType,name,contextOptions={}){
   const question='Điều gì giúp buổi học trở nên hiệu quả hơn?';
   await host.locator('#operatorQuestion').fill(question);
   await host.locator('#wordLimit').fill('5');
+  const roomResponsePromise=host.waitForResponse(r=>r.url().includes('/api/room') && r.request().method()==='POST',{timeout:60000});
   await host.locator('#startQuestion').click();
-  await host.getByText(/Phòng đã mở/i).waitFor({timeout:30000});
+  const roomResponse=await roomResponsePromise;
+  if(!roomResponse.ok()) throw new Error(name+': room POST failed '+roomResponse.status()+' '+await roomResponse.text());
+  await host.waitForFunction(()=>document.querySelector('#joinUrl')?.textContent?.includes('?room='),{timeout:30000});
 
   const joinUrl=await host.locator('#joinUrl').innerText();
   if(!joinUrl.includes('?room=')) throw new Error(name+': join URL missing room');
