@@ -13,8 +13,9 @@ async function run(browserType,name){
   await page.getByText('Bản đồ phản hồi',{exact:true}).first().waitFor();
   await page.getByRole('link',{name:/MỞ BẢN ĐỒ PHẢN HỒI/i}).click();
   await page.waitForURL('**/mang-luoi-an-toan/');
-  await page.getByText('BẢN ĐỒ',{exact:true}).waitFor();
-  await page.getByText('PHẢN HỒI',{exact:true}).first().waitFor();
+  const hostTitle=page.locator('.title');
+  await hostTitle.waitFor();
+  if(!((await hostTitle.innerText()).replace(/\s+/g,' ').trim().includes('BẢN ĐỒ PHẢN HỒI'))) throw new Error(name+': host title not renamed');
   if((await page.title())!=='Bản đồ phản hồi') throw new Error(name+': wrong document title: '+await page.title());
   const body=(await page.locator('body').innerText()).toLowerCase();
   for(const old of ['mạng lưới an toàn','tập huấn bảo vệ trẻ em','tên của thầy/cô','mời thầy cô']){
