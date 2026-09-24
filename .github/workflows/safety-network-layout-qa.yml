@@ -1,0 +1,53 @@
+name: Safety Network Adaptive Layout QA
+
+on:
+  push:
+    branches:
+      - safety-network-adaptive-layout
+      - giaovien-portal
+    paths:
+      - 'mang-luoi-an-toan/**'
+      - 'qa/safety-network-layout.mjs'
+      - '.github/workflows/safety-network-layout-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Start local portal
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/safety-layout-http.log 2>&1 &
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/mang-luoi-an-toan/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/safety-layout-http.log
+          exit 1
+
+      - name: Run dense adaptive layout QA
+        run: node qa/safety-network-layout.mjs
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-network-layout-qa
+          path: qa-safety-layout-*.png
+          if-no-files-found: ignore
+          retention-days: 7
