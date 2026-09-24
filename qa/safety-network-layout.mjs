@@ -90,7 +90,7 @@ async function run(browserType,name){
     };
   });
 
-  if(report.keywordCount!==11) throw new Error(name+': expected 11 keyword groups, got '+report.keywordCount);
+  if(report.keywordCount!==12) throw new Error(name+': expected 12 keyword groups, got '+report.keywordCount);
   if(report.personCount!==18) throw new Error(name+': expected 18 participant boxes, got '+report.personCount);
   if(report.viewHeight<=700) throw new Error(name+': SVG did not grow for dense content: '+report.viewHeight);
 
@@ -125,7 +125,7 @@ async function run(browserType,name){
 
   await page.locator('#hideAll').click();
   await page.waitForTimeout(100);
-  if(await page.locator('.keywordGroup.locked').count()!==11) throw new Error(name+': reveal-lock mode regression');
+  if(await page.locator('.keywordGroup.locked').count()!==12) throw new Error(name+': reveal-lock mode regression');
   await page.locator('#showAll').click();
   await page.waitForTimeout(100);
 
