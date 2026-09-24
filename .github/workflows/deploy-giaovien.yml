@@ -76,7 +76,7 @@ jobs:
           grep -q 'href="/"' /tmp/boc.html
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/mang-luoi-an-toan/" -o /tmp/safety.html
-          grep -qi "mạng lưới" /tmp/safety.html
+          grep -qi "bản đồ phản hồi" /tmp/safety.html
           grep -q 'href="/"' /tmp/safety.html
 
           curl --fail-with-body --location --retry 5 --retry-delay 3 -sS "$BASE/api/health" -o /tmp/health.json
