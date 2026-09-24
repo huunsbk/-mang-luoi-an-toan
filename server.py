@@ -140,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path=="/api/health":
             room="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";token="cccccccc-cccc-4ccc-8ccc-cccccccccccc";person="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-            question="Theo thầy cô điều gì giúp trẻ em an toàn hơn";limit=3;base="https://mang-luoi-an-toan.vercel.app"
+            question="Điều gì giúp một hoạt động tương tác hiệu quả hơn";limit=3;base="https://mang-luoi-an-toan.vercel.app"
             try:
                 set_room=self._post_json_url(base+"/api/room",{"room":room,"host_token":token,"question":question,"word_limit":limit})
                 room_data=self._get_json_url(base+"/api/room?room="+room)
