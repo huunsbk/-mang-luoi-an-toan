@@ -148,12 +148,16 @@
         };
 
         const DEFAULT_POSE_CONFIG = {
-            NONE: { label: 'Bình thường', icon: '🧍' },
-            RAISE_LEFT: { label: 'Giơ tay trái', icon: '🙋‍♂️' },
-            RAISE_RIGHT: { label: 'Giơ tay phải', icon: '🙋‍♀️' },
-            BOTH_UP: { label: 'Giơ hai tay', icon: '🙌' },
-            CROSS_ARMS: { label: 'Khoanh tay', icon: '🙅' }
+            NONE: { label: 'Bình thường', icon: '🧍', image: '/pose-quiz/assets/default-pose-none.webp' },
+            RAISE_LEFT: { label: 'Giơ tay trái', icon: '🙋‍♂️', image: '/pose-quiz/assets/default-pose-raise-left.webp' },
+            RAISE_RIGHT: { label: 'Giơ tay phải', icon: '🙋‍♀️', image: '/pose-quiz/assets/default-pose-raise-right.webp' },
+            BOTH_UP: { label: 'Giơ hai tay', icon: '🙌', image: '/pose-quiz/assets/default-pose-both-up.webp' },
+            CROSS_ARMS: { label: 'Khoanh tay', icon: '🙅', image: '/pose-quiz/assets/default-pose-cross-arms.webp' }
         };
+
+        const resolvedPoseAssetSrc = (settings, poseId) => (
+            mediaSrc(settings?.poseAssets?.[poseId]) || DEFAULT_POSE_CONFIG[poseId]?.image || null
+        );
 
         let sharedAudioContext = null;
         const unlockAudio = () => {
@@ -971,8 +975,9 @@
             const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
 
             const getPoseVisual = (poseId) => {
-                if (mediaSrc(settings.poseAssets?.[poseId])) {
-                    return <img src={mediaSrc(settings.poseAssets[poseId])} className="w-full h-full object-contain" />;
+                const src = resolvedPoseAssetSrc(settings, poseId);
+                if (src) {
+                    return <img src={src} className="w-full h-full object-contain" />;
                 }
                 return <span className="text-4xl">{DEFAULT_POSE_CONFIG[poseId]?.icon || '❓'}</span>;
             };
@@ -1603,8 +1608,8 @@
                                     {Object.keys(DEFAULT_POSE_CONFIG).map(poseId => (
                                         <div key={poseId} className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
                                             <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 flex-shrink-0">
-                                                {settings.poseAssets[poseId] ? (
-                                                    <img src={mediaSrc(settings.poseAssets[poseId])} className="w-full h-full object-contain" />
+                                                {resolvedPoseAssetSrc(settings, poseId) ? (
+                                                    <img src={resolvedPoseAssetSrc(settings, poseId)} className="w-full h-full object-contain" />
                                                 ) : (
                                                     <span className="text-xl">{DEFAULT_POSE_CONFIG[poseId].icon}</span>
                                                 )}
@@ -1783,7 +1788,7 @@
                                                     </div>
                                                     <div className="w-16 h-16 bg-white rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden relative shadow-inner">
                                                         {ans.image ? <img src={mediaSrc(ans.image)} className="w-full h-full object-contain" /> : (
-                                                            settings.poseAssets[ans.pose] ? <img src={mediaSrc(settings.poseAssets[ans.pose])} className="w-full h-full object-contain" /> : <span className="text-2xl">{DEFAULT_POSE_CONFIG[ans.pose]?.icon}</span>
+                                                            resolvedPoseAssetSrc(settings, ans.pose) ? <img src={resolvedPoseAssetSrc(settings, ans.pose)} className="w-full h-full object-contain" /> : <span className="text-2xl">{DEFAULT_POSE_CONFIG[ans.pose]?.icon}</span>
                                                         )}
                                                     </div>
                                                 </div>
