@@ -65,6 +65,11 @@ jobs:
           grep -q "Nền bài dạy" /tmp/pose.html
           grep -q "defaultFeedback" /tmp/pose.html
           grep -q "bgmVolume" /tmp/pose.html
+          if grep -Fq "getPoseVisual(currentQuestion.answers.find(a=>a.isCorrect)?.pose)" /tmp/pose.html; then
+            echo "Pose Quiz must not reveal the correct pose in the question panel"
+            exit 1
+          fi
+          grep -Fq "getPoseVisual(ans.pose)" /tmp/pose.html
           if grep -Fq "options.headers['x-pose-action']" /tmp/pose.html; then
             echo "Redundant x-pose-action header is still present in production frontend"
             exit 1
