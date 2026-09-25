@@ -70,7 +70,7 @@ jobs:
 
       - name: Check existing safety backend
         run: |
-          curl --fail-with-body --location --retry 3 -sS https://mang-luoi-an-toan.vercel.app/api/health | tee /tmp/health.json
+          curl --fail-with-body --location --retry 3 -sS https://giaovien-psi.vercel.app/api/health | tee /tmp/health.json
           python3 - <<'PY'
           import json
           d=json.load(open('/tmp/health.json'))
