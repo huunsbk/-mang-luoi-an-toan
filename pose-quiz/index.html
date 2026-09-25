@@ -1205,13 +1205,9 @@
                             {lessonBackground && <div className="absolute inset-0 pointer-events-none" style={{backgroundColor: `rgba(248,250,252,${lessonOverlay})`}}></div>}
                             <div className="pose-question-panel flex-[5] bg-indigo-50/60 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden z-10">
                                 <h2 className="pose-question-text text-3xl font-black text-slate-800 mb-4 text-center leading-tight">{currentQuestion.text}</h2>
-                                {currentQuestion.image ? (
+                                {currentQuestion.image && (
                                     <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
                                         <img src={mediaSrc(currentQuestion.image)} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-4 border-white" alt="Câu hỏi" />
-                                    </div>
-                                ) : (
-                                    <div className="pose-question-visual w-64 h-64 flex items-center justify-center character-bounce">
-                                         {getPoseVisual(currentQuestion.answers.find(a=>a.isCorrect)?.pose)}
                                     </div>
                                 )}
                             </div>
