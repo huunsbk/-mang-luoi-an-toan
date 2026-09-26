@@ -27,9 +27,12 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .portal-home-fab{position:fixed;top:12px;left:12px;z-index:99999;padding:9px 12px;border-radius:12px;background:rgba(15,23,42,.92);color:#fff!important;text-decoration:none;font:800 13px/1.1 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}
 .portal-home-fab:hover{transform:translateY(-1px);background:#0f172a}
-@media(max-width:640px){.portal-home-fab{top:8px;left:8px;padding:8px 10px;font-size:12px}.portal-home-label{display:none}}
+@media(max-width:1100px){
+  .portal-home-fab{top:8px;left:8px;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:12px}
+  .portal-home-label{display:none}
+}
 @media(max-width:768px){
-  .pose-game-header{padding:6px 6px 6px 52px!important;gap:4px!important;min-height:58px}
+  .pose-game-header{padding:6px 6px 6px 56px!important;gap:4px!important;min-height:58px}
   .pose-game-header-left{gap:4px!important}
   .pose-game-question-no{font-size:12px!important;padding:5px 7px!important;border-radius:9px!important}
   .pose-game-mute{width:30px!important;height:30px!important;font-size:16px!important}
@@ -37,7 +40,7 @@
   .pose-game-timer{padding-right:5px!important}
   .pose-game-timer-label{font-size:7px!important;letter-spacing:.06em!important}
   .pose-game-timer-value{font-size:20px!important}
-  .pose-game-check{padding:7px 10px!important;font-size:13px!important;border-radius:12px!important;white-space:nowrap}
+  .pose-game-check,.pose-game-pause{padding:7px 9px!important;font-size:12px!important;border-radius:12px!important;white-space:nowrap}
   .pose-game-main{flex-direction:column!important}
   .pose-game-content{width:100%!important;height:64%!important;min-height:0!important;border-right:0!important;border-bottom:2px solid #e2e8f0!important;padding:5px!important}
   .pose-question-panel{padding:6px!important;border-radius:18px!important;min-height:0!important}
@@ -956,10 +959,14 @@
             const [feedback, setFeedback] = useState(null);
             const [correctCount, setCorrectCount] = useState(0);
             const [isMuted, setIsMuted] = useState(false);
+            const [isPaused, setIsPaused] = useState(false);
             const [gameToken, setGameToken] = useState(null);
             const [gameReady, setGameReady] = useState(false);
             const [gameError, setGameError] = useState('');
             const checkInFlightRef = useRef(false);
+            const isPausedRef = useRef(false);
+            const pendingResultRef = useRef(null);
+            const feedbackTimeoutRef = useRef(null);
             
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
@@ -1000,6 +1007,36 @@
                 return () => { cancelled = true; };
             }, []);
 
+            const applyCheckedResult = useCallback((result) => {
+                if (!isMounted.current) return;
+                pendingResultRef.current = null;
+                if (feedbackTimeoutRef.current) {
+                    clearTimeout(feedbackTimeoutRef.current);
+                    feedbackTimeoutRef.current = null;
+                }
+                if (result.finished) {
+                    setScore(result.score || 0);
+                    setScreen('RESULT');
+                } else {
+                    setGameToken(result.game_token);
+                    setQIndex(result.next_index);
+                    setTimeLeft(settings.timeLimit);
+                    setCheckTimer(settings.checkInterval || 3);
+                    setFeedback(null);
+                    checkInFlightRef.current = false;
+                }
+            }, [settings.timeLimit, settings.checkInterval, setScore, setScreen]);
+
+            const scheduleCheckedResult = useCallback((result, delay = 1500) => {
+                pendingResultRef.current = result;
+                if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+                feedbackTimeoutRef.current = setTimeout(() => {
+                    feedbackTimeoutRef.current = null;
+                    if (!isMounted.current || isPausedRef.current) return;
+                    applyCheckedResult(result);
+                }, delay);
+            }, [applyCheckedResult]);
+
             const checkAnswer = useCallback(async () => {
                 if (feedback || !gameReady || !gameToken || checkInFlightRef.current) return;
                 checkInFlightRef.current = true;
@@ -1028,31 +1065,36 @@
                         playDefaultFeedbackTone(isCorrect, settings.audio.feedbackVolume ?? 0.9);
                     }
 
-                    setTimeout(() => {
-                        if (!isMounted.current) return;
-                        if (result.finished) {
-                            setScore(result.score || 0);
-                            setScreen('RESULT');
-                        } else {
-                            setGameToken(result.game_token);
-                            setQIndex(result.next_index);
-                            setTimeLeft(settings.timeLimit);
-                            setCheckTimer(settings.checkInterval || 3);
-                            setFeedback(null);
-                            checkInFlightRef.current = false;
-                        }
-                    }, 1500);
+                    scheduleCheckedResult(result, 1500);
                 } catch (err) {
                     checkInFlightRef.current = false;
                     alert('Backend không chấm được câu hỏi: ' + err.message);
                 }
-            }, [feedback, gameReady, gameToken, detectedPose, isMuted, settings, setScore, setScreen]);
+            }, [feedback, gameReady, gameToken, detectedPose, isMuted, settings, scheduleCheckedResult]);
 
             // Hàm xử lý khi nhấn nút Kiểm tra
             const handleManualCheck = () => {
-                if (feedback || !gameReady || checkInFlightRef.current) return;
+                if (isPaused || feedback || !gameReady || checkInFlightRef.current) return;
                 setTimeLeft(0);
             };
+
+            const togglePause = () => setIsPaused(prev => !prev);
+
+            useEffect(() => {
+                isPausedRef.current = isPaused;
+                if (isPaused) {
+                    if (feedbackTimeoutRef.current) {
+                        clearTimeout(feedbackTimeoutRef.current);
+                        feedbackTimeoutRef.current = null;
+                    }
+                } else if (pendingResultRef.current) {
+                    scheduleCheckedResult(pendingResultRef.current, 350);
+                }
+            }, [isPaused, scheduleCheckedResult]);
+
+            useEffect(() => () => {
+                if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+            }, []);
 
             useEffect(() => {
                 if (bgmRef.current) {
@@ -1060,7 +1102,7 @@
                     bgmRef.current = null;
                 }
                 const bgmSrc = resolvedLessonAudioSrc(settings, 'bgm');
-                if (bgmSrc && !isMuted) {
+                if (bgmSrc && !isMuted && !isPaused) {
                     bgmRef.current = new Audio(bgmSrc);
                     bgmRef.current.loop = true;
                     bgmRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.bgmVolume ?? 0.3)));
@@ -1072,7 +1114,7 @@
                         bgmRef.current = null;
                     }
                 };
-            }, [isMuted, settings.audio.bgm?.data, settings.audio.bgmVolume]);
+            }, [isMuted, isPaused, settings.audio.bgm?.data, settings.audio.bgmVolume]);
 
             useEffect(() => {
                 if (questionAudioRef.current) {
@@ -1080,7 +1122,7 @@
                     questionAudioRef.current = null;
                 }
                 const questionAudio = mediaSrc(currentQuestion?.audio?.data);
-                if (questionAudio && !isMuted && !feedback) {
+                if (questionAudio && !isMuted && !feedback && !isPaused) {
                     questionAudioRef.current = new Audio(questionAudio);
                     questionAudioRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.questionVolume ?? 1)));
                     questionAudioRef.current.play().catch(() => {});
@@ -1091,7 +1133,7 @@
                         questionAudioRef.current = null;
                     }
                 };
-            }, [qIndex, currentQuestion?.audio?.data, isMuted, settings.audio.questionVolume]);
+            }, [qIndex, currentQuestion?.audio?.data, isMuted, isPaused, settings.audio.questionVolume]);
 
             useEffect(() => {
                 if (!gameReady) return;
@@ -1147,7 +1189,7 @@
             }, [gameReady]);
 
             useEffect(() => {
-                if (!gameReady || gameError || feedback) return;
+                if (!gameReady || gameError || feedback || isPaused) return;
                 if (timeLeft <= 0) { checkAnswer(); return; }
                 const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
                 const intervalTimer = setInterval(() => {
@@ -1157,7 +1199,7 @@
                     });
                 }, 1000);
                 return () => { clearInterval(timer); clearInterval(intervalTimer); };
-            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError]);
+            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused]);
 
             if (!gameReady) {
                 return (
@@ -1188,10 +1230,22 @@
                                 <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Thời gian còn</span>
                                 <span className={`pose-game-timer-value text-4xl font-black leading-none ${timeLeft < 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</span>
                             </div>
-                            <button onClick={handleManualCheck} className="pose-game-check bg-yellow-400 text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
+                            <button
+                                onClick={togglePause}
+                                className={`pose-game-pause px-5 py-2 rounded-2xl font-black text-base shadow-xl transform active:scale-95 transition-all ${isPaused ? 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300' : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'}`}
+                                title={isPaused ? 'Tiếp tục bài chơi' : 'Tạm dừng để giáo viên sửa và giải thích đáp án'}
+                            >
+                                {isPaused ? '▶ TIẾP TỤC' : '⏸ TẠM DỪNG'}
+                            </button>
+                            <button onClick={handleManualCheck} disabled={isPaused} className="pose-game-check bg-yellow-400 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
                         </div>
                     </div>
 
+                    {isPaused && (
+                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[80] bg-amber-400 text-amber-950 px-5 py-2 rounded-full font-black shadow-xl border-2 border-white">
+                            ⏸ ĐANG TẠM DỪNG — giáo viên có thể sửa, giải thích đáp án
+                        </div>
+                    )}
                     <div className="pose-game-main flex-1 flex overflow-hidden">
                         <div
                             className="pose-game-content w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2 relative overflow-hidden"
