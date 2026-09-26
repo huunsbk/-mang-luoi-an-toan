@@ -27,16 +27,24 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .portal-home-fab{position:fixed;top:12px;left:12px;z-index:99999;padding:9px 12px;border-radius:12px;background:rgba(15,23,42,.92);color:#fff!important;text-decoration:none;font:800 13px/1.1 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}
 .portal-home-fab:hover{transform:translateY(-1px);background:#0f172a}
+/* Trong màn chơi, Cổng giáo viên ở hàng trên; CÂU + loa nằm riêng góc trái phía dưới để không chồng nhau. */
+.pose-game-header{position:relative;min-height:96px!important;padding:8px 10px 8px 10px!important;align-items:flex-start!important}
+.pose-game-header-left{position:absolute!important;left:12px!important;bottom:8px!important;z-index:30!important;gap:6px!important}
+.pose-game-header-right{margin-left:auto!important;gap:10px!important}
+
 @media(max-width:1100px){
   .portal-home-fab{top:8px;left:8px;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:12px}
   .portal-home-label{display:none}
+  .pose-game-header{min-height:92px!important}
+  .pose-game-header-left{left:8px!important;bottom:7px!important}
+  .pose-game-header-right{gap:6px!important}
 }
 @media(max-width:768px){
-  .pose-game-header{padding:6px 6px 6px 56px!important;gap:4px!important;min-height:58px}
-  .pose-game-header-left{gap:4px!important}
+  .pose-game-header{padding:6px!important;gap:4px!important;min-height:94px!important}
+  .pose-game-header-left{left:6px!important;bottom:6px!important;gap:4px!important}
   .pose-game-question-no{font-size:12px!important;padding:5px 7px!important;border-radius:9px!important}
   .pose-game-mute{width:30px!important;height:30px!important;font-size:16px!important}
-  .pose-game-header-right{gap:5px!important}
+  .pose-game-header-right{gap:5px!important;max-width:calc(100% - 52px)!important;flex-wrap:wrap!important;justify-content:flex-end!important}
   .pose-game-timer{padding-right:5px!important}
   .pose-game-timer-label{font-size:7px!important;letter-spacing:.06em!important}
   .pose-game-timer-value{font-size:20px!important}
@@ -735,7 +743,7 @@
                     bankVisibility: "private",
                     bankGroupId: "",
                     timeLimit: 20,
-                    checkInterval: 3,
+                    checkInterval: 20,
                     numAnswers: 4,
                     poseAssets: {
                         NONE: null,
@@ -870,7 +878,7 @@
                     bankVisibility: 'private',
                     bankGroupId: '',
                     timeLimit: 20,
-                    checkInterval: 3,
+                    checkInterval: 20,
                     numAnswers: 4,
                     poseAssets: { NONE: null, RAISE_LEFT: null, RAISE_RIGHT: null, BOTH_UP: null, CROSS_ARMS: null },
                     questions: [{
@@ -954,7 +962,7 @@
         const Game = ({ settings, setScreen, setScore }) => {
             const [qIndex, setQIndex] = useState(0);
             const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
-            const [checkTimer, setCheckTimer] = useState(settings.checkInterval || 3);
+            const [checkTimer, setCheckTimer] = useState(settings.checkInterval || 20);
             const [detectedPose, setDetectedPose] = useState('NONE');
             const [feedback, setFeedback] = useState(null);
             const [correctCount, setCorrectCount] = useState(0);
@@ -1021,7 +1029,7 @@
                     setGameToken(result.game_token);
                     setQIndex(result.next_index);
                     setTimeLeft(settings.timeLimit);
-                    setCheckTimer(settings.checkInterval || 3);
+                    setCheckTimer(settings.checkInterval || 20);
                     setFeedback(null);
                     checkInFlightRef.current = false;
                 }
@@ -1194,7 +1202,7 @@
                 const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
                 const intervalTimer = setInterval(() => {
                     setCheckTimer(prev => {
-                        if (prev <= 1) { checkAnswer(); return settings.checkInterval || 3; }
+                        if (prev <= 1) { checkAnswer(); return settings.checkInterval || 20; }
                         return prev - 1;
                     });
                 }, 1000);
@@ -1649,7 +1657,7 @@
                                     </div>
                                     <div>
                                         <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">TG quét tự động (giây)</label>
-                                        <input type="number" value={settings.checkInterval} onChange={(e) => setSettings({...settings, checkInterval: parseInt(e.target.value) || 3})} className="w-full p-2 bg-slate-50 rounded-xl border border-slate-200 font-bold" />
+                                        <input type="number" value={settings.checkInterval} onChange={(e) => setSettings({...settings, checkInterval: parseInt(e.target.value) || 20})} className="w-full p-2 bg-slate-50 rounded-xl border border-slate-200 font-bold" />
                                     </div>
                                 </div>
 
