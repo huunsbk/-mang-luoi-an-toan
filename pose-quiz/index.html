@@ -300,17 +300,29 @@
             if (!previous || !detections?.length) return null;
             let best = null;
             let bestScore = Infinity;
+            const predictedX = previous.cx + (previous.vx || 0);
+            const predictedY = previous.cy + (previous.vy || 0);
+
             detections.forEach(detection => {
                 const centerDistance = Math.hypot(
-                    detection.box.cx - previous.cx,
-                    detection.box.cy - previous.cy
+                    detection.box.cx - predictedX,
+                    detection.box.cy - predictedY
                 );
                 const sizeRatio = detection.box.height / Math.max(0.02, previous.height);
                 const overlap = boxIoU(previous, detection.box);
                 const allowedDistance = Math.max(0.18, Math.min(0.32, previous.width * 1.25));
                 const plausible = (centerDistance <= allowedDistance || overlap >= 0.08) && sizeRatio >= 0.5 && sizeRatio <= 1.9;
                 if (!plausible) return;
-                const score = centerDistance * 1.6 + Math.abs(Math.log(sizeRatio)) * 0.18 + (1 - overlap) * 0.25;
+
+                // PoseLandmarker VIDEO mode maintains internal tracks reasonably well.
+                // Prefer the same output slot when spatial evidence is also plausible,
+                // while still allowing recovery if MediaPipe reorders detections.
+                const slotBias = detection.index === previous.index ? -0.16 : 0.08;
+                const score = centerDistance * 1.6
+                    + Math.abs(Math.log(sizeRatio)) * 0.18
+                    + (1 - overlap) * 0.25
+                    + slotBias;
+
                 if (score < bestScore) {
                     bestScore = score;
                     best = detection;
@@ -1354,7 +1366,7 @@
                 if (!selected) return;
 
                 const now = performance.now();
-                targetTrackRef.current = { ...selected.box, lastSeen: now };
+                targetTrackRef.current = { ...selected.box, index: selected.index, vx: 0, vy: 0, lastSeen: now };
                 selectionModeRef.current = false;
                 setSelectionMode(false);
                 setTargetStatus('LOCKED');
@@ -1461,7 +1473,17 @@
                                 const matched = pickTrackedPose(previous, detections);
 
                                 if (matched) {
-                                    targetTrackRef.current = { ...matched.box, lastSeen: now };
+                                    const previousVx = previous?.vx || 0;
+                                    const previousVy = previous?.vy || 0;
+                                    const deltaX = previous ? matched.box.cx - previous.cx : 0;
+                                    const deltaY = previous ? matched.box.cy - previous.cy : 0;
+                                    targetTrackRef.current = {
+                                        ...matched.box,
+                                        index: matched.index,
+                                        vx: previousVx * 0.55 + deltaX * 0.45,
+                                        vy: previousVy * 0.55 + deltaY * 0.45,
+                                        lastSeen: now
+                                    };
                                     setTargetStatus('LOCKED');
                                     const quality = getPoseQuality(matched);
                                     if (now - lastQualityUiUpdateRef.current > 140) {
