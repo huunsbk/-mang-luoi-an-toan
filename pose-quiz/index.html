@@ -1384,20 +1384,129 @@
                 isMounted.current = true;
                 setPoseError('');
 
-                const initPose = async () => {
+                const processPoseFrame = async () => {
+                    if (
+                        cancelled ||
+                        !isMounted.current ||
+                        !poseLandmarkerRef.current ||
+                        !videoRef.current ||
+                        videoRef.current.readyState < 2
+                    ) return;
+
+                    let timestamp = performance.now();
+                    if (timestamp <= lastVideoTimestampRef.current) timestamp = lastVideoTimestampRef.current + 1;
+                    lastVideoTimestampRef.current = timestamp;
+
+                    let result;
                     try {
+                        result = poseLandmarkerRef.current.detectForVideo(videoRef.current, timestamp);
+                    } catch (detectError) {
+                        console.warn('Pose frame skipped:', detectError);
+                        return;
+                    }
+
+                    const detections = (result?.landmarks || [])
+                        .slice(0, 5)
+                        .map((landmarks, index) => buildPoseDetection(landmarks, index))
+                        .filter(Boolean);
+                    detectionsRef.current = detections;
+
+                    const canvas = canvasRef.current;
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    const now = performance.now();
+                    if (now - lastPeopleUiUpdateRef.current > 140) {
+                        setPeopleCount(detections.length);
+                        lastPeopleUiUpdateRef.current = now;
+                    }
+
+                    if (selectionModeRef.current) {
+                        detections.forEach((detection, index) => {
+                            drawDetection(ctx, detection, '#6366f1', 'HS ' + (index + 1), false);
+                        });
+                        return;
+                    }
+
+                    const previous = targetTrackRef.current;
+                    const matched = pickTrackedPose(previous, detections);
+
+                    if (matched) {
+                        const previousVx = previous?.vx || 0;
+                        const previousVy = previous?.vy || 0;
+                        const deltaX = previous ? matched.box.cx - previous.cx : 0;
+                        const deltaY = previous ? matched.box.cy - previous.cy : 0;
+                        targetTrackRef.current = {
+                            ...matched.box,
+                            index: matched.index,
+                            vx: previousVx * 0.55 + deltaX * 0.45,
+                            vy: previousVy * 0.55 + deltaY * 0.45,
+                            lastSeen: now
+                        };
+                        setTargetStatus('LOCKED');
+                        const quality = getPoseQuality(matched);
+                        if (now - lastQualityUiUpdateRef.current > 140) {
+                            setTargetQuality(quality);
+                            lastQualityUiUpdateRef.current = now;
+                        }
+                        drawDetection(ctx, matched, quality.ok ? '#22c55e' : '#f59e0b', quality.ok ? 'ĐÃ KHÓA' : 'GIỮ VỊ TRÍ', true);
+                        setDetectedPose(quality.ok ? analyzePose(matched.landmarks) : 'NONE');
+                    } else {
+                        const lastSeen = previous?.lastSeen || now;
+                        const missingFor = now - lastSeen;
+                        setDetectedPose('NONE');
+                        if (missingFor < 2500) {
+                            setTargetStatus('SEARCHING');
+                            if (now - lastQualityUiUpdateRef.current > 140) {
+                                setTargetQuality({ ok: false, level: 'searching', label: 'Đang tìm lại học sinh đã chọn...' });
+                                lastQualityUiUpdateRef.current = now;
+                            }
+                            detections.forEach(detection => drawDetection(ctx, detection, '#f59e0b', '', false));
+                        } else {
+                            setTargetStatus('LOST');
+                            if (now - lastQualityUiUpdateRef.current > 140) {
+                                setTargetQuality({ ok: false, level: 'lost', label: 'Đã mất mục tiêu — bấm Chọn lại học sinh' });
+                                lastQualityUiUpdateRef.current = now;
+                            }
+                            detections.forEach((detection, index) => drawDetection(ctx, detection, '#ef4444', 'HS ' + (index + 1), false));
+                        }
+                    }
+                };
+
+                const initPose = async () => {
+                    // Camera phải được mở độc lập với AI. Nếu MediaPipe lỗi tải,
+                    // giáo viên vẫn nhìn thấy hình camera và nhận được lỗi AI chính xác.
+                    try {
+                        cameraRef.current = new Camera(videoElement, {
+                            onFrame: processPoseFrame,
+                            width: 640,
+                            height: 480
+                        });
+                        await cameraRef.current.start();
+                    } catch (cameraError) {
+                        console.error('Camera init failed:', cameraError);
+                        if (!cancelled && isMounted.current) {
+                            const reason = cameraError?.message ? String(cameraError.message).slice(0, 180) : 'Trình duyệt không mở được camera';
+                            setPoseError('Không mở được camera: ' + reason);
+                        }
+                        return;
+                    }
+
+                    try {
+                        // Đoạn này nằm trong script type="text/babel". Dùng Function để
+                        // dynamic import được chính trình duyệt xử lý, tránh Babel đổi import() thành require().
+                        const nativeImport = window.__poseNativeImport || (
+                            window.__poseNativeImport = new Function('url', 'return import(url)')
+                        );
                         const visionSources = [
-                            {
-                                module: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.js',
-                                wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-                            },
-                            {
-                                module: 'https://unpkg.com/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs',
-                                wasm: 'https://unpkg.com/@mediapipe/tasks-vision@1.0.1/wasm'
-                            },
                             {
                                 module: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs',
                                 wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm'
+                            },
+                            {
+                                module: 'https://unpkg.com/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs',
+                                wasm: 'https://unpkg.com/@mediapipe/tasks-vision@0.10.21/wasm'
                             }
                         ];
 
@@ -1407,7 +1516,7 @@
 
                         for (const source of visionSources) {
                             try {
-                                const imported = await import(source.module);
+                                const imported = await nativeImport(source.module);
                                 const api = imported?.default && imported.default.FilesetResolver
                                     ? imported.default
                                     : imported;
@@ -1460,108 +1569,12 @@
 
                         poseLandmarkerRef.current = landmarker;
                         resetTargetSelection();
-
-                        cameraRef.current = new Camera(videoElement, {
-                            onFrame: async () => {
-                                if (
-                                    cancelled ||
-                                    !isMounted.current ||
-                                    !poseLandmarkerRef.current ||
-                                    !videoRef.current ||
-                                    videoRef.current.readyState < 2
-                                ) return;
-
-                                let timestamp = performance.now();
-                                if (timestamp <= lastVideoTimestampRef.current) timestamp = lastVideoTimestampRef.current + 1;
-                                lastVideoTimestampRef.current = timestamp;
-
-                                let result;
-                                try {
-                                    result = poseLandmarkerRef.current.detectForVideo(videoRef.current, timestamp);
-                                } catch (detectError) {
-                                    console.warn('Pose frame skipped:', detectError);
-                                    return;
-                                }
-
-                                const detections = (result?.landmarks || [])
-                                    .slice(0, 5)
-                                    .map((landmarks, index) => buildPoseDetection(landmarks, index))
-                                    .filter(Boolean);
-                                detectionsRef.current = detections;
-
-                                const canvas = canvasRef.current;
-                                if (!canvas) return;
-                                const ctx = canvas.getContext('2d');
-                                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                                const now = performance.now();
-                                if (now - lastPeopleUiUpdateRef.current > 140) {
-                                    setPeopleCount(detections.length);
-                                    lastPeopleUiUpdateRef.current = now;
-                                }
-
-                                if (selectionModeRef.current) {
-                                    detections.forEach((detection, index) => {
-                                        drawDetection(ctx, detection, '#6366f1', 'HS ' + (index + 1), false);
-                                    });
-                                    return;
-                                }
-
-                                const previous = targetTrackRef.current;
-                                const matched = pickTrackedPose(previous, detections);
-
-                                if (matched) {
-                                    const previousVx = previous?.vx || 0;
-                                    const previousVy = previous?.vy || 0;
-                                    const deltaX = previous ? matched.box.cx - previous.cx : 0;
-                                    const deltaY = previous ? matched.box.cy - previous.cy : 0;
-                                    targetTrackRef.current = {
-                                        ...matched.box,
-                                        index: matched.index,
-                                        vx: previousVx * 0.55 + deltaX * 0.45,
-                                        vy: previousVy * 0.55 + deltaY * 0.45,
-                                        lastSeen: now
-                                    };
-                                    setTargetStatus('LOCKED');
-                                    const quality = getPoseQuality(matched);
-                                    if (now - lastQualityUiUpdateRef.current > 140) {
-                                        setTargetQuality(quality);
-                                        lastQualityUiUpdateRef.current = now;
-                                    }
-                                    drawDetection(ctx, matched, quality.ok ? '#22c55e' : '#f59e0b', quality.ok ? 'ĐÃ KHÓA' : 'GIỮ VỊ TRÍ', true);
-                                    setDetectedPose(quality.ok ? analyzePose(matched.landmarks) : 'NONE');
-                                } else {
-                                    const lastSeen = previous?.lastSeen || now;
-                                    const missingFor = now - lastSeen;
-                                    setDetectedPose('NONE');
-                                    if (missingFor < 2500) {
-                                        setTargetStatus('SEARCHING');
-                                        if (now - lastQualityUiUpdateRef.current > 140) {
-                                            setTargetQuality({ ok: false, level: 'searching', label: 'Đang tìm lại học sinh đã chọn...' });
-                                            lastQualityUiUpdateRef.current = now;
-                                        }
-                                        detections.forEach(detection => drawDetection(ctx, detection, '#f59e0b', '', false));
-                                    } else {
-                                        setTargetStatus('LOST');
-                                        if (now - lastQualityUiUpdateRef.current > 140) {
-                                            setTargetQuality({ ok: false, level: 'lost', label: 'Đã mất mục tiêu — bấm Chọn lại học sinh' });
-                                            lastQualityUiUpdateRef.current = now;
-                                        }
-                                        detections.forEach((detection, index) => drawDetection(ctx, detection, '#ef4444', 'HS ' + (index + 1), false));
-                                    }
-                                }
-                            },
-                            width: 640,
-                            height: 480
-                        });
-
-                        await cameraRef.current.start();
-                        if (cancelled && cameraRef.current) cameraRef.current.stop();
+                        setPoseError('');
                     } catch (err) {
                         console.error('Multi-pose init failed:', err);
                         if (!cancelled && isMounted.current) {
                             const reason = err?.message ? String(err.message).slice(0, 180) : 'Lỗi không xác định';
-                            setPoseError('Không khởi tạo được AI đa học sinh: ' + reason);
+                            setPoseError('Camera đã mở nhưng AI đa học sinh chưa khởi tạo: ' + reason);
                         }
                     }
                 };
