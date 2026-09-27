@@ -1386,10 +1386,48 @@
 
                 const initPose = async () => {
                     try {
-                        const visionModule = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs');
-                        const vision = await visionModule.FilesetResolver.forVisionTasks(
-                            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-                        );
+                        const visionSources = [
+                            {
+                                module: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.js',
+                                wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
+                            },
+                            {
+                                module: 'https://unpkg.com/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs',
+                                wasm: 'https://unpkg.com/@mediapipe/tasks-vision@1.0.1/wasm'
+                            },
+                            {
+                                module: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs',
+                                wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm'
+                            }
+                        ];
+
+                        let visionModule = null;
+                        let vision = null;
+                        let lastVisionError = null;
+
+                        for (const source of visionSources) {
+                            try {
+                                const imported = await import(source.module);
+                                const api = imported?.default && imported.default.FilesetResolver
+                                    ? imported.default
+                                    : imported;
+                                if (!api?.FilesetResolver || !api?.PoseLandmarker) {
+                                    throw new Error('MediaPipe module không có FilesetResolver/PoseLandmarker');
+                                }
+                                const fileset = await api.FilesetResolver.forVisionTasks(source.wasm);
+                                visionModule = api;
+                                vision = fileset;
+                                console.info('MediaPipe Tasks Vision loaded from:', source.module);
+                                break;
+                            } catch (sourceError) {
+                                lastVisionError = sourceError;
+                                console.warn('MediaPipe source failed:', source.module, sourceError);
+                            }
+                        }
+
+                        if (!visionModule || !vision) {
+                            throw new Error('Không tải được MediaPipe Tasks Vision: ' + (lastVisionError?.message || 'unknown error'));
+                        }
 
                         const createLandmarker = async (delegate, modelAssetPath) => visionModule.PoseLandmarker.createFromOptions(vision, {
                             baseOptions: { modelAssetPath, delegate },
@@ -1522,7 +1560,8 @@
                     } catch (err) {
                         console.error('Multi-pose init failed:', err);
                         if (!cancelled && isMounted.current) {
-                            setPoseError('Không khởi tạo được AI đa học sinh. Hãy tải lại trang hoặc kiểm tra kết nối Internet.');
+                            const reason = err?.message ? String(err.message).slice(0, 180) : 'Lỗi không xác định';
+                            setPoseError('Không khởi tạo được AI đa học sinh: ' + reason);
                         }
                     }
                 };
