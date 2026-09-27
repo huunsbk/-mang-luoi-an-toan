@@ -1,0 +1,57 @@
+name: Pose AI Browser Runtime QA
+
+on:
+  push:
+    branches:
+      - giaovien-portal
+      - pose-quiz-fix-camera-ai-init
+    paths:
+      - 'pose-quiz/**'
+      - 'qa/pose-ai-runtime.mjs'
+      - '.github/workflows/pose-ai-runtime-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Playwright Chromium and WebKit
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Resolve target URL
+        run: |
+          if [ "$GITHUB_REF_NAME" = "giaovien-portal" ]; then
+            echo "POSE_AI_QA_URL=https://giaovien-psi.vercel.app/pose-quiz/" >> "$GITHUB_ENV"
+          else
+            echo "POSE_AI_QA_URL=https://mang-luoi-an-toan-git-pose-quiz-fix-ca-484fca-huunsbks-projects.vercel.app/pose-quiz/" >> "$GITHUB_ENV"
+          fi
+
+      - name: Wait for target deployment
+        run: |
+          for i in $(seq 1 30); do
+            if curl --fail --silent --show-error --location "$POSE_AI_QA_URL" -o /tmp/pose.html; then
+              if grep -q "new Function('url', 'return import(url)')" /tmp/pose.html; then
+                echo "Target contains browser-native import fix."
+                exit 0
+              fi
+            fi
+            echo "Waiting for deployment... attempt $i"
+            sleep 5
+          done
+          echo "::error::Target deployment did not become ready with the expected fix."
+          exit 1
+
+      - name: Run real browser MediaPipe runtime test
+        run: node qa/pose-ai-runtime.mjs
