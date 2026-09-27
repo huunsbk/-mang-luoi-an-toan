@@ -30,27 +30,31 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium webkit
 
-      - name: Resolve target URL
+      - name: Resolve target
         run: |
           if [ "$GITHUB_REF_NAME" = "giaovien-portal" ]; then
             echo "POSE_AI_QA_URL=https://giaovien-psi.vercel.app/pose-quiz/" >> "$GITHUB_ENV"
+            echo "POSE_AI_SKIP_TARGET=0" >> "$GITHUB_ENV"
           else
-            echo "POSE_AI_QA_URL=https://mang-luoi-an-toan-git-pose-quiz-fix-ca-484fca-huunsbks-projects.vercel.app/pose-quiz/" >> "$GITHUB_ENV"
+            # Vercel preview aliases may be protected. On feature branches,
+            # execute the MediaPipe runtime in an isolated browser page.
+            echo "POSE_AI_SKIP_TARGET=1" >> "$GITHUB_ENV"
           fi
 
-      - name: Wait for target deployment
+      - name: Wait for production deployment
+        if: github.ref_name == 'giaovien-portal'
         run: |
           for i in $(seq 1 30); do
             if curl --fail --silent --show-error --location "$POSE_AI_QA_URL" -o /tmp/pose.html; then
               if grep -q "new Function('url', 'return import(url)')" /tmp/pose.html; then
-                echo "Target contains browser-native import fix."
+                echo "Production contains browser-native import fix."
                 exit 0
               fi
             fi
-            echo "Waiting for deployment... attempt $i"
+            echo "Waiting for production deployment... attempt $i"
             sleep 5
           done
-          echo "::error::Target deployment did not become ready with the expected fix."
+          echo "::error::Production did not become ready with the expected fix."
           exit 1
 
       - name: Run real browser MediaPipe runtime test
