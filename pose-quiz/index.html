@@ -371,7 +371,15 @@
                 ctx.fillRect(labelX, labelY, labelW, labelH);
                 ctx.fillStyle = '#ffffff';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(label, labelX + 10, labelY + labelH / 2);
+
+                // Canvas được lật gương bằng CSS để khớp với video camera.
+                // Vẽ chữ lật trước một lần để sau khi CSS mirror, nhãn HS 1/HS 2...
+                // và ĐÃ KHÓA/GIỮ VỊ TRÍ hiển thị đúng chiều cho giáo viên.
+                ctx.save();
+                ctx.translate(labelX + labelW, 0);
+                ctx.scale(-1, 1);
+                ctx.fillText(label, 10, labelY + labelH / 2);
+                ctx.restore();
             }
             ctx.restore();
         };
