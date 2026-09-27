@@ -6,7 +6,7 @@ const moduleUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/
 const wasmUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm';
 const modelUrl = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
-async function run(name, browserType) {
+async function run(name, browserType, { fullInference = true } = {}) {
   const browser = await browserType.launch({ headless: true });
   try {
     const page = await browser.newPage();
@@ -32,7 +32,7 @@ async function run(name, browserType) {
       await page.setContent('<!doctype html><meta charset="utf-8"><title>Pose AI runtime smoke</title><canvas id="root"></canvas>');
     }
 
-    const smoke = await page.evaluate(async ({ moduleUrl, wasmUrl, modelUrl }) => {
+    const smoke = await page.evaluate(async ({ moduleUrl, wasmUrl, modelUrl, fullInference }) => {
       const nativeImport = new Function('url', 'return import(url)');
       const imported = await nativeImport(moduleUrl);
       const api = imported?.default && imported.default.FilesetResolver ? imported.default : imported;
@@ -41,6 +41,10 @@ async function run(name, browserType) {
       }
 
       const vision = await api.FilesetResolver.forVisionTasks(wasmUrl);
+      if (!fullInference) {
+        return { ok: true, stage: 'module+wasm', poseCount: null };
+      }
+
       const landmarker = await api.PoseLandmarker.createFromOptions(vision, {
         baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' },
         runningMode: 'VIDEO',
@@ -60,8 +64,8 @@ async function run(name, browserType) {
       const result = landmarker.detectForVideo(canvas, 1);
       const ok = Array.isArray(result?.landmarks);
       landmarker.close();
-      return { ok, poseCount: result?.landmarks?.length ?? -1 };
-    }, { moduleUrl, wasmUrl, modelUrl });
+      return { ok, stage: 'full-inference', poseCount: result?.landmarks?.length ?? -1 };
+    }, { moduleUrl, wasmUrl, modelUrl, fullInference });
 
     console.log(name, 'MEDIAPIPE_SMOKE', JSON.stringify(smoke));
     console.log(name, 'PAGE_ERRORS', JSON.stringify(pageErrors));
@@ -73,6 +77,8 @@ async function run(name, browserType) {
   }
 }
 
-await run('Chromium', chromium);
-await run('WebKit', webkit);
+await run('Chromium', chromium, { fullInference: true });
+// Headless WebKit on GitHub runners has no usable WebGL context for MediaPipe inference.
+// Validate native ESM import + WASM there; the existing iPhone QA validates the actual UI.
+await run('WebKit', webkit, { fullInference: false });
 console.log('POSE_AI_BROWSER_RUNTIME_OK');
