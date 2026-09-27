@@ -1,6 +1,7 @@
 import { chromium, webkit } from 'playwright';
 
 const target = process.env.POSE_AI_QA_URL || 'https://giaovien-psi.vercel.app/pose-quiz/';
+const skipTarget = process.env.POSE_AI_SKIP_TARGET === '1';
 const moduleUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs';
 const wasmUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm';
 const modelUrl = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
@@ -14,17 +15,21 @@ async function run(name, browserType) {
     page.on('pageerror', e => pageErrors.push(String(e)));
     page.on('requestfailed', r => failed.push(`${r.method()} ${r.url()} :: ${r.failure()?.errorText || 'failed'}`));
 
-    const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    if (!response || response.status() !== 200) {
-      throw new Error(`${name}: Pose Quiz HTTP ${response?.status()}`);
-    }
+    if (!skipTarget) {
+      const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      if (!response || response.status() !== 200) {
+        throw new Error(`${name}: Pose Quiz HTTP ${response?.status()}`);
+      }
 
-    const source = await (await page.request.get(target, { timeout: 60000 })).text();
-    if (!source.includes("new Function('url', 'return import(url)')")) {
-      throw new Error(`${name}: production/preview HTML does not contain native browser import escape`);
-    }
-    if (source.includes('const imported = await import(source.module)')) {
-      throw new Error(`${name}: Babel-transformable dynamic import is still present`);
+      const source = await (await page.request.get(target, { timeout: 60000 })).text();
+      if (!source.includes("new Function('url', 'return import(url)')")) {
+        throw new Error(`${name}: production HTML does not contain native browser import escape`);
+      }
+      if (source.includes('const imported = await import(source.module)')) {
+        throw new Error(`${name}: Babel-transformable dynamic import is still present`);
+      }
+    } else {
+      await page.setContent('<!doctype html><meta charset="utf-8"><title>Pose AI runtime smoke</title><canvas id="root"></canvas>');
     }
 
     const smoke = await page.evaluate(async ({ moduleUrl, wasmUrl, modelUrl }) => {
