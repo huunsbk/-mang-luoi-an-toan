@@ -6,8 +6,15 @@ const moduleUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/
 const wasmUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm';
 const modelUrl = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
-async function run(name, browserType, { fullInference = true } = {}) {
-  const browser = await browserType.launch({ headless: true });
+async function run(name, browserType, { fullInference = true, cameraSmoke = false } = {}) {
+  const launchOptions = { headless: true };
+  if (cameraSmoke) {
+    launchOptions.args = [
+      '--use-fake-device-for-media-stream',
+      '--use-fake-ui-for-media-stream'
+    ];
+  }
+  const browser = await browserType.launch(launchOptions);
   try {
     const page = await browser.newPage();
     const pageErrors = [];
@@ -30,6 +37,52 @@ async function run(name, browserType, { fullInference = true } = {}) {
       }
     } else {
       await page.setContent('<!doctype html><meta charset="utf-8"><title>Pose AI runtime smoke</title><canvas id="root"></canvas>');
+    }
+
+    if (cameraSmoke) {
+      const cameraResult = await page.evaluate(async () => {
+        if (typeof Camera !== 'function') {
+          throw new Error('MediaPipe Camera utility is not available');
+        }
+        const video = document.createElement('video');
+        video.playsInline = true;
+        video.muted = true;
+        video.style.position = 'fixed';
+        video.style.left = '-9999px';
+        document.body.appendChild(video);
+
+        let frames = 0;
+        const camera = new Camera(video, {
+          onFrame: async () => { frames += 1; },
+          width: 640,
+          height: 480
+        });
+
+        try {
+          await camera.start();
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          const stream = video.srcObject;
+          const tracks = stream?.getVideoTracks?.() || [];
+          const live = tracks.some(track => track.readyState === 'live');
+          return {
+            ok: live && frames > 0,
+            live,
+            frames,
+            readyState: video.readyState,
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight
+          };
+        } finally {
+          try { camera.stop(); } catch (_) {}
+          try { video.srcObject?.getTracks?.().forEach(track => track.stop()); } catch (_) {}
+          video.remove();
+        }
+      });
+
+      console.log(name, 'CAMERA_SMOKE', JSON.stringify(cameraResult));
+      if (!cameraResult.ok) {
+        throw new Error(`${name}: MediaPipe Camera did not produce a live video stream/frame`);
+      }
     }
 
     const smoke = await page.evaluate(async ({ moduleUrl, wasmUrl, modelUrl, fullInference }) => {
@@ -77,7 +130,7 @@ async function run(name, browserType, { fullInference = true } = {}) {
   }
 }
 
-await run('Chromium', chromium, { fullInference: true });
+await run('Chromium', chromium, { fullInference: true, cameraSmoke: !skipTarget });
 // Headless WebKit on GitHub runners has no usable WebGL context for MediaPipe inference.
 // Validate native ESM import + WASM there; the existing iPhone QA validates the actual UI.
 await run('WebKit', webkit, { fullInference: false });
