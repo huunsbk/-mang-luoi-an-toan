@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Pose Quiz Game - V9.9 Quick Response</title>
+    <title>AI Pose Quiz Game - V10 Multi-Person Target Lock</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -226,6 +226,144 @@
 
             return 'NONE';
         };
+
+        const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+        const IMPORTANT_POSE_POINTS = [11, 12, 13, 14, 15, 16, 23, 24];
+
+        const buildPoseDetection = (landmarks, index) => {
+            const usable = (landmarks || []).filter(point =>
+                Number.isFinite(point?.x) &&
+                Number.isFinite(point?.y) &&
+                (Number.isFinite(point?.visibility) ? point.visibility >= 0.2 : true)
+            );
+            if (!usable.length) return null;
+
+            const xs = usable.map(point => clamp01(point.x));
+            const ys = usable.map(point => clamp01(point.y));
+            const padX = 0.035;
+            const padY = 0.04;
+            const minX = clamp01(Math.min(...xs) - padX);
+            const maxX = clamp01(Math.max(...xs) + padX);
+            const minY = clamp01(Math.min(...ys) - padY);
+            const maxY = clamp01(Math.max(...ys) + padY);
+            const width = Math.max(0.02, maxX - minX);
+            const height = Math.max(0.02, maxY - minY);
+            const shoulderWidth = landmarks?.[11] && landmarks?.[12]
+                ? Math.hypot(landmarks[11].x - landmarks[12].x, landmarks[11].y - landmarks[12].y)
+                : 0;
+
+            return {
+                index,
+                landmarks,
+                box: {
+                    minX, maxX, minY, maxY, width, height,
+                    cx: (minX + maxX) / 2,
+                    cy: (minY + maxY) / 2
+                },
+                shoulderWidth
+            };
+        };
+
+        const getPoseQuality = (detection) => {
+            if (!detection) return { ok: false, level: 'lost', label: 'Không thấy học sinh đã chọn' };
+            const landmarks = detection.landmarks || [];
+            const important = IMPORTANT_POSE_POINTS.map(index => landmarks[index]).filter(Boolean);
+            const visibleCount = important.filter(point => !Number.isFinite(point.visibility) || point.visibility >= 0.45).length;
+            const visibilityAvg = important.length
+                ? important.reduce((sum, point) => sum + (Number.isFinite(point.visibility) ? point.visibility : 1), 0) / important.length
+                : 0;
+
+            if (detection.box.height < 0.28 || detection.shoulderWidth < 0.055) {
+                return { ok: false, level: 'far', label: 'Hơi xa camera — mời học sinh tiến gần hơn' };
+            }
+            if (detection.box.height > 0.96) {
+                return { ok: false, level: 'near', label: 'Quá gần camera — lùi lại một chút' };
+            }
+            if (visibleCount < 6 || visibilityAvg < 0.45) {
+                return { ok: false, level: 'occluded', label: 'Cơ thể bị che/khuất — cần thấy rõ vai, tay và hông' };
+            }
+            return { ok: true, level: 'good', label: 'Khoảng cách tốt — AI đã sẵn sàng nhận tư thế' };
+        };
+
+        const boxIoU = (a, b) => {
+            if (!a || !b) return 0;
+            const left = Math.max(a.minX, b.minX);
+            const top = Math.max(a.minY, b.minY);
+            const right = Math.min(a.maxX, b.maxX);
+            const bottom = Math.min(a.maxY, b.maxY);
+            const inter = Math.max(0, right - left) * Math.max(0, bottom - top);
+            const union = a.width * a.height + b.width * b.height - inter;
+            return union > 0 ? inter / union : 0;
+        };
+
+        const pickTrackedPose = (previous, detections) => {
+            if (!previous || !detections?.length) return null;
+            let best = null;
+            let bestScore = Infinity;
+            detections.forEach(detection => {
+                const centerDistance = Math.hypot(
+                    detection.box.cx - previous.cx,
+                    detection.box.cy - previous.cy
+                );
+                const sizeRatio = detection.box.height / Math.max(0.02, previous.height);
+                const overlap = boxIoU(previous, detection.box);
+                const allowedDistance = Math.max(0.18, Math.min(0.32, previous.width * 1.25));
+                const plausible = (centerDistance <= allowedDistance || overlap >= 0.08) && sizeRatio >= 0.5 && sizeRatio <= 1.9;
+                if (!plausible) return;
+                const score = centerDistance * 1.6 + Math.abs(Math.log(sizeRatio)) * 0.18 + (1 - overlap) * 0.25;
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = detection;
+                }
+            });
+            return best;
+        };
+
+        const drawDetection = (ctx, detection, color, label, strong = false) => {
+            if (!ctx || !detection) return;
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            const box = detection.box;
+            const x = box.minX * width;
+            const y = box.minY * height;
+            const w = box.width * width;
+            const h = box.height * height;
+
+            ctx.save();
+            try {
+                drawConnectors(ctx, detection.landmarks, POSE_CONNECTIONS, {
+                    color,
+                    lineWidth: strong ? 4 : 2
+                });
+                drawLandmarks(ctx, detection.landmarks, {
+                    color: strong ? '#ffffff' : color,
+                    lineWidth: 1,
+                    radius: strong ? 3 : 2
+                });
+            } catch (_) {}
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = strong ? 5 : 3;
+            ctx.setLineDash(strong ? [] : [8, 5]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.setLineDash([]);
+
+            if (label) {
+                ctx.font = '800 18px Quicksand, sans-serif';
+                const textWidth = ctx.measureText(label).width;
+                const labelW = Math.max(70, textWidth + 20);
+                const labelH = 30;
+                const labelX = Math.max(0, Math.min(width - labelW, x));
+                const labelY = Math.max(0, y - labelH);
+                ctx.fillStyle = color;
+                ctx.fillRect(labelX, labelY, labelW, labelH);
+                ctx.fillStyle = '#ffffff';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, labelX + 10, labelY + labelH / 2);
+            }
+            ctx.restore();
+        };
+
 
 
         const AuthScreen = () => {
@@ -947,7 +1085,7 @@
                 </div>
                 <div className="mb-4 text-8xl animate-bounce drop-shadow-2xl">🙋‍♂️</div>
                 <h1 className="text-6xl font-black mb-2 tracking-tighter uppercase">AI POSE QUIZ</h1>
-                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V9.9 Cloud</p>
+                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V10 Multi-Person</p>
                 <div className="flex flex-col gap-3 w-[34rem] max-w-full">
                     <button onClick={() => { unlockAudio(); setScreen('GAME'); }} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
                     <div className="grid grid-cols-2 gap-3">
@@ -974,6 +1112,11 @@
             const [gameToken, setGameToken] = useState(null);
             const [gameReady, setGameReady] = useState(false);
             const [gameError, setGameError] = useState('');
+            const [poseError, setPoseError] = useState('');
+            const [peopleCount, setPeopleCount] = useState(0);
+            const [selectionMode, setSelectionMode] = useState(true);
+            const [targetStatus, setTargetStatus] = useState('SELECTING');
+            const [targetQuality, setTargetQuality] = useState({ ok: false, level: 'waiting', label: 'Chọn học sinh cần nhận diện' });
             const checkInFlightRef = useRef(false);
             const isPausedRef = useRef(false);
             const pendingResultRef = useRef(null);
@@ -982,12 +1125,20 @@
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
             const poseRef = useRef(null);
+            const poseLandmarkerRef = useRef(null);
             const cameraRef = useRef(null);
             const bgmRef = useRef(null);
             const questionAudioRef = useRef(null);
             const isMounted = useRef(true);
+            const detectionsRef = useRef([]);
+            const targetTrackRef = useRef(null);
+            const selectionModeRef = useRef(true);
+            const lastPeopleUiUpdateRef = useRef(0);
+            const lastQualityUiUpdateRef = useRef(0);
+            const lastVideoTimestampRef = useRef(0);
 
             const currentQuestion = settings.questions[qIndex];
+            const recognitionBlocked = selectionMode || targetStatus !== 'LOCKED' || !targetQuality.ok || !!poseError;
             const lessonBackground = mediaSrc(settings.theme?.background);
             const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
             const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
@@ -1049,7 +1200,7 @@
             }, [applyCheckedResult]);
 
             const checkAnswer = useCallback(async () => {
-                if (feedback || !gameReady || !gameToken || checkInFlightRef.current) return;
+                if (feedback || !gameReady || !gameToken || checkInFlightRef.current || recognitionBlocked) return;
                 checkInFlightRef.current = true;
                 try {
                     const result = await backendRequest('game.check', {
@@ -1081,11 +1232,11 @@
                     checkInFlightRef.current = false;
                     alert('Backend không chấm được câu hỏi: ' + err.message);
                 }
-            }, [feedback, gameReady, gameToken, detectedPose, isMuted, masterVolume, settings, scheduleCheckedResult]);
+            }, [feedback, gameReady, gameToken, detectedPose, isMuted, masterVolume, settings, scheduleCheckedResult, recognitionBlocked]);
 
             // Hàm xử lý khi nhấn nút Kiểm tra
             const handleManualCheck = () => {
-                if (isPaused || feedback || !gameReady || checkInFlightRef.current) return;
+                if (isPaused || feedback || !gameReady || checkInFlightRef.current || recognitionBlocked) return;
                 setTimeLeft(0);
             };
 
@@ -1147,60 +1298,236 @@
             }, [qIndex, currentQuestion?.audio?.data, isMuted, isPaused, masterVolume, settings.audio.questionVolume]);
 
             useEffect(() => {
+                selectionModeRef.current = selectionMode;
+            }, [selectionMode]);
+
+            const resetTargetSelection = useCallback(() => {
+                selectionModeRef.current = true;
+                setSelectionMode(true);
+                setTargetStatus('SELECTING');
+                setTargetQuality({ ok: false, level: 'waiting', label: 'Chọn học sinh cần nhận diện' });
+                targetTrackRef.current = null;
+                setDetectedPose('NONE');
+            }, []);
+
+            const handleCanvasClick = useCallback((event) => {
+                if (!selectionModeRef.current || !canvasRef.current) return;
+                const detections = detectionsRef.current || [];
+                if (!detections.length) return;
+
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const sourceWidth = canvas.width || 640;
+                const sourceHeight = canvas.height || 480;
+                const scale = Math.min(rect.width / sourceWidth, rect.height / sourceHeight);
+                const renderedWidth = sourceWidth * scale;
+                const renderedHeight = sourceHeight * scale;
+                const offsetX = (rect.width - renderedWidth) / 2;
+                const offsetY = (rect.height - renderedHeight) / 2;
+
+                const mirroredX = rect.right - event.clientX;
+                const sourceX = (mirroredX - offsetX) / renderedWidth;
+                const sourceY = (event.clientY - rect.top - offsetY) / renderedHeight;
+                if (sourceX < 0 || sourceX > 1 || sourceY < 0 || sourceY > 1) return;
+
+                let candidates = detections.filter(detection => (
+                    sourceX >= detection.box.minX &&
+                    sourceX <= detection.box.maxX &&
+                    sourceY >= detection.box.minY &&
+                    sourceY <= detection.box.maxY
+                ));
+
+                if (!candidates.length) {
+                    candidates = detections
+                        .map(detection => ({
+                            detection,
+                            distance: Math.hypot(sourceX - detection.box.cx, sourceY - detection.box.cy)
+                        }))
+                        .filter(item => item.distance <= 0.18)
+                        .sort((a, b) => a.distance - b.distance)
+                        .map(item => item.detection);
+                } else {
+                    candidates.sort((a, b) => (a.box.width * a.box.height) - (b.box.width * b.box.height));
+                }
+
+                const selected = candidates[0];
+                if (!selected) return;
+
+                const now = performance.now();
+                targetTrackRef.current = { ...selected.box, lastSeen: now };
+                selectionModeRef.current = false;
+                setSelectionMode(false);
+                setTargetStatus('LOCKED');
+                const quality = getPoseQuality(selected);
+                setTargetQuality(quality);
+                setDetectedPose(quality.ok ? analyzePose(selected.landmarks) : 'NONE');
+            }, []);
+
+            useEffect(() => {
                 if (!gameReady) return;
                 const videoElement = videoRef.current;
                 if (!videoElement) return;
 
+                let cancelled = false;
                 isMounted.current = true;
+                setPoseError('');
+
                 const initPose = async () => {
                     try {
-                        poseRef.current = new Pose({ 
-                            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` 
+                        const visionModule = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs');
+                        const vision = await visionModule.FilesetResolver.forVisionTasks(
+                            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
+                        );
+
+                        const createLandmarker = async (delegate, modelAssetPath) => visionModule.PoseLandmarker.createFromOptions(vision, {
+                            baseOptions: { modelAssetPath, delegate },
+                            runningMode: 'VIDEO',
+                            numPoses: 5,
+                            minPoseDetectionConfidence: 0.45,
+                            minPosePresenceConfidence: 0.45,
+                            minTrackingConfidence: 0.5,
+                            outputSegmentationMasks: false
                         });
-                        poseRef.current.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-                        poseRef.current.onResults((results) => {
-                            if (!isMounted.current || !canvasRef.current) return;
-                            const canvasCtx = canvasRef.current.getContext('2d');
-                            canvasCtx.save();
-                            canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                            if (results.poseLandmarks) {
-                                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#6366f1', lineWidth: 3});
-                                drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#f43f5e', lineWidth: 1, radius: 3 });
-                                setDetectedPose(analyzePose(results.poseLandmarks));
-                            }
-                            canvasCtx.restore();
-                        });
-                        if (!isMounted.current) return;
+
+                        let landmarker;
+                        try {
+                            landmarker = await createLandmarker(
+                                'GPU',
+                                'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task'
+                            );
+                        } catch (gpuError) {
+                            console.warn('Pose GPU unavailable, switching to CPU/Lite:', gpuError);
+                            landmarker = await createLandmarker(
+                                'CPU',
+                                'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+                            );
+                        }
+
+                        if (cancelled || !isMounted.current) {
+                            try { landmarker.close(); } catch (_) {}
+                            return;
+                        }
+
+                        poseLandmarkerRef.current = landmarker;
+                        resetTargetSelection();
+
                         cameraRef.current = new Camera(videoElement, {
                             onFrame: async () => {
-                                if (isMounted.current && poseRef.current && videoRef.current) {
-                                    await poseRef.current.send({image: videoRef.current});
+                                if (
+                                    cancelled ||
+                                    !isMounted.current ||
+                                    !poseLandmarkerRef.current ||
+                                    !videoRef.current ||
+                                    videoRef.current.readyState < 2
+                                ) return;
+
+                                let timestamp = performance.now();
+                                if (timestamp <= lastVideoTimestampRef.current) timestamp = lastVideoTimestampRef.current + 1;
+                                lastVideoTimestampRef.current = timestamp;
+
+                                let result;
+                                try {
+                                    result = poseLandmarkerRef.current.detectForVideo(videoRef.current, timestamp);
+                                } catch (detectError) {
+                                    console.warn('Pose frame skipped:', detectError);
+                                    return;
+                                }
+
+                                const detections = (result?.landmarks || [])
+                                    .slice(0, 5)
+                                    .map((landmarks, index) => buildPoseDetection(landmarks, index))
+                                    .filter(Boolean);
+                                detectionsRef.current = detections;
+
+                                const canvas = canvasRef.current;
+                                if (!canvas) return;
+                                const ctx = canvas.getContext('2d');
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                                const now = performance.now();
+                                if (now - lastPeopleUiUpdateRef.current > 140) {
+                                    setPeopleCount(detections.length);
+                                    lastPeopleUiUpdateRef.current = now;
+                                }
+
+                                if (selectionModeRef.current) {
+                                    detections.forEach((detection, index) => {
+                                        drawDetection(ctx, detection, '#6366f1', 'HS ' + (index + 1), false);
+                                    });
+                                    return;
+                                }
+
+                                const previous = targetTrackRef.current;
+                                const matched = pickTrackedPose(previous, detections);
+
+                                if (matched) {
+                                    targetTrackRef.current = { ...matched.box, lastSeen: now };
+                                    setTargetStatus('LOCKED');
+                                    const quality = getPoseQuality(matched);
+                                    if (now - lastQualityUiUpdateRef.current > 140) {
+                                        setTargetQuality(quality);
+                                        lastQualityUiUpdateRef.current = now;
+                                    }
+                                    drawDetection(ctx, matched, quality.ok ? '#22c55e' : '#f59e0b', quality.ok ? 'ĐÃ KHÓA' : 'GIỮ VỊ TRÍ', true);
+                                    setDetectedPose(quality.ok ? analyzePose(matched.landmarks) : 'NONE');
+                                } else {
+                                    const lastSeen = previous?.lastSeen || now;
+                                    const missingFor = now - lastSeen;
+                                    setDetectedPose('NONE');
+                                    if (missingFor < 2500) {
+                                        setTargetStatus('SEARCHING');
+                                        if (now - lastQualityUiUpdateRef.current > 140) {
+                                            setTargetQuality({ ok: false, level: 'searching', label: 'Đang tìm lại học sinh đã chọn...' });
+                                            lastQualityUiUpdateRef.current = now;
+                                        }
+                                        detections.forEach(detection => drawDetection(ctx, detection, '#f59e0b', '', false));
+                                    } else {
+                                        setTargetStatus('LOST');
+                                        if (now - lastQualityUiUpdateRef.current > 140) {
+                                            setTargetQuality({ ok: false, level: 'lost', label: 'Đã mất mục tiêu — bấm Chọn lại học sinh' });
+                                            lastQualityUiUpdateRef.current = now;
+                                        }
+                                        detections.forEach((detection, index) => drawDetection(ctx, detection, '#ef4444', 'HS ' + (index + 1), false));
+                                    }
                                 }
                             },
-                            width: 640, height: 480
+                            width: 640,
+                            height: 480
                         });
+
                         await cameraRef.current.start();
-                        if (!isMounted.current && cameraRef.current) cameraRef.current.stop();
+                        if (cancelled && cameraRef.current) cameraRef.current.stop();
                     } catch (err) {
-                        if (isMounted.current) console.warn('Camera/Pose init failed:', err);
+                        console.error('Multi-pose init failed:', err);
+                        if (!cancelled && isMounted.current) {
+                            setPoseError('Không khởi tạo được AI đa học sinh. Hãy tải lại trang hoặc kiểm tra kết nối Internet.');
+                        }
                     }
                 };
+
                 initPose();
                 return () => {
+                    cancelled = true;
                     isMounted.current = false;
+                    detectionsRef.current = [];
+                    targetTrackRef.current = null;
                     if (cameraRef.current) {
                         try { cameraRef.current.stop(); } catch (_) {}
                         cameraRef.current = null;
+                    }
+                    if (poseLandmarkerRef.current) {
+                        try { poseLandmarkerRef.current.close(); } catch (_) {}
+                        poseLandmarkerRef.current = null;
                     }
                     if (poseRef.current) {
                         try { poseRef.current.close(); } catch (_) {}
                         poseRef.current = null;
                     }
                 };
-            }, [gameReady]);
+            }, [gameReady, resetTargetSelection]);
 
             useEffect(() => {
-                if (!gameReady || gameError || feedback || isPaused) return;
+                if (!gameReady || gameError || feedback || isPaused || recognitionBlocked) return;
                 if (timeLeft <= 0) { checkAnswer(); return; }
                 const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
                 const intervalTimer = setInterval(() => {
@@ -1210,7 +1537,7 @@
                     });
                 }, 1000);
                 return () => { clearInterval(timer); clearInterval(intervalTimer); };
-            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused]);
+            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused, recognitionBlocked]);
 
             if (!gameReady) {
                 return (
@@ -1285,7 +1612,7 @@
                             >
                                 {isPaused ? '▶ TIẾP TỤC' : '⏸ TẠM DỪNG'}
                             </button>
-                            <button onClick={handleManualCheck} disabled={isPaused} className="pose-game-check bg-yellow-400 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
+                            <button onClick={handleManualCheck} disabled={isPaused || recognitionBlocked} className="pose-game-check bg-yellow-400 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
                         </div>
                     </div>
 
@@ -1316,7 +1643,7 @@
                             
                             <div className="pose-answers-grid flex-[3] grid grid-cols-2 gap-2 relative z-10">
                                 {currentQuestion.answers.slice(0, settings.numAnswers).map((ans, idx) => (
-                                    <div key={idx} className={`pose-answer-card answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
+                                    <div key={idx} className={`pose-answer-card answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${!recognitionBlocked && detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
                                         <div className="pose-answer-letter flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 rounded-2xl mr-3 text-white text-2xl font-black shadow-md">{String.fromCharCode(65 + idx)}</div>
                                         <div className="flex-1 min-w-0 pr-2">
                                             <span className="pose-answer-text text-lg font-bold text-slate-700 leading-tight block line-clamp-2">{ans.text}</span>
@@ -1331,27 +1658,68 @@
 
                         <div className="pose-camera-panel w-[38%] relative bg-slate-900 overflow-hidden flex flex-col">
                             <div className="relative flex-1 bg-black">
-                                <video ref={videoRef} playsInline className="camera-flip w-full h-full object-cover opacity-90" />
-                                <canvas ref={canvasRef} className="camera-flip absolute inset-0 w-full h-full" />
+                                <video ref={videoRef} playsInline className="camera-flip w-full h-full object-contain opacity-90" />
+                                <canvas
+                                    ref={canvasRef}
+                                    width="640"
+                                    height="480"
+                                    onClick={handleCanvasClick}
+                                    className={`camera-flip absolute inset-0 w-full h-full object-contain ${selectionMode ? 'cursor-crosshair' : 'cursor-default'}`}
+                                    title={selectionMode ? 'Chạm vào khung học sinh muốn AI nhận diện' : 'AI đang khóa học sinh đã chọn'}
+                                />
+                                {selectionMode && (
+                                    <div className="absolute top-3 left-3 right-3 z-20 bg-indigo-600/95 text-white px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-center pointer-events-none">
+                                        <div className="font-black text-sm">🎯 CHỌN HỌC SINH CẦN NHẬN DIỆN</div>
+                                        <div className="text-xs font-bold text-indigo-100 mt-0.5">
+                                            {peopleCount > 0 ? `AI thấy ${peopleCount} học sinh — chạm trực tiếp vào khung của em cần chơi` : 'Chưa thấy học sinh — mời các em đứng trọn trong khung camera'}
+                                        </div>
+                                    </div>
+                                )}
+                                {targetStatus === 'SEARCHING' && (
+                                    <div className="absolute top-3 left-3 right-3 z-20 bg-amber-400/95 text-amber-950 px-4 py-2 rounded-2xl shadow-xl font-black text-sm text-center pointer-events-none">
+                                        🔎 ĐANG TÌM LẠI HỌC SINH ĐÃ CHỌN — chưa tính đáp án
+                                    </div>
+                                )}
+                                {targetStatus === 'LOST' && (
+                                    <div className="absolute top-3 left-3 right-3 z-30 bg-red-600/95 text-white px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-center">
+                                        <div className="font-black text-sm">⚠ ĐÃ MẤT HỌC SINH MỤC TIÊU</div>
+                                        <button onClick={resetTargetSelection} className="mt-2 bg-white text-red-700 px-4 py-1.5 rounded-xl text-xs font-black">🎯 CHỌN LẠI HỌC SINH</button>
+                                    </div>
+                                )}
+                                {poseError && (
+                                    <div className="absolute top-3 left-3 right-3 z-40 bg-red-700 text-white px-4 py-3 rounded-2xl shadow-xl text-center font-bold text-sm">
+                                        ⚠ {poseError}
+                                    </div>
+                                )}
                                 <div className="pose-camera-status absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between shadow-2xl border border-white/50">
                                     <div className="flex items-center gap-3">
                                         <div className="pose-camera-status-icon w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-inner overflow-hidden border border-slate-200">
                                             {getPoseVisual(detectedPose)}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Bạn đang:</span>
-                                            <span className="pose-camera-status-name text-xl font-black text-indigo-700 uppercase italic leading-none">{DEFAULT_POSE_CONFIG[detectedPose].label}</span>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                                {selectionMode ? 'Trạng thái AI:' : targetStatus === 'LOCKED' ? 'Học sinh đang:' : 'Theo dõi:'}
+                                            </span>
+                                            <span className={`pose-camera-status-name text-lg font-black uppercase italic leading-none ${targetQuality.ok ? 'text-indigo-700' : 'text-amber-600'}`}>
+                                                {selectionMode ? 'CHỜ CHỌN HỌC SINH' : targetStatus === 'LOCKED' ? DEFAULT_POSE_CONFIG[detectedPose].label : targetStatus === 'SEARCHING' ? 'ĐANG TÌM LẠI' : 'MẤT MỤC TIÊU'}
+                                            </span>
+                                            <span className={`text-[10px] mt-1 font-bold leading-tight ${targetQuality.ok ? 'text-emerald-600' : 'text-slate-500'}`}>{targetQuality.label}</span>
                                         </div>
                                     </div>
                                     <div className="pose-camera-scan flex items-center gap-2">
-                                         <div className="text-right mr-2">
-                                            <div className="text-[8px] font-bold text-slate-400 uppercase leading-none">Scanning</div>
-                                            <div className="text-[10px] font-black text-indigo-500">{checkTimer}s</div>
+                                         <div className="text-right mr-1">
+                                            <div className="text-[8px] font-bold text-slate-400 uppercase leading-none">{targetStatus === 'LOCKED' ? 'Target lock' : 'Multi-pose'}</div>
+                                            <div className={`text-[10px] font-black ${targetQuality.ok ? 'text-emerald-600' : 'text-indigo-500'}`}>{selectionMode ? peopleCount + ' người' : targetQuality.ok ? 'SẴN SÀNG' : 'TẠM DỪNG'}</div>
                                          </div>
-                                         <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center relative">
-                                            <div className="absolute inset-0 rounded-full border-2 border-indigo-400 animate-ping opacity-20"></div>
-                                            <div className="w-4 h-4 rounded-full bg-white"></div>
-                                        </div>
+                                         {!selectionMode && (
+                                            <button
+                                                onClick={resetTargetSelection}
+                                                className="px-3 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black shadow"
+                                                title="Chọn một học sinh khác"
+                                            >
+                                                🎯 CHỌN LẠI
+                                            </button>
+                                         )}
                                     </div>
                                 </div>
                             </div>
