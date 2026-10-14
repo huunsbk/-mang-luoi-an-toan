@@ -713,12 +713,13 @@ function chosenTeacherVoice(){
  return (key!=='auto'&&voices.find(v=>(v.voiceURI||v.name)===key))||
    voices.sort((a,b)=>teacherVoiceScore(b)-teacherVoiceScore(a))[0]||null;
 }
-let currentAiAudio=null,currentAiUrl=null,currentAiAbort=null;
+let currentAiAudio=null,currentAiUrl=null,currentAiAbort=null,currentAiSource=null;
 let geminiInfo={configured:false,voiceVersion:'initial'},lastAiFailure=0;
 const aiClips=new Map();
 function stopStudySpeech(){
  studySpeechRun++;
  if(currentAiAbort){currentAiAbort.abort();currentAiAbort=null}
+ if(currentAiSource){try{currentAiSource.stop()}catch(e){}currentAiSource=null}
  if(currentAiAudio){currentAiAudio.pause();currentAiAudio.src='';currentAiAudio=null}
  if(currentAiUrl){URL.revokeObjectURL(currentAiUrl);currentAiUrl=null}
  if(hasStudySpeech())try{speechSynthesis.cancel()}catch(e){console.warn('Không thể dừng giọng đọc:',e)}
@@ -787,6 +788,7 @@ async function obtainGeminiClip(text,signal){
  return clip;
 }
 async function speakStudySequence(parts,force=false){
+ soundReady();
  if((!force&&!$('voiceName').checked)||!parts.length){stopStudySpeech();return}
  if($('aiVoiceMode').value!=='studio'||!geminiInfo.configured||!$('aiVoicePin').value.trim()){
   speakLocalSequence(parts,force);return;
@@ -798,10 +800,21 @@ async function speakStudySequence(parts,force=false){
   const blob=await obtainGeminiClip(content,controller.signal);
   if(token!==studySpeechRun)return;
   currentAiAbort=null;
-  const url=URL.createObjectURL(blob),audio=new Audio(url);
-  currentAiUrl=url;currentAiAudio=audio;audio.volume=clamp(Number($('winVol').value)/100,.1,1);
-  audio.onended=()=>{if(currentAiAudio===audio){currentAiAudio=null;URL.revokeObjectURL(url);currentAiUrl=null}};
-  await audio.play();
+  if(audioCtx&&audioCtx.state==='running'){
+   const buffer=await audioCtx.decodeAudioData(await blob.arrayBuffer());
+   if(token!==studySpeechRun)return;
+   const source=audioCtx.createBufferSource(),gain=audioCtx.createGain();
+   source.buffer=buffer;gain.gain.value=clamp(Number($('winVol').value)/100,.1,1);
+   source.connect(gain);gain.connect(audioCtx.destination);
+   currentAiSource=source;
+   source.onended=()=>{if(currentAiSource===source)currentAiSource=null};
+   source.start();
+  }else{
+   const url=URL.createObjectURL(blob),audio=new Audio(url);
+   currentAiUrl=url;currentAiAudio=audio;audio.volume=clamp(Number($('winVol').value)/100,.1,1);
+   audio.onended=()=>{if(currentAiAudio===audio){currentAiAudio=null;URL.revokeObjectURL(url);currentAiUrl=null}};
+   await audio.play();
+  }
  }catch(error){
   if(token!==studySpeechRun)return;
   currentAiAbort=null;
