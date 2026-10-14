@@ -1,0 +1,74 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ngân hàng câu hỏi & giọng đọc | Cổng giáo viên số</title>
+<style>
+:root{--blue:#2563eb;--dark:#17294b;--grey:#5c6e88;--line:#dae4f2;--bg:#f3f7fe;--danger:#bb3030}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top left,#dceafe,transparent 50%),var(--bg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--dark)}
+header{padding:24px 4%;background:linear-gradient(120deg,#13264e,#254f9c);color:white}header>a{color:#dcf0ff;text-decoration:none;font-weight:700}header h1{margin:10px 0 0;font-size:clamp(23px,3vw,35px)}header p{color:#d8e8ff;margin:7px 0 0}
+main{max-width:1400px;margin:auto;padding:22px 16px 70px}.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 10px 26px #162b4f0a}
+h2{font-size:19px;margin:0 0 10px}h3{font-size:16px;margin:0 0 9px}p{margin:6px 0 13px}
+label{font-size:13px;font-weight:750;display:block;margin:9px 0 4px}input,select,textarea{background:#fff;color:var(--dark);border:1px solid #b7c9e4;border-radius:10px;padding:10px;width:100%;font:inherit;min-width:0}textarea{min-height:84px;resize:vertical}
+button,.buttonlink{border:0;border-radius:10px;background:#e9f0fe;color:#174a9a;padding:10px 13px;cursor:pointer;font:inherit;font-weight:730;text-decoration:none;display:inline-block;text-align:center}button:hover,.buttonlink:hover{filter:brightness(.96)}button:disabled{opacity:.5;cursor:wait}
+.primary{background:var(--blue);color:white}.danger{background:#ffe3e2;color:#9e2727}.ok{background:#dff7ed;color:#087a5a}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{flex:0 1 auto}.row .grow{flex:1 1 160px}.split{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px}.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.filter-grid{display:grid;grid-template-columns:1fr 1fr 1.6fr;gap:9px}.list{max-height:590px;overflow:auto;border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.item{display:flex;gap:10px;align-items:start;padding:10px 8px;border-bottom:1px solid #e9edf4}.item.active{background:#e9f1ff}.item:last-child{border:0}.item input[type=checkbox]{width:17px;height:17px;flex:none;margin-top:5px}
+.itembutton{flex:1;text-align:left;background:transparent;padding:3px;min-width:0;font-weight:400}.itembutton strong{display:block;overflow-wrap:anywhere}.itembutton small{display:block;color:var(--grey);margin-top:2px}
+.muted{color:var(--grey);font-size:13px}.notice{border-radius:10px;padding:10px;background:#eaf3ff;color:#1a4c88;margin-top:9px;white-space:pre-line;font-size:13px}.notice.error{background:#fff1f1;color:#ae2727}
+.pill{font-size:11px;color:#2864ac;background:#e8f2ff;border-radius:30px;padding:4px 8px;display:inline-block}
+[hidden]{display:none!important}details{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}summary{font-weight:800;cursor:pointer}
+.control-label{display:flex;align-items:center;gap:8px;font-weight:650;margin:8px 0}.control-label input{width:auto}.helper{background:#f0f6ff;border-radius:10px;padding:9px 11px;color:#4d6080;font-size:13px;margin:7px 0}
+.audio-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+.audio-cell{background:#f5f8fe;border:1px solid #e2ebf6;border-radius:10px;padding:10px}.audio-cell span{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
+@media(max-width:960px){.split{grid-template-columns:1fr}.list{max-height:370px}}
+@media(max-width:580px){.filter-grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}header{padding:18px}main{padding:13px 9px 50px}.panel{padding:13px}.row>*{flex:1 1 130px}}
+</style></head><body>
+<header><a href="/">← Cổng giáo viên</a><h1>📚 Ngân hàng câu hỏi & giọng đọc</h1><p>Học liệu dùng chung cho AI Pose Quiz, Đua bi và các trò chơi tiếp theo · Supabase MotionClass</p></header>
+<main>
+<section class="panel" id="loginPanel"><h2>🔐 Đăng nhập MotionClass</h2><p class="muted">Dùng tài khoản giáo viên đang sử dụng trong AI Pose Quiz và Quản lý lớp học.</p>
+<form id="loginForm"><div class="two"><div><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" required></div><div><label for="loginPass">Mật khẩu</label><input id="loginPass" type="password" autocomplete="current-password" required></div></div><div class="row" style="margin-top:10px"><button class="primary" type="submit">Đăng nhập</button></div></form></section>
+<div id="appPanel" hidden>
+<div class="panel row"><strong id="userLabel" class="grow"></strong><span class="pill" id="bankTotals">0 câu hỏi</span><button id="reloadBank">⟳ Làm mới</button><button id="logout">Đăng xuất</button></div>
+<div class="split">
+<section class="panel"><h2>🔎 Danh sách câu hỏi</h2><div class="filter-grid">
+<div><label for="filterSubject">Môn</label><select id="filterSubject"><option value="ALL">Tất cả</option></select></div>
+<div><label for="filterLesson">Bài học</label><select id="filterLesson"><option value="ALL">Tất cả</option></select></div>
+<div><label for="filterSearch">Từ khóa</label><input id="filterSearch" placeholder="Tìm theo nội dung..."></div></div>
+<label class="control-label"><input id="onlyMine" type="checkbox" checked> Chỉ câu hỏi của tôi</label>
+<div class="row"><button id="newQuestion" class="primary">＋ Tạo câu mới</button><button id="selectAll">✓ Chọn tất cả</button><button id="unselectAll">Bỏ chọn</button></div>
+<div id="questionList" class="list"><p class="muted" style="padding:10px">Đăng nhập để xem câu hỏi.</p></div>
+<div class="row"><button id="bulkDelete" class="danger">🗑 Xóa câu đã chọn</button><button id="exportJson">↓ Xuất JSON</button><button id="exportCsv">↓ Xuất CSV</button></div>
+<details><summary>📥 Nhập nhanh nhiều câu hỏi</summary>
+<p class="muted">Dán nội dung từ Đua bi hoặc tải tệp TXT/JSON. Mỗi câu gồm Câu 1:, A., B., C., D. và Đáp án đúng: A–D.</p>
+<label for="bulkSubject">Môn học khi nhập</label><input id="bulkSubject" placeholder="Ví dụ: Tin học 5">
+<label for="bulkLesson">Bài học khi nhập</label><input id="bulkLesson" placeholder="Ví dụ: Chủ đề Máy tính và em">
+<textarea id="bulkText" rows="9" placeholder="Câu 1: Thiết bị nào giúp gõ chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Loa&#10;D. Chuột&#10;Đáp án đúng: B"></textarea>
+<label for="bulkFile">Hoặc chọn TXT/JSON</label><input type="file" id="bulkFile" accept=".txt,.json,text/plain,application/json">
+<label class="control-label"><input id="bulkPublic" type="checkbox"> Chia sẻ công khai những câu mới</label>
+<div class="row"><button id="bulkPreview">✓ Kiểm tra danh sách</button><button id="bulkSave" class="primary">☁ Lưu tất cả lên Supabase</button></div>
+<div id="bulkStatus" class="notice" role="status">Chưa nhập câu hỏi.</div></details>
+</section>
+<section>
+<div class="panel"><h2>✏️ Soạn / chỉnh sửa câu hỏi</h2>
+<input id="editId" type="hidden">
+<div class="two"><div><label for="subject">Môn học</label><input id="subject" maxlength="120" placeholder="Tin học 5"></div><div><label for="lesson">Bài học / chủ đề</label><input id="lesson" maxlength="200" placeholder="Bài 3"></div></div>
+<label for="question">Câu hỏi</label><textarea id="question" rows="3" maxlength="1600" placeholder="Nhập nội dung câu hỏi..."></textarea>
+<div class="two"><div><label for="optionA">A</label><input id="optionA" maxlength="800"></div><div><label for="optionB">B</label><input id="optionB" maxlength="800"></div><div><label for="optionC">C</label><input id="optionC" maxlength="800"></div><div><label for="optionD">D</label><input id="optionD" maxlength="800"></div></div>
+<div class="two"><div><label for="correct">Đáp án đúng</label><select id="correct"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div><div><label for="visibility">Phạm vi chia sẻ</label><select id="visibility"><option value="private">Riêng tư</option><option value="public">Công khai</option><option value="group">Nhóm (giữ nguyên nếu đã có)</option></select></div></div>
+<div id="editorImage" class="helper" hidden></div>
+<div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
+<div id="editStatus" class="notice" role="status">Tạo câu hỏi mới hoặc chọn một câu ở danh sách bên trái.</div></div>
+<div class="panel"><h2>🎙️ Quản lý giọng đọc AI</h2>
+<p class="muted">Mỗi câu có thể lưu giọng riêng. NGHI-TTS tạo âm thanh ngay trên thiết bị, sau đó lưu vào kho riêng tư MotionClass và tái sử dụng cho mọi trò chơi.</p>
+<label for="voiceModel">Giọng NGHI-TTS</label><select id="voiceModel"><option value="deepman3909">Nam trầm · deepman3909</option><option value="chieuthanh">Nam · chieuthanh</option><option value="duyoryx3175">Nam · duyoryx3175</option><option value="vietthao3886">Nam · vietthao3886</option><option value="calmwoman3688">Nữ · calmwoman3688</option><option value="banmai">Nữ · banmai</option><option value="ngocngan3701">Nữ · ngocngan3701</option></select>
+<div class="helper">Lần đầu mỗi giọng cần tải mô hình khoảng 64 MB. Giọng đã tạo có thể nghe lại ngay từ Supabase, không sử dụng quota Google AI Studio.</div>
+<div class="row"><button id="audioRefresh">⟳ Kiểm tra âm thanh đã lưu</button><button id="audioGenerate" class="primary">🔊 Tạo & lưu giọng cho câu này</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
+<div id="audioGrid" class="audio-list"></div>
+<div id="audioStatus" class="notice" role="status">Chọn câu hỏi đã lưu để xem và tạo giọng đọc.</div></div>
+</section></div></div>
+<footer>Ngân hàng học liệu dùng chung · Câu hỏi và giọng đọc được phân quyền theo tài khoản MotionClass.</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/pose-quiz/supabase-config.js"></script>
+<script src="/question-bank/manager.js"></script>
+</body></html>
