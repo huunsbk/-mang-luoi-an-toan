@@ -167,6 +167,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         static_routes = {
+            "/register": ("register/index.html", "text/html; charset=utf-8"),
+            "/register/": ("register/index.html", "text/html; charset=utf-8"),
+            "/register/index.html": ("register/index.html", "text/html; charset=utf-8"),
+            "/register/register.js": ("register/register.js", "application/javascript; charset=utf-8"),
             "/question-bank": ("question-bank/index.html", "text/html; charset=utf-8"),
             "/question-bank/": ("question-bank/index.html", "text/html; charset=utf-8"),
             "/question-bank/index.html": ("question-bank/index.html", "text/html; charset=utf-8"),
