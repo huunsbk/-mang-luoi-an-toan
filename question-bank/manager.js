@@ -47,6 +47,8 @@ function showEditor(item=null){
  $('correct').value=item?.correct||'A';$('visibility').value=item?.visibility||'private';
  $('visibility').querySelector('option[value=group]').disabled=item?.visibility!=='group';
  $('deleteQuestion').disabled=!item?.owned;$('duplicateQuestion').disabled=!item;
+ $('uploadQuestionImage').disabled=!item?.id||!item?.owned;
+ $('removeQuestionImage').disabled=!item?.id||!item?.owned||!item?.imageUrl;
  $('saveQuestion').disabled=Boolean(item&&!item.owned);
  $('editorImage').hidden=!item?.imageUrl;
  if(item?.imageUrl){$('editorImage').replaceChildren();let img=new Image();img.src=item.imageUrl;img.alt='Hình minh họa câu hỏi';img.style.cssText='max-height:140px;max-width:100%;border-radius:10px';$('editorImage').append(img)}
@@ -111,6 +113,40 @@ async function deleteQuestion(){
  if(!editing?.owned)return;
  if(!confirm('Xóa vĩnh viễn câu hỏi này cùng các âm thanh dùng chung?'))return;
  await run(async()=>{await api('bank.delete',{id:editing.id});showEditor(null);await reload(false);report('editStatus','Đã xóa câu hỏi thành công.')});
+}
+async function jpegFile(file){
+ if(!file||!file.type.startsWith("image/"))throw Error('Hãy chọn tệp ảnh JPEG, PNG hoặc WebP.');
+ if(file.size>15*1024*1024)throw Error('Ảnh gốc quá 15 MB. Hãy giảm kích thước trước.');
+ const img=await createImageBitmap(file),scale=Math.min(1,1280/Math.max(img.width,img.height));
+ const canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
+ canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+ img.close?.();
+ return await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('Không xử lý được ảnh.')),'image/jpeg',.84));
+}
+async function uploadQuestionImage(){
+ await run(async()=>{
+  if(!editing?.id||!editing.owned)throw Error('Hãy lưu câu hỏi thuộc quyền sở hữu trước khi tải ảnh.');
+  const file=$('questionImageFile').files?.[0];
+  if(!file)throw Error('Chưa chọn ảnh minh họa.');
+  const blob=await jpegFile(file);
+  const session=await auth(),form=new FormData();
+  form.set('action','image.put');form.set('id',editing.id);form.set('image',new File([blob],'minh-hoa.jpg',{type:'image/jpeg'}));
+  const response=await fetch(ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+session.access_token,apikey:cfg.publishableKey},body:form});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.ok)throw Error(result.error||'Không tải được hình ảnh.');
+  $('questionImageFile').value='';const id=editing.id;
+  await reload(false);showEditor(rows.find(r=>r.id===id)||null);
+  report('editStatus','✅ Đã lưu hình minh họa vào câu hỏi, có thể sử dụng chung trong các trò chơi.');
+ });
+}
+async function deleteQuestionImage(){
+ if(!editing?.id||!editing.owned||!editing.imageUrl)return;
+ if(!confirm('Xóa hình minh họa khỏi câu hỏi?'))return;
+ await run(async()=>{
+  const id=editing.id;await api('image.delete',{id});
+  await reload(false);showEditor(rows.find(r=>r.id===id)||null);
+  report('editStatus','Đã xóa hình minh họa khỏi câu hỏi.');
+ });
 }
 async function bulkDelete(){
  const owned=rows.filter(r=>selected.has(r.id)&&r.owned);
@@ -271,6 +307,7 @@ async function init(){
  $('filterLesson').onchange=renderList;$('filterSearch').oninput=renderList;$('onlyMine').onchange=renderList;
  $('newQuestion').onclick=()=>showEditor(null);
  $('saveQuestion').onclick=saveQuestion;$('deleteQuestion').onclick=deleteQuestion;$('bulkDelete').onclick=bulkDelete;
+ $('uploadQuestionImage').onclick=uploadQuestionImage;$('removeQuestionImage').onclick=deleteQuestionImage;
  $('duplicateQuestion').onclick=()=>{if(!editing)return;const clone={...editing,id:null,owned:true,visibility:'private',updatedAt:null};showEditor(clone);$('editId').value='';editing=null;editingStamp=null;report('editStatus','Đang nhân bản thành câu hỏi mới.')};
  $('selectAll').onclick=()=>{rows.filter(r=>r.owned&&(!$('onlyMine').checked||r.owned)).forEach(r=>selected.add(r.id));renderList()};
  $('unselectAll').onclick=()=>{selected.clear();renderList()};
