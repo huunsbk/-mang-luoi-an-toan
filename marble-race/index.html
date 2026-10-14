@@ -91,7 +91,7 @@
    <div class="mode-switch" aria-label="Chọn chế độ trò chơi" role="group"><button class="mode-choice" data-mode="select" aria-pressed="true">🏆 CHỌN HỌC SINH</button><button class="mode-choice" data-mode="learn" aria-pressed="false">📚 HỌC TẬP</button></div>
    <div class="section"><div class="section-head"><h2 class="section-title">① Danh sách học sinh</h2><span class="count" id="listCount">0 em</span></div><textarea id="names" spellcheck="false" placeholder="Dán tên mỗi học sinh trên một dòng. Có thể dán trực tiếp từ Excel.&#10;Nguyễn Văn An&#10;Trần Thị Bình"></textarea><div class="btnrow"><button class="btn blue fill" id="create">👥 Tạo viên bi</button><button class="btn red" id="clear">🗑 Xóa</button></div><div class="btnrow"><label class="btn fill file-label" style="text-align:center">📷 Tải nhiều ảnh<input id="multiPhotos" accept="image/*" type="file" multiple></label><button class="btn" id="reshuffle">🎨 Đổi màu bi</button></div><div class="sub" style="margin-top:7px">Có ảnh: tên tệp ảnh trùng tên học sinh (không dấu cũng được). Nếu chưa có, hệ thống dùng avatar minh họa tự tạo.</div></div>
    <div class="section" id="learningQuestionSection" hidden><div class="section-head"><h2 class="section-title">📚 Ngân hàng câu hỏi</h2><span class="study-tag">HỌC TẬP</span></div><div class="sub" style="margin-bottom:9px">Dán các câu trắc nghiệm. Mỗi câu gồm nội dung, A/B/C/D và đáp án đúng. Trò chơi xếp hạng toàn bộ học sinh trước khi bắt đầu hỏi.</div><textarea id="questionsInput" class="question-input" spellcheck="false" aria-label="Nhập ngân hàng câu hỏi" placeholder="Câu 1: Bộ phận nào dùng để nhập chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Chuột&#10;D. Loa&#10;Đáp án đúng: B"></textarea><div class="btnrow"><button class="btn blue fill" id="checkQuestions">✓ Kiểm tra câu hỏi</button><button class="btn fill" id="demoQuestions">✨ Câu hỏi mẫu</button></div><div id="questionInfo" class="question-info" aria-live="polite">Chưa có câu hỏi</div><div class="switchrow"><label for="voiceName">🔉 Đọc tên học sinh khi đến lượt</label><input class="switch" type="checkbox" id="voiceName" checked></div><div class="sub" style="margin-top:8px">Nếu ít câu hỏi hơn số học sinh, phần mềm sử dụng lại câu hỏi theo vòng; đáp án chỉ được công bố sau khi giáo viên chọn.</div></div>
-   <div class="section"><div class="section-head"><h2 class="section-title">② Thời gian & đường đua</h2></div><div class="field"><label for="duration">Thời gian mục tiêu (giây)</label><span class="num" id="durationValue">40</span></div><input class="range" id="duration" type="range" min="10" max="90" step="5" value="40"><div class="ticktext"><span>10 giây</span><span>40 giây</span><span>90 giây</span></div><div class="field"><span>⛳ Chặng chướng ngại vật</span><b id="zoneCount">10 chặng</b></div><div class="sub">Tăng thời gian sẽ tăng chiều dài đường đua và số chặng. Kết quả xác định bởi viên bi chạm đích đầu tiên, không chọn trước người thắng.</div></div>
+   <div class="section"><div class="section-head"><h2 class="section-title">② Thời gian & đường đua</h2></div><div class="field"><label for="duration">Thời gian mục tiêu (giây)</label><span class="num" id="durationValue">40</span></div><input class="range" id="duration" type="range" min="10" max="90" step="5" value="40"><div class="ticktext"><span>10 giây</span><span>40 giây</span><span>90 giây</span></div><div class="field"><span>⛳ Chặng chướng ngại vật</span><b id="zoneCount">10 chặng</b></div><div class="field"><span>🟣 Độ nảy còn lại</span><b id="bounceValue">100%</b></div><div class="sub">Độ nảy giảm dần theo đồng hồ: còn 0 giây = 0% độ nảy. Hệ thống hỗ trợ bi thoát kẹt và về đích đúng hạn, không cộng giờ.</div></div>
    <div class="section"><h2 class="section-title">③ Hiệu ứng trình diễn</h2><div class="field"><label for="music">🎵 Nhạc nền</label><b id="musicV">45%</b></div><input class="range" type="range" id="music" min="0" max="100" value="45"><div class="field"><label for="sfx">🔊 Va chạm & chuyển động</label><b id="sfxV">68%</b></div><input class="range" type="range" id="sfx" min="0" max="100" value="68"><div class="field"><label for="winVol">🏆 Âm thanh vinh danh</label><b id="winVolV">80%</b></div><input class="range" type="range" id="winVol" min="0" max="100" value="80"><div class="switchrow"><label for="lights">✨ Ánh sáng & hạt sáng</label><input class="switch" type="checkbox" id="lights" checked></div><div class="switchrow"><label for="autoCamera">🎥 Camera theo cuộc đua</label><input class="switch" type="checkbox" id="autoCamera" checked></div><div class="switchrow"><label for="reducedMotion">🛡 Giảm hiệu ứng nhấp nháy</label><input class="switch" type="checkbox" id="reducedMotion" checked></div></div>
    <div class="section"><h2 class="section-title">④ Tùy chọn chọn học sinh</h2><div class="switchrow"><label for="exclude">Không chọn lặp học sinh đã thắng</label><input class="switch" type="checkbox" id="exclude" checked></div><div class="switchrow"><label for="shuffle">Trộn vị trí và kiểu viên bi mỗi lượt</label><input class="switch" type="checkbox" id="shuffle" checked></div><div class="btnrow"><button class="btn fill" id="resetHistory">↻ Khôi phục đã chọn</button><button class="btn fill" id="saveList">⬇ Xuất danh sách</button></div></div>
    <div><button class="btn green full" id="start">▶ BẮT ĐẦU CUỘC ĐUA</button><div class="statusline" id="statusText" role="status">Sẵn sàng cho cuộc đua đầu tiên!</div><div class="statusline" id="learningQuickInfo" hidden>🏁 Đã về đích 0/0 học sinh</div><button class="btn blue full" id="learnRankButton" hidden style="margin-top:8px">🏁 XEM THỨ TỰ & KẾT QUẢ</button></div>
@@ -150,7 +150,7 @@ function parsing(raw){return raw.split(/\r?\n|;/).map(line=>line.replace(/^\s*\d
 function applyNames(){if(game?.running){toast('Tạm dừng cuộc đua trước khi thay danh sách');return}const names=parsing($('names').value);if(!names.length){toast('Thầy/cô hãy dán danh sách học sinh trước.');return}const pool=new Map();for(const s of students){const k=normalize(s.name);if(!pool.has(k))pool.set(k,[]);pool.get(k).push(s)}studyFinishers=[];studyAnswers.clear();students=names.map((n,i)=>{const old=pool.get(normalize(n))?.shift();return old?{...old,name:n}:makeStudent(n,i)});chosenIds=new Set([...chosenIds].filter(id=>students.some(s=>s.id===id)));initAvatars().then(()=>{renderRoster();save();resetPreview()});toast(`Đã tạo ${students.length} viên bi 3D!`)}
 function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:students.map(({id,name,avatar,color,style,photo})=>({id,name,avatar,color,style,photo})),selected:[...chosenIds],duration:getN(),music:$('music').value,sfx:$('sfx').value,winVol:$('winVol').value,lights:$('lights').checked,autoCamera:$('autoCamera').checked,reducedMotion:$('reducedMotion').checked,exclude:$('exclude').checked,shuffle:$('shuffle').checked,voiceName:$('voiceName').checked,mode:studyMode,questionText:$('questionsInput').value,studyFinishers,studyAnswers:[...studyAnswers]}));}catch(e){console.warn('Không thể lưu bộ nhớ',e);toast('Bộ nhớ trình duyệt đã đầy; ảnh mới có thể không lưu được.')}}
 function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
-function updateSettings(){document.documentElement.classList.toggle('reduce-motion',$('reducedMotion').checked);const t=getN();$('durationValue').textContent=t;$('zoneCount').textContent=Math.max(4,Math.round(t/4))+' chặng';for(const k of ['music','sfx','winVol'])$(k+'V').textContent=$(k).value+'%';$('timer').textContent='00:'+String(t).padStart(2,'0');if(t>=60)$('timer').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');$('progress').textContent=`🏁 ${Math.max(4,Math.round(t/4))} chặng • Camera ${$('autoCamera').checked?'tự động':'toàn cảnh'}`}
+function updateSettings(){document.documentElement.classList.toggle('reduce-motion',$('reducedMotion').checked);const t=getN();$('durationValue').textContent=t;$('bounceValue').textContent='100%';$('zoneCount').textContent=Math.max(4,Math.round(t/4))+' chặng';for(const k of ['music','sfx','winVol'])$(k+'V').textContent=$(k).value+'%';$('timer').textContent='00:'+String(t).padStart(2,'0');if(t>=60)$('timer').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');$('progress').textContent=`🏁 ${Math.max(4,Math.round(t/4))} chặng • Camera ${$('autoCamera').checked?'tự động':'toàn cảnh'}`}
 function renderRoster(){if(isLearning()){const root=$('roster');$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=studyAnswers.size;renderStudyRoster();return}const root=$('roster');root.replaceChildren();$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=chosenIds.size;let count=0;for(const s of students){count++;const r=document.createElement('div');r.className='person';r.title='Nhấn để thay ảnh: '+s.name;r.style.setProperty('--c',COLORS[s.color%COLORS.length]);const nu=document.createElement('div');nu.className='num-tag';nu.textContent=count;const img=document.createElement('img');img.className='face';img.alt='';img.src=s.photo||avatarSvg(s.avatar);const text=document.createElement('div');text.className='person-name';text.textContent=s.name;const badge=document.createElement('div');badge.className='person-state'+(chosenIds.has(s.id)?' done':'');badge.textContent=chosenIds.has(s.id)?'Đã chọn':'Đang chơi';r.append(nu,img,text,badge);r.addEventListener('click',()=>photoDialog(s.id));root.appendChild(r)}}
 function photoDialog(id){photoTarget=students.find(s=>s.id===id);if(!photoTarget)return;$('photoName').textContent=photoTarget.name;$('photoPreview').src=photoTarget.photo||avatarSvg(photoTarget.avatar);$('photoOverlay').hidden=false}
 function fileToImage(file){return new Promise((resolve,reject)=>{const rdr=new FileReader();rdr.onload=async()=>{const im=await loadImg(rdr.result);if(!im){reject(Error('Không thể đọc ảnh'));return}const c=document.createElement('canvas');c.width=c.height=176;const x=c.getContext('2d');const side=Math.min(im.naturalWidth,im.naturalHeight);x.drawImage(im,(im.naturalWidth-side)/2,(im.naturalHeight-side)/2,side,side,0,0,176,176);resolve(c.toDataURL('image/jpeg',.78))};rdr.onerror=reject;rdr.readAsDataURL(file)})}
@@ -194,24 +194,119 @@ function makeCourse(sec){const n=Math.max(4,Math.round(sec/4)),gap=385,height=35
  if(typ===9){peg(200,y+75,34,'bumper');peg(560,y+75,34,'bumper');seg(65,y+198,310,y+295,'spring');seg(695,y+198,450,y+295,'spring');items.push({shape:'rotor',x:380,y:y+200,len:125,phase:0,spd:.7,zone:rnd})}}
 const byZone=Array.from({length:n},()=>[]);for(const item of items)byZone[item.zone].push(item);return{n,height,gap,items,byZone,decor,finish:height-174}}
 function courseSegments(o,t){if(o.shape==='segment')return [o.x1,o.y1,o.x2,o.y2,0,0];if(o.shape==='rotor'){const a=t*o.spd+o.phase;return[o.x-Math.cos(a)*o.len,o.y-Math.sin(a)*o.len,o.x+Math.cos(a)*o.len,o.y+Math.sin(a)*o.len,o.spd,0]}if(o.shape==='gate'){const shift=Math.sin(t*1.13+o.phase)*112;return[o.x-o.len/2+shift,o.y,o.x+o.len/2+shift,o.y,0,Math.cos(t*1.13+o.phase)*112*1.13]}return null}
-function makeGame(preview=false){const duration=getN();const course=makeCourse(duration);const all=isLearning()?students.slice():$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students.slice();const entrants=all.slice();if($('shuffle').checked)for(let i=entrants.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[entrants[i],entrants[j]]=[entrants[j],entrants[i]]};const count=Math.max(entrants.length,1);const cols=Math.min(count,22);const radius=count>80?10:count>48?12:count>28?14:count>15?17:21;const xMin=55+radius,xMax=705-radius;const spacing=(xMax-xMin)/(cols+1);const balls=entrants.map((s,i)=>{const col=i%cols,row=Math.floor(i/cols);return{s,id:s.id,x:xMin+spacing*(col+1)+(Math.random()-.5)*3,y:112+row*(radius*2+5),vx:rand(-12,12),vy:rand(0,20),r:radius,angle:0,spin:0,stuck:0}});return{course,balls,duration,time:0,camera:0,particles:[],finishers:[],winner:null,running:!preview,preview,done:false,musicScale:1,lead:0}}
+function makeGame(preview=false){const duration=getN();const course=makeCourse(duration);const all=isLearning()?students.slice():$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students.slice();const entrants=all.slice();if($('shuffle').checked)for(let i=entrants.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[entrants[i],entrants[j]]=[entrants[j],entrants[i]]};const count=Math.max(entrants.length,1);const cols=Math.min(count,22);const radius=count>80?10:count>48?12:count>28?14:count>15?17:21;const xMin=55+radius,xMax=705-radius;const spacing=(xMax-xMin)/(cols+1);const balls=entrants.map((s,i)=>{const col=i%cols,row=Math.floor(i/cols);return{s,id:s.id,x:xMin+spacing*(col+1)+(Math.random()-.5)*3,y:112+row*(radius*2+5),vx:rand(-12,12),vy:rand(0,20),r:radius,angle:0,spin:0,stuck:0,startY:112+row*(radius*2+5),tie:Math.random()}});return{course,balls,duration,time:0,camera:0,particles:[],finishers:[],winner:null,running:!preview,preview,done:false,musicScale:1,lead:0,bounceFactor:1}}
 function resetPreview(){if(game?.running)return;clearTimeout(winnerTimer);game=makeGame(true);game.camera=0;$('stateText').textContent='CHỜ XUẤT PHÁT';$('timerLabel').textContent='THỜI GIAN MỤC TIÊU';updateSettings();$('pause').disabled=true;$('duration').disabled=false;$('start').disabled=false;$('start').textContent='▶ BẮT ĐẦU CUỘC ĐUA';$('statusText').textContent=`Sẵn sàng: ${students.length} học sinh • ${game.course.n} chặng`; $('learningQuickInfo').textContent=`🏁 Đã về đích ${studyFinishers.length}/${students.length} học sinh`;}
 function start(){clearTimeout(winnerTimer);if(isLearning()&&!inspectQuestions(true)){ $('learningQuestionSection').scrollIntoView({behavior:'smooth',block:'nearest'});return}if(!students.length){toast('Vui lòng nhập danh sách học sinh trước.');return}if(game?.running)return;const available=isLearning()?students:$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students;if(!available.length){toast('Tất cả học sinh đã được chọn! Hãy khôi phục danh sách.');return}if($('shuffle').checked){for(const s of available){s.style=Math.floor(Math.random()*5);s.color=Math.floor(Math.random()*COLORS.length);s.orb=null}renderRoster();save()}if(isLearning()){studyFinishers=[];studyAnswers.clear();$('learnRankButton').hidden=true;renderRoster()} game=makeGame(false);paused=false;currentWinner=null;document.querySelectorAll('.mode-choice').forEach(b=>b.disabled=true);$('winOverlay').hidden=true;$('stateText').textContent='ĐANG TRANH TÀI';$('timerLabel').textContent='THỜI GIAN CÒN LẠI';$('pause').disabled=false;$('pause').textContent='⏸ Tạm dừng';$('start').disabled=true;$('duration').disabled=true;$('start').textContent='● ĐANG ĐUA';$('statusText').textContent=`Đã xuất phát! ${game.balls.length} viên bi trên ${game.course.n} chặng`;if(isLearning())$('learningQuickInfo').textContent=`🏁 Đã về đích 0/${game.balls.length} viên bi`;lastMusic=0;musicIndex=0;playIntro()}
 $('start').onclick=start;
 $('pause').onclick=()=>{if(!game?.running)return;paused=!paused;$('pause').textContent=paused?'▶ Tiếp tục':'⏸ Tạm dừng';$('stateText').textContent=paused?'ĐANG TẠM DỪNG':'ĐANG TRANH TÀI';if(!paused)soundReady()};$('fullScreen').onclick=()=>{const el=$('stage');if(document.fullscreenElement)document.exitFullscreen?.();else el.requestFullscreen?.().catch(()=>toast('Trình duyệt chưa hỗ trợ toàn màn hình'))};
 function spark(g,x,y,strength=1,color='#ffefad'){if(!$('lights').checked)return;for(let i=0;i<Math.min($('reducedMotion').checked?4:10,Math.ceil(3*strength));i++)g.particles.push({x,y,vx:rand(-120,120),vy:rand(-150,25),life:rand(.2,.55),color,r:rand(1.2,2.8)});if(g.particles.length>230)g.particles.splice(0,g.particles.length-230)}
-function bounceCircle(b,p,g){let dx=b.x-p.x,dy=b.y-p.y,dist=Math.hypot(dx,dy)||.0001,min=b.r+p.r;if(dist>=min)return;let nx=dx/dist,ny=dy/dist;b.x+=nx*(min-dist+.15);b.y+=ny*(min-dist+.15);let dot=b.vx*nx+b.vy*ny;if(dot<0){const e=p.kind==='spring'?1.25:p.kind==='bumper'?1.12:.75;b.vx-=(1+e)*dot*nx;b.vy-=(1+e)*dot*ny;if(Math.abs(dot)>55){spark(g,b.x,b.y,Math.abs(dot)/130,COLORS[b.s.color]);if(!g.preview)hitSound(Math.abs(dot)/100)}}}
-function bounceSegment(b,coords,o,g){let [x1,y1,x2,y2,angular,motion]=coords;let dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy||1,q=clamp(((b.x-x1)*dx+(b.y-y1)*dy)/len2,0,1),px=x1+dx*q,py=y1+dy*q;const width=o.kind==='spring'?9:7;let nx=b.x-px,ny=b.y-py,dist=Math.hypot(nx,ny)||.0001;if(dist>=b.r+width)return;nx/=dist;ny/=dist;b.x+=nx*(b.r+width-dist+.2);b.y+=ny*(b.r+width-dist+.2);const mvx=angular?-(py-o.y)*angular:motion||0,mvy=angular?(px-o.x)*angular:0;let rel=(b.vx-mvx)*nx+(b.vy-mvy)*ny;if(rel<0){let e=o.kind==='spring'?1.18:.76;b.vx-=(1+e)*rel*nx;b.vy-=(1+e)*rel*ny;if(Math.abs(rel)>55){spark(g,b.x,b.y,Math.abs(rel)/135);if(!g.preview)hitSound(Math.abs(rel)/140)}}}
-function physics(g,dt){if(!g.running)return;g.time+=dt;const speedFactor=1.4;dt*=speedFactor;const course=g.course,maxY=course.finish;let lead=0;const maxSpeed=340;const ahead=Math.max(0,...g.balls.map(x=>x.y))/Math.max(1,maxY);for(let b of g.balls){if(b.finished)continue;if(b.y>=maxY){b.y=maxY;continue}let factor=clamp(.8+(g.time/g.duration-ahead)*1.65,.7,2.65);b.vy+=(345*factor)*dt;b.vx*=Math.pow(.988,dt*60);b.vy*=Math.pow(.996,dt*60);const speed=Math.hypot(b.vx,b.vy);if(speed>maxSpeed){b.vx*=maxSpeed/speed;b.vy*=maxSpeed/speed}b.x+=b.vx*dt;b.y+=b.vy*dt;b.angle+=b.vx*dt*.014;
-const lx=40+b.r,rx=720-b.r;if(b.x<lx){b.x=lx;b.vx=Math.abs(b.vx)*.83}else if(b.x>rx){b.x=rx;b.vx=-Math.abs(b.vx)*.83}if(b.y<70){b.y=70;b.vy=Math.max(0,b.vy)}
-const zone=Math.floor((b.y-310)/course.gap);for(let j=Math.max(0,zone-1);j<=Math.min(course.n-1,zone+1);j++){const base=310+j*course.gap;if(b.y<base-75||b.y>base+385)continue;for(const o of course.byZone[j]){if(o.shape==='circle'){if(Math.abs(o.y-b.y)<o.r+b.r+2&&Math.abs(o.x-b.x)<o.r+b.r+2)bounceCircle(b,o,g)}else{const segment=courseSegments(o,g.time);if(segment&&Math.abs((segment[1]+segment[3])/2-b.y)<o.len+90||o.shape==='segment'&&Math.min(o.y1,o.y2)-45<b.y&&Math.max(o.y1,o.y2)+45>b.y){if(segment)bounceSegment(b,segment,o,g)}}}}
-if(Math.abs(b.vx)+Math.abs(b.vy)<12){b.stuck+=dt;if(b.stuck>2.2){b.vx+=rand(-80,80);b.vy+=80;b.stuck=0}}else b.stuck=0;
-if(b.y>lead)lead=b.y;if(b.y>=maxY&&!b.finished){if(isLearning()){learningFinishedBall(g,b)}else if(!g.winner){g.winner=b;finishRace(g,b)}}}
-for(let i=0;i<g.balls.length;i++)for(let j=i+1;j<g.balls.length;j++){const a=g.balls[i],b=g.balls[j];if(a.finished||b.finished)continue;let dx=b.x-a.x,dy=b.y-a.y,min=a.r+b.r;if(Math.abs(dx)>min||Math.abs(dy)>min)continue;let dist=Math.hypot(dx,dy);if(dist>=min||dist<.0001)continue;let nx=dx/dist,ny=dy/dist,overlap=(min-dist)/2;a.x-=nx*overlap;b.x+=nx*overlap;a.y-=ny*overlap;b.y+=ny*overlap;let rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel<0){const impulse=-.89*rel;a.vx-=nx*impulse;b.vx+=nx*impulse;a.vy-=ny*impulse;b.vy+=ny*impulse}}
-for(const p of g.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=160*dt;p.life-=dt}g.particles=g.particles.filter(p=>p.life>0);g.lead=lead;
-const viewHeight=ch/(Math.min(cw/W,1.25));let dest=0;if($('autoCamera').checked){const center=lead;dest=clamp(center-viewHeight*.50,0,Math.max(0,course.height-viewHeight))}g.camera+=(dest-g.camera)*Math.min(1,dt*2.2);
-const left=Math.max(0,g.duration-g.time),minute=Math.floor(left/60),sec=Math.ceil(left%60);$('timer').textContent=String(minute).padStart(2,'0')+':'+String(sec).padStart(2,'0');if(left===0){$('timerLabel').textContent='⏱ BÙ GIỜ'}$('progress').textContent=isLearning()?`🏁 ĐÃ VỀ ĐÍCH ${g.finishers.length}/${g.balls.length} • ${Math.round(Math.min(100,lead/course.finish*100))}%`: `🏁 ${Math.min(course.n,Math.floor(Math.max(0,lead-310)/course.gap)+1)}/${course.n} chặng • ${Math.round(Math.min(100,lead/course.finish*100))}% quãng đường`;
+function bounceCircle(b,p,g){let dx=b.x-p.x,dy=b.y-p.y,dist=Math.hypot(dx,dy)||.0001,min=b.r+p.r;if(dist>=min)return;let nx=dx/dist,ny=dy/dist;b.x+=nx*(min-dist+.15);b.y+=ny*(min-dist+.15);let dot=b.vx*nx+b.vy*ny;if(dot<0){const e=(p.kind==='spring'?1.25:p.kind==='bumper'?1.12:.75)*g.bounceFactor;b.vx-=(1+e)*dot*nx;b.vy-=(1+e)*dot*ny;if(Math.abs(dot)>55){spark(g,b.x,b.y,Math.abs(dot)/130,COLORS[b.s.color]);if(!g.preview)hitSound(Math.abs(dot)/100)}}}
+function bounceSegment(b,coords,o,g){let [x1,y1,x2,y2,angular,motion]=coords;let dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy||1,q=clamp(((b.x-x1)*dx+(b.y-y1)*dy)/len2,0,1),px=x1+dx*q,py=y1+dy*q;const width=o.kind==='spring'?9:7;let nx=b.x-px,ny=b.y-py,dist=Math.hypot(nx,ny)||.0001;if(dist>=b.r+width)return;nx/=dist;ny/=dist;b.x+=nx*(b.r+width-dist+.2);b.y+=ny*(b.r+width-dist+.2);const mvx=angular?-(py-o.y)*angular:motion||0,mvy=angular?(px-o.x)*angular:0;let rel=(b.vx-mvx)*nx+(b.vy-mvy)*ny;if(rel<0){let e=(o.kind==='spring'?1.18:.76)*g.bounceFactor;b.vx-=(1+e)*rel*nx;b.vy-=(1+e)*rel*ny;if(Math.abs(rel)>55){spark(g,b.x,b.y,Math.abs(rel)/135);if(!g.preview)hitSound(Math.abs(rel)/140)}}}
+// PHYSICS DEADLINE: reduce restitution continuously and guarantee completion at the exact selected time.
+// The minimum-progress envelope is intentionally very gentle early in the race, then stronger near the deadline.
+// It avoids trapped loops without preselecting a winner; on last-frame ties the previous positions and random keys decide.
+function physics(g,dt){
+ if(!g.running)return;
+ const remaining=Math.max(0,g.duration-g.time);
+ const wallStep=Math.min(Math.max(0,dt),remaining);
+ g.time=Math.min(g.duration,g.time+wallStep);
+ const raceRatio=clamp(g.time/g.duration,0,1);
+ g.bounceFactor=Math.pow(1-raceRatio,1.65);
+ const activeDt=wallStep*1.4;
+ const course=g.course,maxY=course.finish;
+ let lead=0;
+ const maxSpeed=340;
+ const ahead=Math.max(0,...g.balls.map(x=>x.y))/Math.max(1,maxY);
+ const arrived=[];
+ for(const b of g.balls){
+  if(b.finished)continue;
+  const previousY=b.y;
+  if(g.time<g.duration){
+   // Global bounce reduction applies to walls, obstacles, moving rotors and collisions between balls.
+   let factor=clamp(.8+(raceRatio-ahead)*1.65,.7,2.65);
+   b.vy+=(345*factor)*activeDt;
+   b.vx*=Math.pow(.988,activeDt*60);b.vy*=Math.pow(.996,activeDt*60);
+   const speed=Math.hypot(b.vx,b.vy);
+   if(speed>maxSpeed){b.vx*=maxSpeed/speed;b.vy*=maxSpeed/speed}
+   b.x+=b.vx*activeDt;b.y+=b.vy*activeDt;b.angle+=b.vx*activeDt*.014;
+   const lx=40+b.r,rx=720-b.r;
+   const wallBounce=.83*g.bounceFactor;
+   if(b.x<lx){b.x=lx;b.vx=Math.abs(b.vx)*wallBounce}
+   else if(b.x>rx){b.x=rx;b.vx=-Math.abs(b.vx)*wallBounce}
+   if(b.y<70){b.y=70;b.vy=Math.max(0,b.vy)}
+   const zone=Math.floor((b.y-310)/course.gap);
+   for(let j=Math.max(0,zone-1);j<=Math.min(course.n-1,zone+1);j++){
+    const base=310+j*course.gap;
+    if(b.y<base-75||b.y>base+385)continue;
+    for(const o of course.byZone[j]){
+     if(o.shape==='circle'){
+      if(Math.abs(o.y-b.y)<o.r+b.r+2&&Math.abs(o.x-b.x)<o.r+b.r+2)bounceCircle(b,o,g);
+     }else{
+      const segment=courseSegments(o,g.time);
+      if(segment&&(Math.abs((segment[1]+segment[3])/2-b.y)<o.len+90||o.shape==='segment'&&Math.min(o.y1,o.y2)-45<b.y&&Math.max(o.y1,o.y2)+45>b.y))bounceSegment(b,segment,o,g);
+     }
+    }
+   }
+   // A continuous minimum-progress line prevents balls from circulating forever on springs/rotors.
+   // Because the line advances every physics frame, this looks like forward motion, not a late teleport.
+   const minY=b.startY+(maxY-b.startY)*Math.pow(raceRatio,2.05);
+   if(b.y<minY){
+    b.y=minY;
+    const guidedSpeed=(maxY-b.startY)*2.05*Math.pow(raceRatio,1.05)/g.duration/1.4;
+    b.vy=Math.max(b.vy,guidedSpeed);
+    b.vx*=.985;
+    b.stuck=0;
+   }
+   if(Math.abs(b.vx)+Math.abs(b.vy)<12){
+    b.stuck+=wallStep;
+    if(b.stuck>1.2){b.vx+=rand(-55,55)*g.bounceFactor;b.vy=Math.max(80,b.vy);b.stuck=0}
+   }else b.stuck=0;
+  }else{
+   // At exactly zero seconds there is no bounce, no extra time and no unfinished student.
+   b.vx=0;b.vy=0;b.y=maxY;
+  }
+  if(b.y>lead)lead=b.y;
+  if(b.y>=maxY&&!b.finished){
+   b.y=maxY;
+   arrived.push({ball:b,previousY,randomTie:b.tie});
+  }
+ }
+ if(g.time<g.duration){
+  // Ball-to-ball collisions: restitution fades to zero with the same global factor.
+  for(let i=0;i<g.balls.length;i++)for(let j=i+1;j<g.balls.length;j++){
+   const a=g.balls[i],b=g.balls[j];if(a.finished||b.finished||a.y>=maxY||b.y>=maxY)continue;
+   const dx=b.x-a.x,dy=b.y-a.y,min=a.r+b.r;
+   if(Math.abs(dx)>min||Math.abs(dy)>min)continue;
+   const dist=Math.hypot(dx,dy);if(dist>=min||dist<.0001)continue;
+   const nx=dx/dist,ny=dy/dist,overlap=(min-dist)/2;
+   a.x-=nx*overlap;b.x+=nx*overlap;a.y-=ny*overlap;b.y+=ny*overlap;
+   const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+   if(rel<0){const impulse=-(.5+.39*g.bounceFactor)*rel;
+    a.vx-=nx*impulse;b.vx+=nx*impulse;a.vy-=ny*impulse;b.vy+=ny*impulse}
+  }
+ }
+ // Distinguish close finishers by their position immediately before they crossed; break exact ties randomly.
+ arrived.sort((a,b)=>b.previousY-a.previousY||a.randomTie-b.randomTie);
+ for(const f of arrived){
+  if(!g.running)break;
+  if(isLearning())learningFinishedBall(g,f.ball);
+  else if(!g.winner){g.winner=f.ball;finishRace(g,f.ball)}
+ }
+ for(const p of g.particles){p.x+=p.vx*activeDt;p.y+=p.vy*activeDt;p.vy+=160*activeDt;p.life-=activeDt}
+ g.particles=g.particles.filter(p=>p.life>0);g.lead=lead;
+ const viewHeight=ch/Math.min(cw/W,1.25);
+ let dest=0;
+ if($('autoCamera').checked)dest=clamp(lead-viewHeight*.50,0,Math.max(0,course.height-viewHeight));
+ g.camera+=(dest-g.camera)*Math.min(1,activeDt*2.2);
+ const left=Math.max(0,g.duration-g.time),minute=Math.floor(left/60),sec=Math.ceil(left%60);
+ if(g.done){$('timerLabel').textContent='HOÀN THÀNH';$('timer').textContent=g.time.toFixed(1)+'s'}
+ else $('timer').textContent=String(minute).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+ $('bounceValue').textContent=Math.round(g.bounceFactor*100)+'%';
+ if(left<=0 && g.running){$('timerLabel').textContent='HOÀN THÀNH'}
+ $('progress').textContent=(isLearning()?`🏁 ĐÃ VỀ ĐÍCH ${g.finishers.length}/${g.balls.length} • ${Math.round(Math.min(100,lead/course.finish*100))}%`:
+ `🏁 ${Math.min(course.n,Math.floor(Math.max(0,lead-310)/course.gap)+1)}/${course.n} chặng • ${Math.round(Math.min(100,lead/course.finish*100))}%`)+` • Nảy ${Math.round(g.bounceFactor*100)}%`;
 }
+
 function finishRace(g,b){document.querySelectorAll('.mode-choice').forEach(b=>b.disabled=false);g.running=false;g.done=true;currentWinner=b.s;chosenIds.add(b.id);renderRoster();save();$('pause').disabled=true;$('duration').disabled=false;$('start').disabled=false;$('start').textContent='▶ CHẠY LƯỢT MỚI';$('stateText').textContent='🏆 ĐÃ CÓ KẾT QUẢ';$('timerLabel').textContent='HOÀN THÀNH';$('timer').textContent=g.time.toFixed(1)+'s';$('statusText').textContent=`Vô địch: ${b.s.name} • ${g.time.toFixed(1)} giây`;winTune();winnerTimer=setTimeout(()=>{if(game===g)showWinner(b.s)},700)}
 function showWinner(s){if(!s)return;$('winnerName').textContent=s.name;$('winnerOrb').src=makeOrb(s).toDataURL('image/png');const conf=$('confetti');conf.replaceChildren();const palette=['#ffd353','#f769ba','#39dfff','#ffffe7','#b16cff','#7fffa6'];for(let i=0;i<($('reducedMotion').checked?35:90);i++){const sp=document.createElement('span');sp.style.setProperty('--x',rand(0,100)+'%');sp.style.setProperty('--w',rand(4,9)+'px');sp.style.setProperty('--h',rand(6,18)+'px');sp.style.setProperty('--color',palette[i%palette.length]);sp.style.setProperty('--t',rand(2.6,5)+'s');sp.style.setProperty('--delay',rand(-4,0)+'s');sp.style.setProperty('--dx',rand(-180,180)+'px');conf.appendChild(sp)}$('winOverlay').hidden=false}
 function hideWinner(){$('winOverlay').hidden=true;clearTimeout(confettiTimeout)}$('winClose').onclick=hideWinner;$('winOverlay').addEventListener('click',e=>{if(e.target===$('winOverlay'))hideWinner()});$('again').onclick=()=>{hideWinner();resetPreview();start()};$('removeWinner').onclick=()=>{hideWinner();if(currentWinner){chosenIds.add(currentWinner.id);$('exclude').checked=true;renderRoster();save()}resetPreview();toast('Học sinh vừa thắng sẽ không xuất hiện ở lượt tiếp theo')};$('replay').onclick=()=>{hideWinner();if(currentWinner){chosenIds.delete(currentWinner.id);renderRoster();save()}resetPreview();start()};
@@ -411,7 +506,7 @@ function setupLearningUI(){
 
 setupLearningUI();
 // Test harness: inspect pure UI state and advance the game without waiting real time.
-window.__marbleTest={getState:()=>({studentCount:students.length,zoneCount:game?.course?.n,courseHeight:game?.course?.height,elapsed:game?.time,running:!!game?.running,done:!!game?.done,selected:chosenIds.size,winner:game?.winner?.s?.name,ballCount:game?.balls?.length,modalOpen:!$('winOverlay').hidden,mode:studyMode,finishCount:game?.finishers?.length,studyFinishers:studyFinishers.map(f=>f.id),answered:studyAnswers.size,correct:[...studyAnswers.values()].filter(a=>a.correct).length,rankingOpen:!$('rankOverlay').hidden,quizOpen:!$('quizOverlay').hidden,questionCount:studyQuestions.length}),advance:(seconds)=>{if(!game?.running)return;const n=Math.floor(seconds*60);for(let i=0;i<n&&game.running;i++)physics(game,1/60);draw()},preview:()=>{resetPreview();draw()}};
+window.__marbleTest={getState:()=>({studentCount:students.length,zoneCount:game?.course?.n,courseHeight:game?.course?.height,elapsed:game?.time,running:!!game?.running,done:!!game?.done,selected:chosenIds.size,winner:game?.winner?.s?.name,ballCount:game?.balls?.length,modalOpen:!$('winOverlay').hidden,mode:studyMode,finishCount:game?.finishers?.length,studyFinishers:studyFinishers.map(f=>f.id),answered:studyAnswers.size,correct:[...studyAnswers.values()].filter(a=>a.correct).length,rankingOpen:!$('rankOverlay').hidden,quizOpen:!$('quizOverlay').hidden,questionCount:studyQuestions.length,bounceFactor:game?.bounceFactor,unfinished:game?.balls?.filter(b=>!b.finished).length,timerText:$('timer').textContent}),advance:(seconds)=>{if(!game?.running)return;const n=Math.floor(seconds*60);for(let i=0;i<n&&game.running;i++)physics(game,1/60);draw()},preview:()=>{resetPreview();draw()}};
 load();requestAnimationFrame(tick);
 })();
 </script>
