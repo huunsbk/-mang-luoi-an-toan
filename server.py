@@ -167,6 +167,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         static_routes = {
+            "/forgot-password": ("forgot-password/index.html", "text/html; charset=utf-8"),
+            "/forgot-password/": ("forgot-password/index.html", "text/html; charset=utf-8"),
+            "/forgot-password/index.html": ("forgot-password/index.html", "text/html; charset=utf-8"),
+            "/forgot-password/recovery.js": ("forgot-password/recovery.js", "application/javascript; charset=utf-8"),
             "/register": ("register/index.html", "text/html; charset=utf-8"),
             "/register/": ("register/index.html", "text/html; charset=utf-8"),
             "/register/index.html": ("register/index.html", "text/html; charset=utf-8"),
