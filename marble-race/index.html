@@ -806,8 +806,13 @@ const goodSpeech='Chính xác! Chúc mừng em!';
 const badSpeech='Chưa chính xác. Em hãy cố gắng nhé!';
 function studentSpeech(name){return 'Mời em '+name+' trả lời câu hỏi.'}
 function questionSpeech(question){
- return 'Câu số '+question.num+'. '+question.text.trim()+'. '+
-  answerKeys.map(key=>'Phương án '+key+'. '+question.options[key].trim()+'.').join(' ')+
+ const text=question.text.trim();
+ const questionLine=/[.!?]$/.test(text)?text:text+'.';
+ return 'Câu số '+question.num+'. '+questionLine+' '+
+  answerKeys.map(key=>{
+   const value=question.options[key].trim();
+   return 'Phương án '+key+'. '+value+(/[.!?]$/.test(value)?'':'.');
+  }).join(' ')+
   ' Em hãy suy nghĩ và lựa chọn một đáp án.';
 }
 function correctAnswerSpeech(question){return 'Đáp án đúng là phương án '+question.correct+'. '+question.options[question.correct]+'.'}
