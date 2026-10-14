@@ -116,7 +116,7 @@ async function chooseQuestions(){
  const items=validateChoice(selectedRows());
  const added=hooks.importQuestions(items);
  status('✓ Đã thêm '+added+' câu vào Đua bi. '+(items.length-added)+' câu có thể đã tồn tại.');
- await loadSavedVoice(items.filter(i=>hooks.questions().some(q=>q.id===i.id)));
+ if(hooks.isNghi())await loadSavedVoice(items.filter(i=>hooks.questions().some(q=>q.id===i.id)));
 }
 function sha256(value){
  return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))
