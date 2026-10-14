@@ -155,17 +155,23 @@ async function saveVoices(){
  if(!hooks.isNghi())throw Error('Hãy chọn nguồn giọng NGHI-TTS trước khi tạo âm thanh.');
  const items=validateChoice(selectedRows()).filter(x=>x.owned);
  if(!items.length)throw Error('Không có câu thuộc quyền sở hữu được chọn để lưu giọng.');
- let done=0;
+ const voice=hooks.voice().id,existing=await fetchVoiceRows(items);
+ const hashes=new Map(existing.map(x=>[x.id+':'+x.part,x.textHash]));
+ let created=0,skipped=0;
  for(const item of items){
   for(const part of ['full','answer']){
-   status('🎙️ Đang tạo giọng '+hooks.voice().id+' · câu '+(done/2+1)+'/'+items.length+' · '+part);
-   const clip=await hooks.generateClip(item.spoken[part]);
+   if(hooks.voice().id!==voice)throw Error('Đã đổi giọng khi đang lưu. Hãy thử lại với giọng mới.');
+   const text=item.spoken[part];
+   if(hashes.get(item.id+':'+part)===await sha256(text)){skipped++;continue}
+   status('🎙️ Đang tạo giọng '+voice+' · câu '+item.text.slice(0,35)+'... · '+part);
+   const clip=await hooks.generateClip(text);
+   if(hooks.voice().id!==voice)throw Error('Đã đổi giọng khi đang tạo. Không tải nhầm giọng lên Supabase.');
    await uploadAudio(item,part,clip);
-   hooks.storeClip(item.spoken[part],clip);
-   done++;
+   hooks.storeClip(text,clip);
+   created++;
   }
  }
- status('✅ Đã lưu '+done+' đoạn âm thanh lên kho riêng tư Supabase. Các trò chơi khác có thể tải và phát lại.');
+ status('✅ Hoàn thành: '+created+' đoạn mới đã lưu, '+skipped+' đoạn đã có được giữ nguyên.');
 }
 async function downloadPack(){
  const items=validateChoice(selectedRows());
@@ -186,7 +192,7 @@ async function downloadPack(){
  }
  for(const item of items){
   if(!item.imageUrl)continue;
-  try{const resp=await fetch(item.imageUrl);if(resp.ok)zip.file('images/'+item.id+'.jpg',await resp.blob())}catch(_e){}
+  try{const resp=await fetch(item.imageUrl);if(resp.ok){const file=await resp.blob();const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':file.type==='image/gif'?'gif':'jpg';zip.file('images/'+item.id+'.'+ext,file)}}catch(_e){}
  }
  status('📦 Đang đóng gói '+items.length+' câu hỏi và '+n+' tệp giọng đọc...');
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:5}});
