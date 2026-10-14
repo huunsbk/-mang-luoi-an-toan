@@ -104,7 +104,7 @@ class Handler(BaseHTTPRequestHandler):
         # The 64 MB ONNX model is redirected to HuggingFace's CORS-enabled CDN,
         # not streamed through the Vercel function. Inference stays on the client.
         # Allowlist NGHI-TTS voices; only the selected model (~64 MB) is downloaded.
-        voice_match=re.fullmatch(r"/marble-race/voice/([a-z0-9]+)\\.onnx(\\.json)?",path)
+        voice_match=re.fullmatch(r"/marble-race/voice/([a-z0-9]+)\.onnx(\.json)?",path)
         available_voices={'adam1','banmai','calmwoman3688','chieuthanh','deepman3909','duyoryx3175','lacphi','maiphuong','manhdung','minhkhang','minhquang','minhthu','mytam2','mytam2794','ngochuyen','ngochuyennew','ngocngan3701','phuongtrang','taian2','taian4','thanhphuong2','thientam','tranthanh3870','vietthao3886','yannew'}
         if voice_match:
             voice=voice_match.group(1)
