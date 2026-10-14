@@ -33,11 +33,13 @@ STYLE = (
     "Do not add, omit, translate or rephrase any spoken words."
 )
 
-def _json(handler, status, payload):
+def _json(handler, status, payload, retry_after=None):
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Cache-Control", "no-store")
+    if retry_after is not None:
+        handler.send_header("Retry-After", str(retry_after))
     handler.send_header("X-Content-Type-Options", "nosniff")
     handler.send_header("Content-Length", str(len(data)))
     handler.end_headers()
@@ -72,7 +74,7 @@ class handler(BaseHTTPRequestHandler):
         now = time.monotonic()
         _hits[ip] = [t for t in _hits[ip] if now - t < _WINDOW]
         if len(_hits[ip]) >= REQUEST_LIMIT:
-            return _json(self, 429, {"error": "Đã đạt giới hạn đọc AI trong giờ. Sử dụng giọng thiết bị."})
+            return _json(self, 429, {"error": "Máy chủ đang giới hạn số lần tạo giọng AI. Hãy thử lại sau.", "code": "RATE_LIMIT"}, retry_after=3600)
         length = int(self.headers.get("Content-Length", "0") or 0)
         if length < 2 or length > 12000:
             return _json(self, 413, {"error": "Yêu cầu giọng đọc quá dài."})
@@ -132,5 +134,19 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(audio)
         except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
-            status = 429 if isinstance(exc, HTTPError) and exc.code == 429 else 502
-            return _json(self, status, {"error": "Không thể tạo âm thanh bằng Gemini. Thử lại hoặc dùng giọng thiết bị."})
+            if isinstance(exc, HTTPError) and exc.code == 429:
+                # Google API quota and request/minute caps are different; do not
+                # automatically flood the API again on receiving HTTP 429.
+                raw_wait = exc.headers.get("Retry-After", "") if exc.headers else ""
+                try:
+                    delay = min(900, max(60, int(raw_wait)))
+                except (ValueError, TypeError):
+                    delay = 60
+                return _json(self, 429, {
+                    "code": "RATE_LIMIT",
+                    "error": "Gemini đang giới hạn lượt tạo giọng AI (429). Có thể đã hết hạn mức hoặc gửi yêu cầu quá nhanh. Hãy kiểm tra hạn mức Google AI Studio."
+                }, retry_after=delay)
+            return _json(self, 502, {
+                "code": "UPSTREAM_ERROR",
+                "error": "Gemini chưa tạo được âm thanh. Phần mềm sẽ dùng giọng thiết bị."
+            })
