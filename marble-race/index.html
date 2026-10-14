@@ -13,7 +13,7 @@
 .mode-choice[aria-pressed="true"]{color:#133052;background:linear-gradient(145deg,#fff4b7,#ffcf75);box-shadow:0 4px 0 #b9772d,0 0 15px #ffd87957}
 .mode-choice[data-mode="learn"][aria-pressed="true"]{background:linear-gradient(145deg,#b2ffdf,#5cecc4);box-shadow:0 4px 0 #078570,0 0 18px #6affd067}
 .mode-choice:disabled{opacity:.6;cursor:not-allowed}
-.learning-fields[hidden],.learn-only[hidden],.rank-actions[hidden]{display:none!important}
+.voice-select{width:100%;border-radius:10px;border:1px solid #6ea2e9;background:#e8f2ff;color:#132b57;font-size:12px;padding:10px;min-height:40px}.voice-note{margin-top:8px;line-height:1.5}.learning-fields[hidden],.learn-only[hidden],.rank-actions[hidden]{display:none!important}
 .question-input{height:215px;min-height:175px;background:#fff9e7;color:#223a5b;line-height:1.6;border:2px solid #ffc961;font-size:12px}
 .question-info{font-size:11px;line-height:1.45;color:#9be3f7;white-space:pre-wrap}
 .question-info.error{color:#ffb7af;background:#541e32;border-radius:9px;padding:9px}
@@ -132,7 +132,7 @@
   <aside class="panel settings" aria-label="Cài đặt đường đua">
    <div class="mode-switch" aria-label="Chọn chế độ trò chơi" role="group"><button class="mode-choice" data-mode="select" aria-pressed="true">🏆 CHỌN HỌC SINH</button><button class="mode-choice" data-mode="learn" aria-pressed="false">📚 HỌC TẬP</button></div>
    <div class="section"><div class="section-head"><h2 class="section-title">① Danh sách học sinh</h2><span class="count" id="listCount">0 em</span></div><textarea id="names" spellcheck="false" placeholder="Dán tên mỗi học sinh trên một dòng. Có thể dán trực tiếp từ Excel.&#10;Nguyễn Văn An&#10;Trần Thị Bình"></textarea><div class="btnrow"><button class="btn blue fill" id="create">👥 Tạo viên bi</button><button class="btn red" id="clear">🗑 Xóa</button></div><div class="btnrow"><label class="btn fill file-label" style="text-align:center">📷 Tải nhiều ảnh<input id="multiPhotos" accept="image/*" type="file" multiple></label><button class="btn" id="reshuffle">🎨 Đổi màu bi</button></div><div class="btnrow"><button class="btn blue full" id="classPhotoOpen" type="button">📸 ẢNH CHUNG CẢ LỚP · CHỌN MẶT &amp; GÁN TÊN</button></div><div class="sub" style="margin-top:7px">Chụp một ảnh cả lớp, chạm lần lượt vào khuôn mặt rồi chọn đúng tên học sinh. Ảnh gốc không được tải lên máy chủ; chỉ ảnh chân dung đã cắt được lưu trên trình duyệt này.</div></div>
-   <div class="section" id="learningQuestionSection" hidden><div class="section-head"><h2 class="section-title">📚 Ngân hàng câu hỏi</h2><span class="study-tag">HỌC TẬP</span></div><div class="sub" style="margin-bottom:9px">Dán các câu trắc nghiệm. Mỗi câu gồm nội dung, A/B/C/D và đáp án đúng. Trò chơi xếp hạng toàn bộ học sinh trước khi bắt đầu hỏi.</div><textarea id="questionsInput" class="question-input" spellcheck="false" aria-label="Nhập ngân hàng câu hỏi" placeholder="Câu 1: Bộ phận nào dùng để nhập chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Chuột&#10;D. Loa&#10;Đáp án đúng: B"></textarea><div class="btnrow"><button class="btn blue fill" id="checkQuestions">✓ Kiểm tra câu hỏi</button><button class="btn fill" id="demoQuestions">✨ Câu hỏi mẫu</button></div><div id="questionInfo" class="question-info" aria-live="polite">Chưa có câu hỏi</div><div class="switchrow"><label for="voiceName">🔉 Đọc tên học sinh khi đến lượt</label><input class="switch" type="checkbox" id="voiceName" checked></div><div class="sub" style="margin-top:8px">Nếu ít câu hỏi hơn số học sinh, phần mềm sử dụng lại câu hỏi theo vòng; đáp án chỉ được công bố sau khi giáo viên chọn.</div></div>
+   <div class="section" id="learningQuestionSection" hidden><div class="section-head"><h2 class="section-title">📚 Ngân hàng câu hỏi</h2><span class="study-tag">HỌC TẬP</span></div><div class="sub" style="margin-bottom:9px">Dán các câu trắc nghiệm. Mỗi câu gồm nội dung, A/B/C/D và đáp án đúng. Trò chơi xếp hạng toàn bộ học sinh trước khi bắt đầu hỏi.</div><textarea id="questionsInput" class="question-input" spellcheck="false" aria-label="Nhập ngân hàng câu hỏi" placeholder="Câu 1: Bộ phận nào dùng để nhập chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Chuột&#10;D. Loa&#10;Đáp án đúng: B"></textarea><div class="btnrow"><button class="btn blue fill" id="checkQuestions">✓ Kiểm tra câu hỏi</button><button class="btn fill" id="demoQuestions">✨ Câu hỏi mẫu</button></div><div id="questionInfo" class="question-info" aria-live="polite">Chưa có câu hỏi</div><div class="switchrow"><label for="voiceName">🔊 Đọc tên, câu hỏi và các phương án; đọc kết quả sau khi chấm</label><input class="switch" type="checkbox" id="voiceName" checked></div><div class="field"><label for="voiceSelect">🎙️ Giọng đọc tiếng Việt</label></div><select id="voiceSelect" class="voice-select" aria-label="Chọn giọng đọc tiếng Việt"><option value="auto">Tự động — ưu tiên giọng nam miền Bắc</option></select><div class="btnrow"><button class="btn blue fill" id="voicePreview" type="button">🔉 Nghe thử giọng đọc</button></div><div id="voiceInfo" class="sub voice-note" role="status">Ưu tiên giọng nam phổ thông miền Bắc, khoảng 30 tuổi, rõ chữ, giọng giáo viên; chất giọng thực tế phụ thuộc giọng tiếng Việt được cài trên thiết bị.</div><div class="sub" style="margin-top:8px">Phần mềm đọc đầy đủ câu hỏi và A–D trước khi học sinh chọn; chỉ công bố đáp án đúng sau khi giáo viên chấm. Nếu ít câu hỏi hơn số học sinh, câu hỏi sẽ được sử dụng lại theo vòng.</div></div>
    <div class="section"><div class="section-head"><h2 class="section-title">② Thời gian & đường đua</h2></div><div class="field"><label for="duration">Thời gian mục tiêu (giây)</label><span class="num" id="durationValue">40</span></div><input class="range" id="duration" type="range" min="10" max="90" step="5" value="40"><div class="ticktext"><span>10 giây</span><span>40 giây</span><span>90 giây</span></div><div class="field"><span>⛳ Chặng chướng ngại vật</span><b id="zoneCount">10 chặng</b></div><div class="field"><span>🟣 Độ nảy còn lại</span><b id="bounceValue">100%</b></div><div class="sub">Độ nảy giảm dần theo đồng hồ: còn 0 giây = 0% độ nảy. Hệ thống hỗ trợ bi thoát kẹt và về đích đúng hạn, không cộng giờ.</div></div>
    <div class="section"><h2 class="section-title">③ Hiệu ứng trình diễn</h2><div class="field"><label for="music">🎵 Nhạc nền</label><b id="musicV">45%</b></div><input class="range" type="range" id="music" min="0" max="100" value="45"><div class="field"><label for="sfx">🔊 Va chạm & chuyển động</label><b id="sfxV">68%</b></div><input class="range" type="range" id="sfx" min="0" max="100" value="68"><div class="field"><label for="winVol">🏆 Âm thanh vinh danh</label><b id="winVolV">80%</b></div><input class="range" type="range" id="winVol" min="0" max="100" value="80"><div class="switchrow"><label for="lights">✨ Ánh sáng & hạt sáng</label><input class="switch" type="checkbox" id="lights" checked></div><div class="switchrow"><label for="autoCamera">🎥 Camera theo cuộc đua</label><input class="switch" type="checkbox" id="autoCamera" checked></div><div class="switchrow"><label for="reducedMotion">🛡 Giảm hiệu ứng nhấp nháy</label><input class="switch" type="checkbox" id="reducedMotion" checked></div></div>
    <div class="section"><h2 class="section-title">④ Tùy chọn chọn học sinh</h2><div class="switchrow"><label for="exclude">Không chọn lặp học sinh đã thắng</label><input class="switch" type="checkbox" id="exclude" checked></div><div class="switchrow"><label for="shuffle">Trộn vị trí và kiểu viên bi mỗi lượt</label><input class="switch" type="checkbox" id="shuffle" checked></div><div class="btnrow"><button class="btn fill" id="resetHistory">↻ Khôi phục đã chọn</button><button class="btn fill" id="saveList">⬇ Xuất danh sách</button></div></div>
@@ -164,7 +164,7 @@
     <div class="quiz-question"><div class="quiz-q-label" id="quizQLabel">CÂU HỎI 01</div><div class="quiz-q-text" id="quizQuestionText"></div></div>
     <div class="quiz-options" id="quizOptions" role="group" aria-label="Bốn phương án trả lời"></div>
     <div class="quiz-feedback" id="quizFeedback" role="status" aria-live="polite"><span class="quiz-feedback-icon">🎯</span><span id="quizFeedbackText">Em hãy suy nghĩ và chọn một đáp án nhé!</span></div>
-    <div class="quiz-buttons"><button class="quiz-quiet" id="quizBack">🏁 Xem thứ hạng</button><button class="quiz-next" id="quizNext" disabled>HỌC SINH TIẾP THEO ➜</button></div>
+    <div class="quiz-buttons"><button class="quiz-quiet" id="quizBack">🏁 Xem thứ hạng</button><button class="quiz-quiet" id="quizReadAloud" type="button">🔊 Nghe lại câu hỏi</button><button class="quiz-next" id="quizNext" disabled>HỌC SINH TIẾP THEO ➜</button></div>
    </div>
    <aside class="quiz-scoreboard"><h3 class="quiz-score-head">🌟 BẢNG KẾT QUẢ</h3><div class="quiz-score-summary" id="quizSummary">Đúng 0 · Sai 0</div><div class="quiz-score-list" id="quizScoreList"></div></aside>
   </div>
@@ -225,8 +225,8 @@ async function initAvatars(){await Promise.all(students.map(async s=>{s.image=aw
 function makeStudent(name,i){return{id:randomId(),name,avatar:i%24,color:i%COLORS.length,style:i%5,photo:null,image:null,orb:null}}
 function parsing(raw){return raw.split(/\r?\n|;/).map(line=>line.replace(/^\s*\d+\s*[.)\-:]\s*/,'').split('\t').map(c=>c.trim()).filter(Boolean).at(-1)||'').map(s=>s.trim()).filter(Boolean).slice(0,150)}
 function applyNames(){if(game?.running){toast('Tạm dừng cuộc đua trước khi thay danh sách');return}const names=parsing($('names').value);if(!names.length){toast('Thầy/cô hãy dán danh sách học sinh trước.');return}const pool=new Map();for(const s of students){const k=normalize(s.name);if(!pool.has(k))pool.set(k,[]);pool.get(k).push(s)}studyFinishers=[];studyAnswers.clear();students=names.map((n,i)=>{const old=pool.get(normalize(n))?.shift();return old?{...old,name:n}:makeStudent(n,i)});chosenIds=new Set([...chosenIds].filter(id=>students.some(s=>s.id===id)));initAvatars().then(()=>{renderRoster();save();resetPreview()});toast(`Đã tạo ${students.length} viên bi 3D!`)}
-function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:students.map(({id,name,avatar,color,style,photo})=>({id,name,avatar,color,style,photo})),selected:[...chosenIds],duration:getN(),music:$('music').value,sfx:$('sfx').value,winVol:$('winVol').value,lights:$('lights').checked,autoCamera:$('autoCamera').checked,reducedMotion:$('reducedMotion').checked,exclude:$('exclude').checked,shuffle:$('shuffle').checked,voiceName:$('voiceName').checked,mode:studyMode,questionText:$('questionsInput').value,studyFinishers,studyAnswers:[...studyAnswers]}));}catch(e){console.warn('Không thể lưu bộ nhớ',e);toast('Bộ nhớ trình duyệt đã đầy; ảnh mới có thể không lưu được.')}}
-function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
+function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:students.map(({id,name,avatar,color,style,photo})=>({id,name,avatar,color,style,photo})),selected:[...chosenIds],duration:getN(),music:$('music').value,sfx:$('sfx').value,winVol:$('winVol').value,lights:$('lights').checked,autoCamera:$('autoCamera').checked,reducedMotion:$('reducedMotion').checked,exclude:$('exclude').checked,shuffle:$('shuffle').checked,voiceName:$('voiceName').checked,voiceChoice:$('voiceSelect').dataset.preferred||$('voiceSelect').value||'auto',mode:studyMode,questionText:$('questionsInput').value,studyFinishers,studyAnswers:[...studyAnswers]}));}catch(e){console.warn('Không thể lưu bộ nhớ',e);toast('Bộ nhớ trình duyệt đã đầy; ảnh mới có thể không lưu được.')}}
+function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;$('voiceSelect').dataset.preferred=data.voiceChoice||'auto';studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();refreshSpeechVoices();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
 function updateSettings(){document.documentElement.classList.toggle('reduce-motion',$('reducedMotion').checked);const t=getN();$('durationValue').textContent=t;$('bounceValue').textContent='100%';$('zoneCount').textContent=Math.max(4,Math.round(t/4))+' chặng';for(const k of ['music','sfx','winVol'])$(k+'V').textContent=$(k).value+'%';$('timer').textContent='00:'+String(t).padStart(2,'0');if(t>=60)$('timer').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');$('progress').textContent=`🏁 ${Math.max(4,Math.round(t/4))} chặng • Camera ${$('autoCamera').checked?'tự động':'toàn cảnh'}`}
 function renderRoster(){if(isLearning()){const root=$('roster');$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=studyAnswers.size;renderStudyRoster();return}const root=$('roster');root.replaceChildren();$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=chosenIds.size;let count=0;for(const s of students){count++;const r=document.createElement('div');r.className='person';r.title='Nhấn để thay ảnh: '+s.name;r.style.setProperty('--c',COLORS[s.color%COLORS.length]);const nu=document.createElement('div');nu.className='num-tag';nu.textContent=count;const img=document.createElement('img');img.className='face';img.alt='';img.src=s.photo||avatarSvg(s.avatar);const text=document.createElement('div');text.className='person-name';text.textContent=s.name;const badge=document.createElement('div');badge.className='person-state'+(chosenIds.has(s.id)?' done':'');badge.textContent=chosenIds.has(s.id)?'Đã chọn':'Đang chơi';r.append(nu,img,text,badge);r.addEventListener('click',()=>photoDialog(s.id));root.appendChild(r)}}
 
@@ -592,7 +592,7 @@ function inspectQuestions(showErrors=true){
 }
 function setStudyMode(next,quiet=false){
  if(game?.running){if(!quiet)toast('Hãy hoàn thành cuộc đua trước khi đổi chế độ.');return}
- studyMode=next==='learn'?'learn':'select';
+ studyMode=next==='learn'?'learn':'select';if(!isLearning())stopStudySpeech();
  for(const b of document.querySelectorAll('.mode-choice')){b.setAttribute('aria-pressed',String(b.dataset.mode===studyMode))}
  $('learningQuestionSection').hidden=!isLearning();$('learningQuickInfo').hidden=!isLearning();
  $('learnRankButton').hidden=!isLearning()||!studyFinishers.length;
@@ -638,6 +638,7 @@ function finishLearningRace(g){
 }
 function rankLabel(index){return ['🥇','🥈','🥉'][index]||`#${index+1}`}
 function showRankings(final=false){
+ stopStudySpeech();
  if(!studyFinishers.length){toast('Chưa có thứ tự về đích.');return}
  $('quizOverlay').hidden=true;
  $('rankTitle').textContent=final?'🌟 BẢNG KẾT QUẢ HỌC TẬP':'🏆 TẤT CẢ ĐÃ VỀ ĐÍCH!';
@@ -669,9 +670,85 @@ function showQuiz(){
  const first=studyFinishers.findIndex(f=>!studyAnswers.has(f.id));if(first<0){showRankings(true);return}
  studyIndex=first;$('rankOverlay').hidden=true;$('quizOverlay').hidden=false;renderQuiz();soundReady();
 }
-function speakStudent(name){
- if(!$('voiceName').checked||!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window))return;
- try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(`Mời em ${name} trả lời câu hỏi.`);u.lang='vi-VN';u.rate=.92;u.pitch=1.06;u.volume=clamp(Number($('winVol').value)/100,.1,1);const vi=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase().startsWith('vi'));if(vi)u.voice=vi;speechSynthesis.speak(u)}catch(err){console.warn('Thiết bị không hỗ trợ đọc tên:',err)}
+/* Giọng nam giáo viên miền Bắc ~30 tuổi: đọc rõ, tự nhiên, tốc độ vừa phải.
+   Web Speech API chỉ chọn được các giọng cài trên thiết bị, không tạo được chính xác
+   tuổi/giới tính/địa phương khi thiết bị thiếu giọng tương ứng. */
+let studySpeechRun=0;
+function hasStudySpeech(){return 'speechSynthesis' in window&&'SpeechSynthesisUtterance' in window}
+function vietnameseVoices(){
+ if(!hasStudySpeech())return [];
+ return speechSynthesis.getVoices().filter(v=>/^vi(?:[-_]|$)/i.test(v.lang||''));
+}
+function teacherVoiceScore(v){
+ const name=(v.name||'').toLocaleLowerCase('vi');
+ let score=/^vi[-_]vn$/i.test(v.lang||'')?20:10;
+ if(/\bmale\b|\bnam\b|giọng nam|ha noi|hà nội|northern|miền bắc/.test(name))score+=90;
+ if(/\bfemale\b|giọng nữ|\bnữ\b|woman/.test(name))score-=120;
+ if(v.localService)score+=2;
+ return score;
+}
+function refreshSpeechVoices(){
+ const sel=$('voiceSelect');if(!sel)return;
+ const preferred=sel.dataset.preferred||sel.value||'auto';
+ sel.replaceChildren(new Option('Tự động — ưu tiên giọng nam miền Bắc','auto'));
+ const voices=vietnameseVoices().sort((a,b)=>teacherVoiceScore(b)-teacherVoiceScore(a));
+ for(const v of voices){const key=v.voiceURI||v.name;sel.add(new Option(v.name+' ('+v.lang+')',key))}
+ sel.value=voices.some(v=>(v.voiceURI||v.name)===preferred)?preferred:'auto';
+ sel.dataset.preferred=preferred;
+ $('voicePreview').disabled=!hasStudySpeech();
+ $('voiceInfo').textContent=!hasStudySpeech()
+  ?'Trình duyệt này không hỗ trợ đọc văn bản thành tiếng.'
+  :voices.length
+   ?'Có '+voices.length+' giọng tiếng Việt trên thiết bị. Chế độ tự động ưu tiên giọng nam và âm sắc miền Bắc nếu có; không thể bảo đảm đúng giới tính, độ tuổi hay vùng miền chỉ bằng trình duyệt.'
+   :'Chưa tìm thấy giọng tiếng Việt. Hãy cài giọng tiếng Việt trong cài đặt thiết bị; trình duyệt có thể dùng giọng mặc định không đúng yêu cầu.';
+}
+function chosenTeacherVoice(){
+ const voices=vietnameseVoices();
+ const key=$('voiceSelect').value;
+ return (key!=='auto'&&voices.find(v=>(v.voiceURI||v.name)===key))||
+   voices.sort((a,b)=>teacherVoiceScore(b)-teacherVoiceScore(a))[0]||null;
+}
+function stopStudySpeech(){
+ studySpeechRun++;
+ if(hasStudySpeech())try{speechSynthesis.cancel()}catch(e){console.warn('Không thể dừng giọng đọc:',e)}
+}
+function splitSpeechSentence(value){
+ const t=String(value||'').replace(/\s+/g,' ').trim();if(!t)return [];
+ if(t.length<=210)return[t];
+ const sentences=t.match(/[^.!?;]+[.!?;]?/g)||[t];
+ const out=[];let part='';
+ for(const sentence of sentences){
+  const unit=sentence.trim();
+  if(part&&(part.length+unit.length+1>210)){out.push(part);part=''}
+  if(unit.length>210){if(part){out.push(part);part=''}for(let i=0;i<unit.length;i+=180)out.push(unit.slice(i,i+180))}
+  else part+=(part?' ':'')+unit;
+ }
+ if(part)out.push(part);return out;
+}
+function speakStudySequence(parts,force=false){
+ stopStudySpeech();
+ if((!force&&!$('voiceName').checked)||!hasStudySpeech())return;
+ const token=studySpeechRun;
+ const pieces=parts.flatMap(splitSpeechSentence);if(!pieces.length)return;
+ const voice=chosenTeacherVoice();
+ let index=0;
+ function next(){
+  if(token!==studySpeechRun||index>=pieces.length)return;
+  const utterance=new SpeechSynthesisUtterance(pieces[index++]);
+  utterance.lang='vi-VN';if(voice)utterance.voice=voice;
+  utterance.rate=.92;utterance.pitch=.94;
+  utterance.volume=clamp(Number($('winVol').value)/100,.1,1);
+  utterance.onend=()=>{if(token===studySpeechRun)setTimeout(next,170)};
+  utterance.onerror=e=>{if(token===studySpeechRun&&e.error!=='canceled'&&e.error!=='interrupted')setTimeout(next,170)};
+  try{speechSynthesis.speak(utterance)}catch(e){console.warn('Không thể phát giọng đọc tiếng Việt:',e)}
+ }
+ next();
+}
+function speakStudent(name,question){
+ const segments=[`Mời em ${name} trả lời câu hỏi số ${question.num}.`,question.text];
+ for(const key of answerKeys)segments.push(`Phương án ${key}. ${question.options[key]}.`);
+ segments.push('Em hãy suy nghĩ và lựa chọn một đáp án.');
+ speakStudySequence(segments);
 }
 function renderQuiz(){
  const f=studyFinishers[studyIndex],s=students.find(st=>st.id===f?.id);
@@ -690,7 +767,7 @@ function renderQuiz(){
  $('quizFeedback').className='quiz-feedback';$('quizFeedback').firstElementChild.textContent='🎯';
  $('quizFeedbackText').textContent='Giáo viên nhấn vào phương án học sinh vừa trả lời để chấm điểm.';
  $('quizNext').disabled=true;$('quizNext').textContent=studyIndex===studyFinishers.length-1?'🏆 XEM TỔNG KẾT':'HỌC SINH TIẾP THEO ➜';
- $('quizCelebration').replaceChildren();renderQuizScoreboard();speakStudent(s.name);
+ $('quizCelebration').replaceChildren();renderQuizScoreboard();speakStudent(s.name,question);
 }
 function renderQuizScoreboard(){
  const root=$('quizScoreList');root.replaceChildren();let correct=0;
@@ -712,7 +789,10 @@ function respondQuiz(key){
  const feedback=$('quizFeedback');feedback.className='quiz-feedback '+(correct?'good':'bad');feedback.firstElementChild.textContent=correct?'🎉':'💡';
  $('quizFeedbackText').textContent=correct?'CHÍNH XÁC! EM RẤT XUẤT SẮC! 🌟':`CHƯA CHÍNH XÁC! ĐÁP ÁN ĐÚNG LÀ ${question.correct}. CỐ GẮNG LÊN NHÉ!`;
  $('quizNext').disabled=false;
- quizAnswerAudio(correct);if(correct)quizConfetti();renderQuizScoreboard();renderRoster();save();
+ quizAnswerAudio(correct);if(correct)quizConfetti();
+ speakStudySequence([correct?'Chính xác! Chúc mừng em!':'Chưa chính xác. Em hãy cố gắng nhé!',
+  `Đáp án đúng là phương án ${question.correct}. ${question.options[question.correct]}.`]);
+ renderQuizScoreboard();renderRoster();save();
 }
 function exportStudyResults(){
  const lines=[['Thứ tự','Học sinh','Thời gian về đích (giây)','Câu hỏi','Phương án học sinh','Đáp án đúng','Kết quả']];
@@ -722,13 +802,23 @@ function exportStudyResults(){
 }
 function setupLearningUI(){
  document.querySelectorAll('.mode-choice').forEach(b=>b.addEventListener('click',()=>setStudyMode(b.dataset.mode)));
- $('checkQuestions').onclick=()=>{inspectQuestions(true);save()};$('voiceName').onchange=save;
+ $('checkQuestions').onclick=()=>{inspectQuestions(true);save()};
+ $('voiceName').onchange=()=>{if(!$('voiceName').checked)stopStudySpeech();save()};
+ $('voiceSelect').onchange=()=>{$('voiceSelect').dataset.preferred=$('voiceSelect').value;stopStudySpeech();save()};
+ $('voicePreview').onclick=()=>{refreshSpeechVoices();speakStudySequence(['Xin chào các em! Thầy rất vui được đồng hành cùng các em trong cuộc đua tri thức.','Các em hãy lắng nghe thật kỹ câu hỏi và lựa chọn đáp án đúng nhé!'],true)};
+ if(hasStudySpeech()&&speechSynthesis.addEventListener)speechSynthesis.addEventListener('voiceschanged',refreshSpeechVoices);
+ refreshSpeechVoices();
  $('questionsInput').addEventListener('input',()=>{const {questions,errors}=parseQuestionBank($('questionsInput').value);$('questionInfo').classList.toggle('error',Boolean(errors.length));$('questionInfo').textContent=errors.length?`⚠ ${errors.length} vấn đề. Nhấn “Kiểm tra câu hỏi” để xem chi tiết.`:`✅ ${questions.length} câu hỏi hợp lệ.`;save()});
  $('demoQuestions').onclick=()=>{$('questionsInput').value='Câu 1: Thiết bị nào giúp em nhập chữ và số vào máy tính?\nA. Màn hình\nB. Bàn phím\nC. Chuột máy tính\nD. Loa\nĐáp án đúng: B\n\nCâu 2: Khi nhận được đường liên kết đáng ngờ, em nên làm gì?\nA. Nhấn ngay để xem\nB. Chia sẻ cho các bạn\nC. Không nhấn và báo cho thầy cô\nD. Nhập mật khẩu để kiểm tra\nĐáp án đúng: C';inspectQuestions(false);save()};
  $('learnRankButton').onclick=()=>showRankings(studyAnswers.size===studyFinishers.length);
  $('rankClose').onclick=()=>{$('rankOverlay').hidden=true};
  $('rankStart').onclick=showQuiz;$('rankExport').onclick=exportStudyResults;
  $('quizBack').onclick=()=>showRankings(false);
+ $('quizReadAloud').onclick=()=>{
+  const f=studyFinishers[studyIndex],student=students.find(s=>s.id===f?.id);
+  const question=studyQuestions[studyIndex%studyQuestions.length];
+  if(student&&question)speakStudent(student.name,question);
+ };
  $('quizNext').onclick=()=>{if(!studyAnswers.has(studyFinishers[studyIndex]?.id))return;const following=studyFinishers.findIndex((f,i)=>i>studyIndex&&!studyAnswers.has(f.id));
  if(following>=0){studyIndex=following;renderQuiz()}else{const any=studyFinishers.findIndex(f=>!studyAnswers.has(f.id));if(any>=0){studyIndex=any;renderQuiz()}else{showRankings(true)}}};
 }
