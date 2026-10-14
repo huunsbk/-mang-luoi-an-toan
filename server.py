@@ -167,6 +167,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         static_routes = {
+            "/classrooms": ("classrooms/index.html", "text/html; charset=utf-8"),
+            "/classrooms/": ("classrooms/index.html", "text/html; charset=utf-8"),
+            "/classrooms/index.html": ("classrooms/index.html", "text/html; charset=utf-8"),
+            "/classrooms/classroom-store.js": ("classrooms/classroom-store.js", "application/javascript; charset=utf-8"),
+            "/classrooms/classroom-manager.js": ("classrooms/classroom-manager.js", "application/javascript; charset=utf-8"),
+            "/marble-race/classroom-picker.js": ("marble-race/classroom-picker.js", "application/javascript; charset=utf-8"),
             "/pose-quiz": ("pose-quiz/index.html", "text/html; charset=utf-8"),
             "/pose-quiz/": ("pose-quiz/index.html", "text/html; charset=utf-8"),
             "/pose-quiz/index.html": ("pose-quiz/index.html", "text/html; charset=utf-8"),
