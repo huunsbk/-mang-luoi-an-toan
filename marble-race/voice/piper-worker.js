@@ -7,7 +7,7 @@
  */
 'use strict';
 const MODEL_NAME='deepman3909';
-const MODEL_BASE='https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/';
+const MODEL_BASE='/marble-race/voice/';
 const PHONEMIZER_BASE='https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/build/piper_phonemize';
 const ORT_DIST='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
 let model=null, config=null, ort=null, phonemizer=null, ready=null;
