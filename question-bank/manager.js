@@ -78,7 +78,14 @@ function renderList(){
 }
 async function reload(preserveEditor=true){
  const old=preserveEditor?editing?.id:null,sub=$('filterSubject').value,lesson=$('filterLesson').value;
- const data=await api('bank.list',{subject:'ALL',lesson:'ALL',search:''});rows=data.items||[];
+ let offset=0,data=null;const collected=[];
+ for(let page=0;page<40;page++){
+  data=await api('bank.list',{subject:'ALL',lesson:'ALL',search:'',offset,limit:250});
+  collected.push(...(data.items||[]));
+  if(data.nextOffset==null)break;
+  offset=data.nextOffset;
+ }
+ rows=collected;
  selected=new Set([...selected].filter(id=>rows.some(x=>x.id===id)));
  fill($('filterSubject'),data.facets?.subjects||[],'Tất cả môn học',sub);
  const lessons=[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))];
