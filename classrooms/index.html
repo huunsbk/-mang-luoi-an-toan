@@ -34,7 +34,7 @@ main{padding:22px 16px 65px}.panel{background:var(--paper);border:1px solid var(
 <main>
 <section class="panel" id="loginPanel">
 <h2>🔐 Đăng nhập tài khoản giáo viên</h2><p class="tiny">Sử dụng tài khoản MotionClass / AI Pose Quiz. Chỉ giáo viên sở hữu mới được xem lớp và ảnh học sinh.</p>
-<form id="loginForm"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="email" placeholder="Địa chỉ email"><label for="loginPass">Mật khẩu</label><input id="loginPass" type="password" required autocomplete="current-password" placeholder="Mật khẩu"><div class="row" style="margin-top:12px"><button class="primary" type="submit">Đăng nhập</button><a href="/register/" style="display:inline-block;padding:10px;color:#205cb8;font-weight:750">＋ Đăng ký tài khoản mới</a></div></form>
+<form id="loginForm"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="email" placeholder="Địa chỉ email"><label for="loginPass">Mật khẩu</label><input id="loginPass" type="password" required autocomplete="current-password" placeholder="Mật khẩu"><div class="row" style="margin-top:12px"><button class="primary" type="submit">Đăng nhập</button><a href="/register/" style="display:inline-block;padding:10px;color:#205cb8;font-weight:750">＋ Đăng ký tài khoản mới</a><a href="/forgot-password/" style="display:inline-block;padding:10px;color:#205cb8;font-weight:750">🔑 Quên mật khẩu?</a></div></form>
 </section>
 <div id="appPanel" hidden>
 <section class="panel row" style="justify-content:space-between"><div><strong>Đang đăng nhập: <span id="userEmail"></span></strong><div class="tiny">Dữ liệu lớp và ảnh được lưu riêng tư trên Supabase MotionClass.</div></div><button id="logoutButton">Đăng xuất</button></section>
