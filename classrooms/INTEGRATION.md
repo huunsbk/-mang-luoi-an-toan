@@ -12,6 +12,16 @@
 - Storage bucket **`teacher-student-photos`** (private, upload tối đa 2 MB): ảnh 320 × 320 JPEG, chỉ chủ tài khoản được xem/upload/xóa. Đường dẫn ảnh có tiền tố UUID của giáo viên, lớp và học sinh.
 - Hai bảng và storage đều có RLS riêng; giáo viên chỉ thao tác được trên lớp và học sinh của chính mình.
 
+## Gán nhiều ảnh từ một ảnh chung của lớp
+
+Trong trang Quản lý lớp học, chọn lớp đã có học sinh, nhấn **Ảnh chung · Gán nhiều học sinh**. Nhấn **Chụp ảnh chung** (camera sau) hoặc **Tải ảnh lớp** một lần. Chạm tâm khuôn mặt trên canvas, chỉnh vùng cắt / phóng to và chọn tên học sinh trong danh sách. Chỉ bản cắt JPEG 320 × 320 được truyền tới hàm `TeacherClassroomStore.savePhoto`, kho ảnh riêng tư `teacher-student-photos`. Ảnh gốc giữ trong bộ nhớ tạm để giáo viên lặp lại thao tác cho các em tiếp theo; mỗi lần gán thành công được đánh dấu ✓ và cập nhật tiến độ. Không có hệ thống nhận diện danh tính khuôn mặt.
+
+- Giữ nguyên ảnh gốc tại thiết bị, không upload, không lưu localStorage.
+- Khi gán sai, giáo viên có thể chọn lại khuôn mặt và xác nhận thay ảnh học sinh đã có.
+- Mỗi tệp JPEG chỉ được gắn với mã học sinh UUID đã chọn, việc lưu kiểm tra quyền RLS qua tài khoản giáo viên.
+- Ảnh đã gán được tự động nạp trong Đua bi vào viên bi của học sinh tương ứng.
+- Kiểm thử Chromium và WebKit giao diện iPhone: chọn liên tiếp hai học sinh với cùng ảnh lớp, tạo hai tệp JPEG 320 × 320 và giữ ảnh gốc, không lỗi JavaScript. Kiểm thử đang dùng Supabase giả lập; cần giáo viên đăng nhập để kiểm tra storage thật.
+
 ## Tích hợp trò chơi tiếp theo
 
 Nạp scripts đã có trên cùng domain:
