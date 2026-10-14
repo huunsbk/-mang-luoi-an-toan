@@ -81,6 +81,42 @@
 @media(prefers-reduced-motion:reduce){.quiz-shell,.quiz-answer,.quiz-feedback,.sparkle{animation:none!important}}
 .reduce-motion .quiz-shell,.reduce-motion .quiz-answer,.reduce-motion .quiz-feedback,.reduce-motion .sparkle{animation:none!important}
 
+/* Classroom group photo mapper — non-AI, manual point-to-name assignment */
+.class-photo-overlay{z-index:48;background:rgba(6,13,39,.91);padding:clamp(8px,1.6vw,20px)}
+.class-photo-panel{width:min(1320px,100%);max-height:97dvh;overflow:auto;border:2px solid #7ee9ff;border-radius:27px;background:linear-gradient(140deg,#13294f,#111b40 66%,#271752);box-shadow:0 0 0 5px #53b9f821,0 22px 90px #020a24;color:#eefaff;padding:clamp(12px,2vw,23px)}
+.class-photo-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.class-photo-head h2{font-size:clamp(19px,2.7vw,30px);margin:0 0 6px;color:#fff4bd;font-weight:1000}
+.class-photo-head p{margin:0;color:#bcdaf7;font-size:13px;line-height:1.5}
+.class-photo-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,350px);gap:14px}
+.class-photo-work{border-radius:19px;border:1px solid #478dce;background:#071734;overflow:hidden;min-width:0}
+.class-photo-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px;background:#183363}
+.class-photo-tools label{font-weight:800;font-size:12px}
+.class-photo-tools input[type=range]{width:min(160px,26vw);accent-color:#55c9fa}
+.class-photo-tools .btn{padding:9px 11px;font-size:12px}
+#classPhotoCanvas{display:block;width:100%;height:min(55dvh,535px);touch-action:none;cursor:crosshair;background:linear-gradient(135deg,#0a1b36,#16335c);outline:none}
+#classPhotoCanvas:focus-visible{outline:3px solid #ffe075;outline-offset:-3px}
+.class-photo-hint{padding:9px 12px;background:#17345c;color:#d2ebff;font-size:12px;line-height:1.45}
+.class-photo-right{background:linear-gradient(150deg,#ffffff,#eef6ff);color:#233d60;border-radius:19px;padding:15px;display:flex;flex-direction:column;gap:11px;min-height:0}
+.class-photo-right h3{margin:0;font-size:18px;font-weight:1000;color:#294a7f}
+.class-photo-right p{margin:0;font-size:12px;color:#596f89;line-height:1.5}
+.class-crop-preview{height:150px;display:flex;align-items:center;justify-content:center;border-radius:17px;border:2px dashed #a9bfdf;background:radial-gradient(circle at 50% 25%,#e2ffff,#e4e7ff);overflow:hidden}
+.class-crop-preview img{width:132px;height:132px;border-radius:50%;border:5px solid white;box-shadow:0 0 0 4px #75c4e8,0 8px 20px #283c5b44;object-fit:cover}
+.class-crop-preview .crop-placeholder{color:#617999;text-align:center;font-weight:850;padding:15px}
+.class-photo-right input[type=search]{width:100%;font-size:16px;line-height:1.25;padding:12px;border:2px solid #b9d1ed;border-radius:12px;color:#244265;background:#fff}
+.class-photo-right input[type=search]:focus{outline:3px solid #95e2ff}
+.class-photo-list{display:grid;gap:7px;max-height:260px;overflow:auto;align-content:start;padding:2px}
+.class-photo-person{border:2px solid #e1e9f6;background:white;border-radius:13px;text-align:left;display:flex;align-items:center;gap:9px;padding:8px 9px;min-height:47px;cursor:pointer;color:#274367;font:800 12px system-ui,sans-serif}
+.class-photo-person:hover,.class-photo-person:focus-visible{border-color:#31b6d6;background:#e8fcff;outline:none}
+.class-photo-person .mini-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;background:#eef3ff;flex:0 0 30px}
+.class-photo-person span{flex:1;overflow-wrap:anywhere}
+.class-photo-person em{font-style:normal;font-size:10px;color:#12866a;white-space:nowrap}
+.class-photo-status{font-size:13px;min-height:24px;font-weight:900;color:#35708c}
+.class-photo-actions{display:flex;flex-wrap:wrap;gap:8px}
+.class-photo-actions .btn{font-size:12px;padding:10px}
+.class-photo-right [hidden],.class-photo-panel [hidden]{display:none!important}
+@media(max-width:850px){.class-photo-layout{grid-template-columns:1fr}.class-photo-list{max-height:170px}.class-photo-panel{max-height:96dvh}.class-crop-preview{height:112px}.class-crop-preview img{height:94px;width:94px}#classPhotoCanvas{height:45dvh}}
+@media(max-width:520px){.class-photo-panel{padding:10px}.class-photo-tools{gap:6px}.class-photo-tools label{font-size:11px}.class-photo-tools .btn{padding:8px}#classPhotoCanvas{height:39dvh}.class-photo-hint{font-size:11px}}
+
 </style>
 </head>
 <body>
@@ -89,7 +125,7 @@
  <main class="board">
   <aside class="panel settings" aria-label="Cài đặt đường đua">
    <div class="mode-switch" aria-label="Chọn chế độ trò chơi" role="group"><button class="mode-choice" data-mode="select" aria-pressed="true">🏆 CHỌN HỌC SINH</button><button class="mode-choice" data-mode="learn" aria-pressed="false">📚 HỌC TẬP</button></div>
-   <div class="section"><div class="section-head"><h2 class="section-title">① Danh sách học sinh</h2><span class="count" id="listCount">0 em</span></div><textarea id="names" spellcheck="false" placeholder="Dán tên mỗi học sinh trên một dòng. Có thể dán trực tiếp từ Excel.&#10;Nguyễn Văn An&#10;Trần Thị Bình"></textarea><div class="btnrow"><button class="btn blue fill" id="create">👥 Tạo viên bi</button><button class="btn red" id="clear">🗑 Xóa</button></div><div class="btnrow"><label class="btn fill file-label" style="text-align:center">📷 Tải nhiều ảnh<input id="multiPhotos" accept="image/*" type="file" multiple></label><button class="btn" id="reshuffle">🎨 Đổi màu bi</button></div><div class="sub" style="margin-top:7px">Có ảnh: tên tệp ảnh trùng tên học sinh (không dấu cũng được). Nếu chưa có, hệ thống dùng avatar minh họa tự tạo.</div></div>
+   <div class="section"><div class="section-head"><h2 class="section-title">① Danh sách học sinh</h2><span class="count" id="listCount">0 em</span></div><textarea id="names" spellcheck="false" placeholder="Dán tên mỗi học sinh trên một dòng. Có thể dán trực tiếp từ Excel.&#10;Nguyễn Văn An&#10;Trần Thị Bình"></textarea><div class="btnrow"><button class="btn blue fill" id="create">👥 Tạo viên bi</button><button class="btn red" id="clear">🗑 Xóa</button></div><div class="btnrow"><label class="btn fill file-label" style="text-align:center">📷 Tải nhiều ảnh<input id="multiPhotos" accept="image/*" type="file" multiple></label><button class="btn" id="reshuffle">🎨 Đổi màu bi</button></div><div class="btnrow"><button class="btn blue full" id="classPhotoOpen" type="button">📸 ẢNH CHUNG CẢ LỚP · CHỌN MẶT &amp; GÁN TÊN</button></div><div class="sub" style="margin-top:7px">Chụp một ảnh cả lớp, chạm lần lượt vào khuôn mặt rồi chọn đúng tên học sinh. Ảnh gốc không được tải lên máy chủ; chỉ ảnh chân dung đã cắt được lưu trên trình duyệt này.</div></div>
    <div class="section" id="learningQuestionSection" hidden><div class="section-head"><h2 class="section-title">📚 Ngân hàng câu hỏi</h2><span class="study-tag">HỌC TẬP</span></div><div class="sub" style="margin-bottom:9px">Dán các câu trắc nghiệm. Mỗi câu gồm nội dung, A/B/C/D và đáp án đúng. Trò chơi xếp hạng toàn bộ học sinh trước khi bắt đầu hỏi.</div><textarea id="questionsInput" class="question-input" spellcheck="false" aria-label="Nhập ngân hàng câu hỏi" placeholder="Câu 1: Bộ phận nào dùng để nhập chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Chuột&#10;D. Loa&#10;Đáp án đúng: B"></textarea><div class="btnrow"><button class="btn blue fill" id="checkQuestions">✓ Kiểm tra câu hỏi</button><button class="btn fill" id="demoQuestions">✨ Câu hỏi mẫu</button></div><div id="questionInfo" class="question-info" aria-live="polite">Chưa có câu hỏi</div><div class="switchrow"><label for="voiceName">🔉 Đọc tên học sinh khi đến lượt</label><input class="switch" type="checkbox" id="voiceName" checked></div><div class="sub" style="margin-top:8px">Nếu ít câu hỏi hơn số học sinh, phần mềm sử dụng lại câu hỏi theo vòng; đáp án chỉ được công bố sau khi giáo viên chọn.</div></div>
    <div class="section"><div class="section-head"><h2 class="section-title">② Thời gian & đường đua</h2></div><div class="field"><label for="duration">Thời gian mục tiêu (giây)</label><span class="num" id="durationValue">40</span></div><input class="range" id="duration" type="range" min="10" max="90" step="5" value="40"><div class="ticktext"><span>10 giây</span><span>40 giây</span><span>90 giây</span></div><div class="field"><span>⛳ Chặng chướng ngại vật</span><b id="zoneCount">10 chặng</b></div><div class="field"><span>🟣 Độ nảy còn lại</span><b id="bounceValue">100%</b></div><div class="sub">Độ nảy giảm dần theo đồng hồ: còn 0 giây = 0% độ nảy. Hệ thống hỗ trợ bi thoát kẹt và về đích đúng hạn, không cộng giờ.</div></div>
    <div class="section"><h2 class="section-title">③ Hiệu ứng trình diễn</h2><div class="field"><label for="music">🎵 Nhạc nền</label><b id="musicV">45%</b></div><input class="range" type="range" id="music" min="0" max="100" value="45"><div class="field"><label for="sfx">🔊 Va chạm & chuyển động</label><b id="sfxV">68%</b></div><input class="range" type="range" id="sfx" min="0" max="100" value="68"><div class="field"><label for="winVol">🏆 Âm thanh vinh danh</label><b id="winVolV">80%</b></div><input class="range" type="range" id="winVol" min="0" max="100" value="80"><div class="switchrow"><label for="lights">✨ Ánh sáng & hạt sáng</label><input class="switch" type="checkbox" id="lights" checked></div><div class="switchrow"><label for="autoCamera">🎥 Camera theo cuộc đua</label><input class="switch" type="checkbox" id="autoCamera" checked></div><div class="switchrow"><label for="reducedMotion">🛡 Giảm hiệu ứng nhấp nháy</label><input class="switch" type="checkbox" id="reducedMotion" checked></div></div>
@@ -129,6 +165,40 @@
  </section>
 </div>
 <div class="floating" id="photoOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="photoTitle"><div class="dialog"><h3 id="photoTitle">Thay ảnh học sinh</h3><div class="dialog-preview"><img id="photoPreview" alt="Ảnh học sinh"><div><b id="photoName"></b><p>Ảnh được cắt vuông trên thiết bị của thầy/cô và lưu cùng danh sách. Nên dùng ảnh có sự đồng ý phù hợp.</p></div></div><label class="btn blue file-label">📷 Chọn ảnh từ thiết bị<input id="singlePhoto" type="file" accept="image/*"></label><button class="btn" id="photoDefault">🎭 Dùng avatar mặc định</button><div class="btnrow"><button class="btn fill" id="photoClose">Đóng</button></div></div></div>
+<div class="floating class-photo-overlay" id="classPhotoOverlay" role="dialog" aria-modal="true" aria-labelledby="classPhotoTitle" hidden>
+ <div class="class-photo-panel">
+  <div class="class-photo-head"><div><h2 id="classPhotoTitle">📸 GẮN ẢNH HỌC SINH TỪ ẢNH CẢ LỚP</h2><p>1. Tải ảnh chung → 2. Nhấn khuôn mặt → 3. Chỉnh vùng cắt → 4. Chọn tên học sinh để gán ảnh.</p></div><button class="btn" type="button" id="classPhotoClose">✕ Đóng</button></div>
+  <div class="class-photo-layout">
+   <div class="class-photo-work">
+    <div class="class-photo-tools">
+     <label class="btn blue file-label">🖼 Chọn ảnh lớp<input id="classPhotoFile" type="file" accept="image/*" aria-label="Tải ảnh chụp chung cả lớp"></label>
+     <button class="btn" id="classZoomOut" type="button" aria-label="Thu nhỏ ảnh">−</button>
+     <label for="classZoom">Phóng to</label><input id="classZoom" type="range" min="1" max="5" step="0.1" value="1"><strong id="classZoomValue">100%</strong>
+     <button class="btn" id="classZoomIn" type="button" aria-label="Phóng to ảnh">+</button>
+     <button class="btn" id="classResetView" type="button">⤾ Đặt lại</button>
+    </div>
+    <canvas id="classPhotoCanvas" tabindex="0" aria-label="Ảnh cả lớp: nhấn vào tâm khuôn mặt học sinh để chọn; kéo để di chuyển ảnh"></canvas>
+    <div class="class-photo-hint">👆 Chạm/nhấn vào mặt học sinh để lấy ảnh. Kéo để di chuyển, cuộn chuột hoặc dùng thanh trượt để phóng to. Ảnh lớp không gửi lên Internet.</div>
+   </div>
+   <aside class="class-photo-right">
+    <h3>🌟 Ảnh chân dung được chọn</h3>
+    <div class="class-crop-preview" id="classPhotoPreview"><span class="crop-placeholder">Chưa chọn khuôn mặt</span></div>
+    <label for="classCropSize" style="font-weight:900;font-size:12px">🔎 Kích thước vùng cắt chân dung</label>
+    <input id="classCropSize" type="range" min="18" max="115" step="1" value="49" aria-label="Điều chỉnh kích thước vùng cắt ảnh">
+    <div id="classPhotoStatus" class="class-photo-status" role="status">Đã gắn 0 ảnh.</div>
+    <div id="classNameCandidates" hidden>
+     <h3 style="font-size:15px;margin-bottom:7px">Chọn học sinh để gắn ảnh</h3>
+     <input id="classNameSearch" type="search" placeholder="Tìm học sinh theo tên..." autocomplete="off" aria-label="Tìm học sinh">
+     <div class="class-photo-list" id="classStudentList"></div>
+    </div>
+    <p id="classPhotoInstructions">Khi chọn một khuôn mặt, ảnh cắt sẽ hiện phía trên và danh sách học sinh sẽ xuất hiện để giáo viên gán tên.</p>
+    <div class="class-photo-actions"><button class="btn" id="classClearSelection" type="button">↶ Chọn lại mặt</button><button class="btn blue" id="classPhotoDone" type="button">✓ Hoàn tất</button></div>
+    <p>🔒 Ảnh gốc chỉ nằm trong bộ nhớ tạm của trang. Các ảnh chân dung đã gán được lưu cục bộ trên trình duyệt. Chỉ sử dụng ảnh học sinh khi có sự đồng ý phù hợp.</p>
+   </aside>
+  </div>
+ </div>
+</div>
+
 <div class="toast" id="toast" role="status" hidden></div>
 <script>
 (()=>{'use strict';
@@ -152,6 +222,132 @@ function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:studen
 function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
 function updateSettings(){document.documentElement.classList.toggle('reduce-motion',$('reducedMotion').checked);const t=getN();$('durationValue').textContent=t;$('bounceValue').textContent='100%';$('zoneCount').textContent=Math.max(4,Math.round(t/4))+' chặng';for(const k of ['music','sfx','winVol'])$(k+'V').textContent=$(k).value+'%';$('timer').textContent='00:'+String(t).padStart(2,'0');if(t>=60)$('timer').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');$('progress').textContent=`🏁 ${Math.max(4,Math.round(t/4))} chặng • Camera ${$('autoCamera').checked?'tự động':'toàn cảnh'}`}
 function renderRoster(){if(isLearning()){const root=$('roster');$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=studyAnswers.size;renderStudyRoster();return}const root=$('roster');root.replaceChildren();$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=chosenIds.size;let count=0;for(const s of students){count++;const r=document.createElement('div');r.className='person';r.title='Nhấn để thay ảnh: '+s.name;r.style.setProperty('--c',COLORS[s.color%COLORS.length]);const nu=document.createElement('div');nu.className='num-tag';nu.textContent=count;const img=document.createElement('img');img.className='face';img.alt='';img.src=s.photo||avatarSvg(s.avatar);const text=document.createElement('div');text.className='person-name';text.textContent=s.name;const badge=document.createElement('div');badge.className='person-state'+(chosenIds.has(s.id)?' done':'');badge.textContent=chosenIds.has(s.id)?'Đã chọn':'Đang chơi';r.append(nu,img,text,badge);r.addEventListener('click',()=>photoDialog(s.id));root.appendChild(r)}}
+/* Class photo picker. No face recognition and no network calls: educator chooses a face and name. */
+let classImage=null,classSelected=null,classPanX=0,classPanY=0,classZoom=1,classFit=1;
+let classPointer=null,classSuppressClick=false;
+const classCanvas=$('classPhotoCanvas'),classContext=classCanvas.getContext('2d');
+function classDrawingGeometry(){
+ const w=classCanvas.clientWidth||650,h=classCanvas.clientHeight||430;
+ const scale=classImage?Math.min(w/classImage.naturalWidth,h/classImage.naturalHeight)*classZoom:1;
+ return{w,h,scale,ox:w/2+classPanX-(classImage?.naturalWidth||0)*scale/2,oy:h/2+classPanY-(classImage?.naturalHeight||0)*scale/2};
+}
+function classDraw(){
+ const dpr=Math.min(window.devicePixelRatio||1,2),g=classDrawingGeometry();
+ if(classCanvas.width!==Math.round(g.w*dpr)||classCanvas.height!==Math.round(g.h*dpr)){
+  classCanvas.width=Math.round(g.w*dpr);classCanvas.height=Math.round(g.h*dpr);
+ }
+ classContext.setTransform(dpr,0,0,dpr,0,0);
+ classContext.clearRect(0,0,g.w,g.h);
+ classContext.fillStyle='#071b37';classContext.fillRect(0,0,g.w,g.h);
+ if(!classImage){classContext.fillStyle='#c7dff5';classContext.textAlign='center';classContext.font='bold 16px system-ui';classContext.fillText('📸 Hãy tải ảnh chung của lớp',g.w/2,g.h/2);return}
+ classContext.drawImage(classImage,g.ox,g.oy,classImage.naturalWidth*g.scale,classImage.naturalHeight*g.scale);
+ if(classSelected){
+  const x=g.ox+classSelected.x*g.scale,y=g.oy+classSelected.y*g.scale;
+  const radius=Number($('classCropSize').value);
+  classContext.save();classContext.beginPath();classContext.arc(x,y,radius,0,Math.PI*2);
+  classContext.lineWidth=4;classContext.strokeStyle='#fff';classContext.shadowColor='#17dfef';classContext.shadowBlur=17;classContext.stroke();
+  classContext.shadowBlur=0;classContext.strokeStyle='#23c6f5';classContext.lineWidth=2;classContext.setLineDash([7,5]);classContext.beginPath();classContext.arc(x,y,radius+6,0,Math.PI*2);classContext.stroke();classContext.restore();
+ }
+}
+function classCrop(){
+ if(!classImage||!classSelected)return null;
+ const geom=classDrawingGeometry();const radius=Number($('classCropSize').value)/geom.scale;
+ const side=Math.min(classImage.naturalWidth,classImage.naturalHeight,radius*2);
+ const sx=clamp(classSelected.x-side/2,0,Math.max(0,classImage.naturalWidth-side));
+ const sy=clamp(classSelected.y-side/2,0,Math.max(0,classImage.naturalHeight-side));
+ const c=document.createElement('canvas');c.width=c.height=192;
+ c.getContext('2d').drawImage(classImage,sx,sy,side,side,0,0,192,192);
+ return c.toDataURL('image/jpeg',.84);
+}
+function classRefreshPreview(){
+ const root=$('classPhotoPreview');root.replaceChildren();
+ const src=classCrop();if(src){const img=document.createElement('img');img.src=src;img.alt='Ảnh chân dung được cắt';root.appendChild(img)}
+ else{const placeholder=document.createElement('span');placeholder.className='crop-placeholder';placeholder.textContent='Chưa chọn khuôn mặt';root.appendChild(placeholder)}
+ $('classNameCandidates').hidden=!classSelected;
+ $('classPhotoInstructions').hidden=Boolean(classSelected);
+ if(classSelected)classRenderStudents();
+ classDraw();
+}
+function classClear(){classSelected=null;$('classNameSearch').value='';classRefreshPreview()}
+function classUpdateStatus(extra=''){
+ const count=students.filter(s=>Boolean(s.photo)).length;
+ $('classPhotoStatus').textContent=`✅ Đã có ảnh ${count}/${students.length} học sinh${extra?' · '+extra:''}`;
+}
+function classRenderStudents(){
+ const root=$('classStudentList');root.replaceChildren();
+ const term=normalize($('classNameSearch').value.trim());
+ const list=students.filter(s=>normalize(s.name).includes(term));
+ if(!list.length){const p=document.createElement('p');p.textContent='Không tìm thấy tên học sinh.';root.appendChild(p);return}
+ for(const s of list){
+  const b=document.createElement('button');b.type='button';b.className='class-photo-person';b.dataset.studentId=s.id;
+  const img=document.createElement('img');img.className='mini-avatar';img.alt='';img.src=s.photo||avatarSvg(s.avatar);
+  const name=document.createElement('span');name.textContent=s.name;
+  const flag=document.createElement('em');flag.textContent=s.photo?'Đã có ảnh · thay':'Chưa có ảnh';
+  b.append(img,name,flag);b.onclick=()=>classAssign(s.id);root.appendChild(b);
+ }
+}
+async function classAssign(id){
+ if(game?.running){toast('Không thể gán ảnh trong lúc đua.');return}
+ const s=students.find(x=>x.id===id);const src=classCrop();if(!s||!src)return;
+ if(s.photo && !confirm(`Thay ảnh hiện tại của ${s.name} bằng khuôn mặt vừa chọn?`))return;
+ const image=await loadImg(src);if(!image){toast('Không thể đọc ảnh đã cắt.');return}
+ s.photo=src;s.image=image;s.orb=null;renderRoster();save();resetPreview();
+ classSelected=null;$('classNameSearch').value='';classRefreshPreview();
+ classUpdateStatus(`Đã gắn ảnh: ${s.name}`);
+ toast(`Đã gắn ảnh cho ${s.name}. Chọn khuôn mặt tiếp theo!`);
+}
+function classSetZoom(v){classZoom=clamp(Number(v),1,5);$('classZoom').value=classZoom;$('classZoomValue').textContent=Math.round(classZoom*100)+'%';classRefreshPreview()}
+function classOpen(){
+ if(game?.running){toast('Hãy đợi đường đua hoàn thành rồi mới gắn ảnh.');return}
+ if(!students.length){toast('Thầy/cô hãy nhập và tạo danh sách học sinh trước.');return}
+ $('classPhotoOverlay').hidden=false;classClear();classUpdateStatus();requestAnimationFrame(classDraw);
+}
+function classClose(){ $('classPhotoOverlay').hidden=true;classPointer=null;classImage=null;classSelected=null;classPanX=classPanY=0;classSetZoom(1);$('classPhotoFile').value=''; }
+$('classPhotoOpen').onclick=classOpen;
+$('classPhotoClose').onclick=classClose;$('classPhotoDone').onclick=classClose;
+$('classPhotoOverlay').addEventListener('click',e=>{if(e.target===$('classPhotoOverlay'))classClose()});
+$('classPhotoFile').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ if(!file.type.startsWith('image/')){toast('Vui lòng chọn tệp ảnh.');return}
+ if(file.size>30*1024*1024){toast('Ảnh lớn hơn 30 MB. Hãy chọn ảnh nhỏ hơn.');return}
+ const url=URL.createObjectURL(file);
+ try{const img=await loadImg(url);if(!img)throw Error('Định dạng ảnh không được trình duyệt hỗ trợ');
+ classImage=img;classPanX=classPanY=0;classSelected=null;classSetZoom(1);classUpdateStatus('Hãy nhấn khuôn mặt đầu tiên');}
+ catch(err){toast('Không mở được ảnh. Thử tệp JPG hoặc PNG.');}
+ finally{URL.revokeObjectURL(url);}
+});
+$('classZoom').addEventListener('input',e=>classSetZoom(e.target.value));
+$('classZoomIn').onclick=()=>classSetZoom(classZoom+.3);
+$('classZoomOut').onclick=()=>classSetZoom(classZoom-.3);
+$('classResetView').onclick=()=>{classPanX=classPanY=0;classSetZoom(1)};
+$('classCropSize').addEventListener('input',classRefreshPreview);
+$('classClearSelection').onclick=classClear;
+$('classNameSearch').addEventListener('input',classRenderStudents);
+classCanvas.addEventListener('pointerdown',e=>{
+ if(!classImage)return;
+ classPointer={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,panX:classPanX,panY:classPanY};
+ classCanvas.setPointerCapture(e.pointerId);
+});
+classCanvas.addEventListener('pointermove',e=>{
+ if(!classPointer||e.pointerId!==classPointer.id)return;
+ const dx=e.clientX-classPointer.x,dy=e.clientY-classPointer.y;
+ if(Math.hypot(dx,dy)>7)classPointer.moved=true;
+ if(classPointer.moved){classPanX=classPointer.panX+dx;classPanY=classPointer.panY+dy;classDraw()}
+});
+classCanvas.addEventListener('pointerup',e=>{
+ if(!classPointer||e.pointerId!==classPointer.id)return;
+ const pointer=classPointer;classPointer=null;
+ if(pointer.moved||!classImage)return;
+ const rect=classCanvas.getBoundingClientRect();const geom=classDrawingGeometry();
+ const x=(e.clientX-rect.left-geom.ox)/geom.scale,y=(e.clientY-rect.top-geom.oy)/geom.scale;
+ if(x<0||y<0||x>classImage.naturalWidth||y>classImage.naturalHeight){toast('Nhấn trực tiếp vào khuôn mặt trong ảnh.');return}
+ classSelected={x,y};classRefreshPreview();
+});
+classCanvas.addEventListener('pointercancel',()=>{classPointer=null});
+classCanvas.addEventListener('wheel',e=>{if(!classImage)return;e.preventDefault();classSetZoom(classZoom+(e.deltaY<0?.2:-.2))},{passive:false});
+window.addEventListener('resize',()=>{if(!$('classPhotoOverlay').hidden)classDraw()});
+window.__classPhotoTest={open:classOpen,getState:()=>({open:!$('classPhotoOverlay').hidden,hasImage:!!classImage,selected:!!classSelected,count:students.filter(s=>Boolean(s.photo)).length}),select:(x,y)=>{classSelected={x,y};classRefreshPreview()},assign:classAssign};
+
 function photoDialog(id){photoTarget=students.find(s=>s.id===id);if(!photoTarget)return;$('photoName').textContent=photoTarget.name;$('photoPreview').src=photoTarget.photo||avatarSvg(photoTarget.avatar);$('photoOverlay').hidden=false}
 function fileToImage(file){return new Promise((resolve,reject)=>{const rdr=new FileReader();rdr.onload=async()=>{const im=await loadImg(rdr.result);if(!im){reject(Error('Không thể đọc ảnh'));return}const c=document.createElement('canvas');c.width=c.height=176;const x=c.getContext('2d');const side=Math.min(im.naturalWidth,im.naturalHeight);x.drawImage(im,(im.naturalWidth-side)/2,(im.naturalHeight-side)/2,side,side,0,0,176,176);resolve(c.toDataURL('image/jpeg',.78))};rdr.onerror=reject;rdr.readAsDataURL(file)})}
 async function addPhoto(s,file){if(!file?.type?.startsWith('image/'))return false;try{s.photo=await fileToImage(file);s.image=await loadImg(s.photo);s.orb=null;return true}catch(e){toast('Lỗi khi tải ảnh '+file.name);return false}}
@@ -322,7 +518,7 @@ for(const p of g.particles){if(p.y<top-6||p.y>bottom+6)continue;ctx.globalAlpha=
 for(const b of g.balls){if((isLearning()&&b.finished)||b.y<top-45||b.y>bottom+45)continue;ctx.shadowColor=COLORS[b.s.color%COLORS.length];ctx.shadowBlur=$('lights').checked?Math.min(20,b.r*.55):0;ctx.drawImage(makeOrb(b.s),b.x-b.r*1.33,b.y-b.r*1.33,b.r*2.66,b.r*2.66);ctx.shadowBlur=0;if(b.r>=15){const label=b.s.name.trim().split(/\s+/).at(-1);ctx.textAlign='center';ctx.font=`900 ${Math.max(10,b.r*.65)}px system-ui`;ctx.strokeStyle='#06173e';ctx.lineWidth=3;ctx.strokeText(label,b.x,b.y+b.r+12);ctx.fillStyle='#fff';ctx.fillText(label,b.x,b.y+b.r+12)}}ctx.restore();
 if(!g.running&&!g.done){ctx.save();ctx.textAlign='center';ctx.fillStyle='#dbeefe';ctx.font='bold 17px system-ui';ctx.shadowColor='#000';ctx.shadowBlur=10;ctx.fillText('Nhấn BẮT ĐẦU để thả các viên bi',cw/2,ch*.76);ctx.restore()}}
 function tick(ms){const dt=clamp(lastFrame?(ms-lastFrame)/1000:0,0,.05);lastFrame=ms;animTime+=dt;if(game?.running&&!paused){const steps=Math.min(6,Math.ceil(dt/.01));for(let i=0;i<steps;i++)physics(game,dt/steps);musicTick(animTime)}draw();requestAnimationFrame(tick)}
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&game?.running&&!paused){paused=true;$('pause').textContent='▶ Tiếp tục';$('stateText').textContent='ĐANG TẠM DỪNG'}});window.addEventListener('keydown',e=>{if(e.key==='Escape'){$('winOverlay').hidden=true;$('photoOverlay').hidden=true;$('rankOverlay').hidden=true;$('quizOverlay').hidden=true}if(e.code==='Space'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='BUTTON'){e.preventDefault();if(game?.running)$('pause').click()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&game?.running&&!paused){paused=true;$('pause').textContent='▶ Tiếp tục';$('stateText').textContent='ĐANG TẠM DỪNG'}});window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('classPhotoOverlay').hidden){classClose();return}$('winOverlay').hidden=true;$('photoOverlay').hidden=true;$('rankOverlay').hidden=true;$('quizOverlay').hidden=true}if(e.code==='Space'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='BUTTON'){e.preventDefault();if(game?.running)$('pause').click()}});
 /* ================ MARBLE RACE — HỌC TẬP / KIẾN THỨC ================ */
 let studyMode='select';
 let studyQuestions=[],studyFinishers=[],studyAnswers=new Map(),studyIndex=0;
