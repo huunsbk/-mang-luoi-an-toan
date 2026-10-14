@@ -81,6 +81,7 @@
 @media(prefers-reduced-motion:reduce){.quiz-shell,.quiz-answer,.quiz-feedback,.sparkle{animation:none!important}}
 .reduce-motion .quiz-shell,.reduce-motion .quiz-answer,.reduce-motion .quiz-feedback,.reduce-motion .sparkle{animation:none!important}
 
+
 /* Classroom group photo mapper — non-AI, manual point-to-name assignment */
 .class-photo-overlay{z-index:48;background:rgba(6,13,39,.91);padding:clamp(8px,1.6vw,20px)}
 .class-photo-panel{width:min(1320px,100%);max-height:97dvh;overflow:auto;border:2px solid #7ee9ff;border-radius:27px;background:linear-gradient(140deg,#13294f,#111b40 66%,#271752);box-shadow:0 0 0 5px #53b9f821,0 22px 90px #020a24;color:#eefaff;padding:clamp(12px,2vw,23px)}
@@ -111,6 +112,11 @@
 .class-photo-person span{flex:1;overflow-wrap:anywhere}
 .class-photo-person em{font-style:normal;font-size:10px;color:#12866a;white-space:nowrap}
 .class-photo-status{font-size:13px;min-height:24px;font-weight:900;color:#35708c}
+.class-photo-progress{height:10px;background:#dce8f8;border-radius:20px;overflow:hidden}
+#classPhotoProgressFill{height:100%;width:0;background:linear-gradient(90deg,#34c5b9,#36a5eb);transition:width .25s ease;border-radius:20px}
+.class-photo-next{font-size:12px;font-weight:850;border-radius:11px;padding:9px 11px;background:#e9f9ff;color:#185c7a;border:1px solid #b4e6f0;line-height:1.5}
+.class-photo-filter{font-size:12px;font-weight:800;display:flex;align-items:center;gap:7px;color:#295977;margin:9px 0}
+.class-photo-filter input{accent-color:#1a9ca2;width:16px;height:16px}
 .class-photo-actions{display:flex;flex-wrap:wrap;gap:8px}
 .class-photo-actions .btn{font-size:12px;padding:10px}
 .class-photo-right [hidden],.class-photo-panel [hidden]{display:none!important}
@@ -165,9 +171,10 @@
  </section>
 </div>
 <div class="floating" id="photoOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="photoTitle"><div class="dialog"><h3 id="photoTitle">Thay ảnh học sinh</h3><div class="dialog-preview"><img id="photoPreview" alt="Ảnh học sinh"><div><b id="photoName"></b><p>Ảnh được cắt vuông trên thiết bị của thầy/cô và lưu cùng danh sách. Nên dùng ảnh có sự đồng ý phù hợp.</p></div></div><label class="btn blue file-label">📷 Chọn ảnh từ thiết bị<input id="singlePhoto" type="file" accept="image/*"></label><button class="btn" id="photoDefault">🎭 Dùng avatar mặc định</button><div class="btnrow"><button class="btn fill" id="photoClose">Đóng</button></div></div></div>
+
 <div class="floating class-photo-overlay" id="classPhotoOverlay" role="dialog" aria-modal="true" aria-labelledby="classPhotoTitle" hidden>
  <div class="class-photo-panel">
-  <div class="class-photo-head"><div><h2 id="classPhotoTitle">📸 GẮN ẢNH HỌC SINH TỪ ẢNH CẢ LỚP</h2><p>1. Tải ảnh chung → 2. Nhấn khuôn mặt → 3. Chỉnh vùng cắt → 4. Chọn tên học sinh để gán ảnh.</p></div><button class="btn" type="button" id="classPhotoClose">✕ Đóng</button></div>
+  <div class="class-photo-head"><div><h2 id="classPhotoTitle">📸 GẮN ẢNH HỌC SINH TỪ ẢNH CẢ LỚP</h2><p>1. Tải ảnh chung MỘT LẦN → 2. Chạm khuôn mặt → 3. Chọn tên → lặp lại đến khi hết học sinh → 4. Nhấn XONG.</p></div><button class="btn" type="button" id="classPhotoClose">✕ Đóng</button></div>
   <div class="class-photo-layout">
    <div class="class-photo-work">
     <div class="class-photo-tools">
@@ -178,21 +185,21 @@
      <button class="btn" id="classResetView" type="button">⤾ Đặt lại</button>
     </div>
     <canvas id="classPhotoCanvas" tabindex="0" aria-label="Ảnh cả lớp: nhấn vào tâm khuôn mặt học sinh để chọn; kéo để di chuyển ảnh"></canvas>
-    <div class="class-photo-hint">👆 Chạm/nhấn vào mặt học sinh để lấy ảnh. Kéo để di chuyển, cuộn chuột hoặc dùng thanh trượt để phóng to. Ảnh lớp không gửi lên Internet.</div>
+    <div class="class-photo-hint">📌 Ảnh lớp được giữ nguyên sau mỗi lần gán! Nhấn tiếp khuôn mặt thứ 2, thứ 3… trên chính ảnh này. Vòng tròn xanh ✓ đánh dấu khuôn mặt đã gán.</div>
    </div>
    <aside class="class-photo-right">
     <h3>🌟 Ảnh chân dung được chọn</h3>
     <div class="class-crop-preview" id="classPhotoPreview"><span class="crop-placeholder">Chưa chọn khuôn mặt</span></div>
     <label for="classCropSize" style="font-weight:900;font-size:12px">🔎 Kích thước vùng cắt chân dung</label>
     <input id="classCropSize" type="range" min="18" max="115" step="1" value="49" aria-label="Điều chỉnh kích thước vùng cắt ảnh">
-    <div id="classPhotoStatus" class="class-photo-status" role="status">Đã gắn 0 ảnh.</div>
+    <div id="classPhotoStatus" class="class-photo-status" role="status">Đã gắn 0 ảnh.</div><div class="class-photo-progress" aria-label="Tiến độ gán ảnh"><div id="classPhotoProgressFill"></div></div><div class="class-photo-next" id="classPhotoNext" role="status">🖼 Chọn ảnh lớp một lần, sau đó gán lần lượt từng khuôn mặt.</div>
     <div id="classNameCandidates" hidden>
      <h3 style="font-size:15px;margin-bottom:7px">Chọn học sinh để gắn ảnh</h3>
-     <input id="classNameSearch" type="search" placeholder="Tìm học sinh theo tên..." autocomplete="off" aria-label="Tìm học sinh">
+     <input id="classNameSearch" type="search" placeholder="Tìm học sinh theo tên..." autocomplete="off" aria-label="Tìm học sinh"><label class="class-photo-filter"><input id="classOnlyMissing" type="checkbox" checked> Chỉ hiển thị học sinh chưa gắn ảnh</label>
      <div class="class-photo-list" id="classStudentList"></div>
     </div>
     <p id="classPhotoInstructions">Khi chọn một khuôn mặt, ảnh cắt sẽ hiện phía trên và danh sách học sinh sẽ xuất hiện để giáo viên gán tên.</p>
-    <div class="class-photo-actions"><button class="btn" id="classClearSelection" type="button">↶ Chọn lại mặt</button><button class="btn blue" id="classPhotoDone" type="button">✓ Hoàn tất</button></div>
+    <div class="class-photo-actions"><button class="btn" id="classClearSelection" type="button">↶ Chọn lại mặt</button><button class="btn blue" id="classPhotoDone" type="button">✓ XONG – LƯU VÀ ĐÓNG</button></div>
     <p>🔒 Ảnh gốc chỉ nằm trong bộ nhớ tạm của trang. Các ảnh chân dung đã gán được lưu cục bộ trên trình duyệt. Chỉ sử dụng ảnh học sinh khi có sự đồng ý phù hợp.</p>
    </aside>
   </div>
@@ -222,8 +229,10 @@ function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:studen
 function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
 function updateSettings(){document.documentElement.classList.toggle('reduce-motion',$('reducedMotion').checked);const t=getN();$('durationValue').textContent=t;$('bounceValue').textContent='100%';$('zoneCount').textContent=Math.max(4,Math.round(t/4))+' chặng';for(const k of ['music','sfx','winVol'])$(k+'V').textContent=$(k).value+'%';$('timer').textContent='00:'+String(t).padStart(2,'0');if(t>=60)$('timer').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');$('progress').textContent=`🏁 ${Math.max(4,Math.round(t/4))} chặng • Camera ${$('autoCamera').checked?'tự động':'toàn cảnh'}`}
 function renderRoster(){if(isLearning()){const root=$('roster');$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=studyAnswers.size;renderStudyRoster();return}const root=$('roster');root.replaceChildren();$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=chosenIds.size;let count=0;for(const s of students){count++;const r=document.createElement('div');r.className='person';r.title='Nhấn để thay ảnh: '+s.name;r.style.setProperty('--c',COLORS[s.color%COLORS.length]);const nu=document.createElement('div');nu.className='num-tag';nu.textContent=count;const img=document.createElement('img');img.className='face';img.alt='';img.src=s.photo||avatarSvg(s.avatar);const text=document.createElement('div');text.className='person-name';text.textContent=s.name;const badge=document.createElement('div');badge.className='person-state'+(chosenIds.has(s.id)?' done':'');badge.textContent=chosenIds.has(s.id)?'Đã chọn':'Đang chơi';r.append(nu,img,text,badge);r.addEventListener('click',()=>photoDialog(s.id));root.appendChild(r)}}
+
 /* Class photo picker. No face recognition and no network calls: educator chooses a face and name. */
 let classImage=null,classSelected=null,classPanX=0,classPanY=0,classZoom=1,classFit=1;
+let classAssignedFaces=new Map(),classAssignBusy=false;
 let classPointer=null,classSuppressClick=false;
 const classCanvas=$('classPhotoCanvas'),classContext=classCanvas.getContext('2d');
 function classDrawingGeometry(){
@@ -241,6 +250,16 @@ function classDraw(){
  classContext.fillStyle='#071b37';classContext.fillRect(0,0,g.w,g.h);
  if(!classImage){classContext.fillStyle='#c7dff5';classContext.textAlign='center';classContext.font='bold 16px system-ui';classContext.fillText('📸 Hãy tải ảnh chung của lớp',g.w/2,g.h/2);return}
  classContext.drawImage(classImage,g.ox,g.oy,classImage.naturalWidth*g.scale,classImage.naturalHeight*g.scale);
+ // Mark faces already assigned during this one-photo session without changing the source image.
+ for(const [studentId,pt] of classAssignedFaces){
+  const student=students.find(x=>x.id===studentId);if(!student)continue;
+  const mx=g.ox+pt.x*g.scale,my=g.oy+pt.y*g.scale;
+  classContext.save();classContext.shadowColor='#0c573f';classContext.shadowBlur=8;
+  classContext.fillStyle='#0cbb87';classContext.strokeStyle='#fff';classContext.lineWidth=2.5;
+  classContext.beginPath();classContext.arc(mx,my,13,0,Math.PI*2);classContext.fill();classContext.stroke();
+  classContext.shadowBlur=0;classContext.fillStyle='#fff';classContext.textAlign='center';classContext.textBaseline='middle';classContext.font='bold 15px system-ui';classContext.fillText('✓',mx,my+1);
+  classContext.restore();
+ }
  if(classSelected){
   const x=g.ox+classSelected.x*g.scale,y=g.oy+classSelected.y*g.scale;
   const radius=Number($('classCropSize').value);
@@ -272,12 +291,14 @@ function classClear(){classSelected=null;$('classNameSearch').value='';classRefr
 function classUpdateStatus(extra=''){
  const count=students.filter(s=>Boolean(s.photo)).length;
  $('classPhotoStatus').textContent=`✅ Đã có ảnh ${count}/${students.length} học sinh${extra?' · '+extra:''}`;
+ $('classPhotoProgressFill').style.width=(students.length?Math.round(count/students.length*100):0)+'%';
+ $('classPhotoDone').textContent=count===students.length?'✓ HOÀN TẤT CẢ LỚP – XONG':`✓ XONG – LƯU ${count}/${students.length}`;
 }
 function classRenderStudents(){
  const root=$('classStudentList');root.replaceChildren();
  const term=normalize($('classNameSearch').value.trim());
- const list=students.filter(s=>normalize(s.name).includes(term));
- if(!list.length){const p=document.createElement('p');p.textContent='Không tìm thấy tên học sinh.';root.appendChild(p);return}
+ const list=students.filter(s=>normalize(s.name).includes(term)&&(!$('classOnlyMissing').checked||!s.photo));
+ if(!list.length){const p=document.createElement('p');p.textContent=$('classOnlyMissing').checked?'Không còn học sinh chưa gắn ảnh phù hợp. Bỏ chọn bộ lọc để xem hoặc thay ảnh đã gán.':'Không tìm thấy tên học sinh.';root.appendChild(p);return}
  for(const s of list){
   const b=document.createElement('button');b.type='button';b.className='class-photo-person';b.dataset.studentId=s.id;
   const img=document.createElement('img');img.className='mini-avatar';img.alt='';img.src=s.photo||avatarSvg(s.avatar);
@@ -288,21 +309,32 @@ function classRenderStudents(){
 }
 async function classAssign(id){
  if(game?.running){toast('Không thể gán ảnh trong lúc đua.');return}
- const s=students.find(x=>x.id===id);const src=classCrop();if(!s||!src)return;
+ if(classAssignBusy)return;
+ const s=students.find(x=>x.id===id),selected=classSelected&&{...classSelected},originalImage=classImage;
+ const src=classCrop();if(!s||!src||!originalImage||!selected)return;
  if(s.photo && !confirm(`Thay ảnh hiện tại của ${s.name} bằng khuôn mặt vừa chọn?`))return;
- const image=await loadImg(src);if(!image){toast('Không thể đọc ảnh đã cắt.');return}
- s.photo=src;s.image=image;s.orb=null;renderRoster();save();resetPreview();
- classSelected=null;$('classNameSearch').value='';classRefreshPreview();
- classUpdateStatus(`Đã gắn ảnh: ${s.name}`);
- toast(`Đã gắn ảnh cho ${s.name}. Chọn khuôn mặt tiếp theo!`);
+ classAssignBusy=true;
+ try{
+  const image=await loadImg(src);if(!image){toast('Không thể đọc ảnh đã cắt.');return}
+  if(classImage!==originalImage||$('classPhotoOverlay').hidden)return;
+  s.photo=src;s.image=image;s.orb=null;
+  classAssignedFaces.set(s.id,selected);
+  renderRoster();save();resetPreview();
+  // Keep the same classroom photograph. Only reset the face selection.
+  classSelected=null;$('classNameSearch').value='';classRefreshPreview();
+  classUpdateStatus(`Đã gắn: ${s.name}`);
+  const remaining=students.filter(x=>!x.photo).length;
+  $('classPhotoNext').textContent=remaining?`✅ Đã gắn cho ${s.name}. Tiếp tục nhấn khuôn mặt khác TRÊN CÙNG ẢNH NÀY (${remaining} em chưa có ảnh).`:'🎉 Tất cả học sinh đã có ảnh! Nhấn XONG để kết thúc.';
+  toast(remaining?`Đã gắn cho ${s.name}. Tiếp tục chọn mặt khác!`:'Đã gắn xong toàn bộ học sinh!');
+ }finally{classAssignBusy=false}
 }
 function classSetZoom(v){classZoom=clamp(Number(v),1,5);$('classZoom').value=classZoom;$('classZoomValue').textContent=Math.round(classZoom*100)+'%';classRefreshPreview()}
 function classOpen(){
  if(game?.running){toast('Hãy đợi đường đua hoàn thành rồi mới gắn ảnh.');return}
  if(!students.length){toast('Thầy/cô hãy nhập và tạo danh sách học sinh trước.');return}
- $('classPhotoOverlay').hidden=false;classClear();classUpdateStatus();requestAnimationFrame(classDraw);
+ $('classPhotoOverlay').hidden=false;classAssignedFaces.clear();classClear();classUpdateStatus();$('classPhotoNext').textContent='🖼 Chọn ảnh lớp một lần, sau đó gán liên tục nhiều học sinh mà không tải lại.';requestAnimationFrame(classDraw);
 }
-function classClose(){ $('classPhotoOverlay').hidden=true;classPointer=null;classImage=null;classSelected=null;classPanX=classPanY=0;classSetZoom(1);$('classPhotoFile').value=''; }
+function classClose(){ $('classPhotoOverlay').hidden=true;classPointer=null;classImage=null;classSelected=null;classAssignedFaces.clear();classPanX=classPanY=0;classSetZoom(1);$('classPhotoFile').value=''; }
 $('classPhotoOpen').onclick=classOpen;
 $('classPhotoClose').onclick=classClose;$('classPhotoDone').onclick=classClose;
 $('classPhotoOverlay').addEventListener('click',e=>{if(e.target===$('classPhotoOverlay'))classClose()});
@@ -312,7 +344,7 @@ $('classPhotoFile').addEventListener('change',async e=>{
  if(file.size>30*1024*1024){toast('Ảnh lớn hơn 30 MB. Hãy chọn ảnh nhỏ hơn.');return}
  const url=URL.createObjectURL(file);
  try{const img=await loadImg(url);if(!img)throw Error('Định dạng ảnh không được trình duyệt hỗ trợ');
- classImage=img;classPanX=classPanY=0;classSelected=null;classSetZoom(1);classUpdateStatus('Hãy nhấn khuôn mặt đầu tiên');}
+ classImage=img;classAssignedFaces.clear();classPanX=classPanY=0;classSelected=null;classSetZoom(1);classUpdateStatus('Ảnh lớp đã tải thành công');$('classPhotoNext').textContent='📍 Nhấn vào khuôn mặt đầu tiên, chọn tên, rồi nhấn vào khuôn mặt tiếp theo. Ảnh lớp sẽ được giữ nguyên.';}
  catch(err){toast('Không mở được ảnh. Thử tệp JPG hoặc PNG.');}
  finally{URL.revokeObjectURL(url);}
 });
@@ -323,6 +355,7 @@ $('classResetView').onclick=()=>{classPanX=classPanY=0;classSetZoom(1)};
 $('classCropSize').addEventListener('input',classRefreshPreview);
 $('classClearSelection').onclick=classClear;
 $('classNameSearch').addEventListener('input',classRenderStudents);
+$('classOnlyMissing').addEventListener('change',classRenderStudents);
 classCanvas.addEventListener('pointerdown',e=>{
  if(!classImage)return;
  classPointer={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,panX:classPanX,panY:classPanY};
@@ -346,7 +379,7 @@ classCanvas.addEventListener('pointerup',e=>{
 classCanvas.addEventListener('pointercancel',()=>{classPointer=null});
 classCanvas.addEventListener('wheel',e=>{if(!classImage)return;e.preventDefault();classSetZoom(classZoom+(e.deltaY<0?.2:-.2))},{passive:false});
 window.addEventListener('resize',()=>{if(!$('classPhotoOverlay').hidden)classDraw()});
-window.__classPhotoTest={open:classOpen,getState:()=>({open:!$('classPhotoOverlay').hidden,hasImage:!!classImage,selected:!!classSelected,count:students.filter(s=>Boolean(s.photo)).length}),select:(x,y)=>{classSelected={x,y};classRefreshPreview()},assign:classAssign};
+window.__classPhotoTest={open:classOpen,getState:()=>({open:!$('classPhotoOverlay').hidden,hasImage:!!classImage,selected:!!classSelected,count:students.filter(s=>Boolean(s.photo)).length,faceMarkers:classAssignedFaces.size}),select:(x,y)=>{classSelected={x,y};classRefreshPreview()},assign:classAssign};
 
 function photoDialog(id){photoTarget=students.find(s=>s.id===id);if(!photoTarget)return;$('photoName').textContent=photoTarget.name;$('photoPreview').src=photoTarget.photo||avatarSvg(photoTarget.avatar);$('photoOverlay').hidden=false}
 function fileToImage(file){return new Promise((resolve,reject)=>{const rdr=new FileReader();rdr.onload=async()=>{const im=await loadImg(rdr.result);if(!im){reject(Error('Không thể đọc ảnh'));return}const c=document.createElement('canvas');c.width=c.height=176;const x=c.getContext('2d');const side=Math.min(im.naturalWidth,im.naturalHeight);x.drawImage(im,(im.naturalWidth-side)/2,(im.naturalHeight-side)/2,side,side,0,0,176,176);resolve(c.toDataURL('image/jpeg',.78))};rdr.onerror=reject;rdr.readAsDataURL(file)})}
