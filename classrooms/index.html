@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quản lý lớp học | Cổng công cụ giáo viên số</title>
+<style>
+:root{--ink:#182744;--muted:#536881;--line:#dce6f3;--primary:#2468db;--paper:#fff}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at top left,#e0edff,#f4f7fc 45%,#eaf0fa);min-height:100vh}
+header{background:linear-gradient(120deg,#101d46,#173f87);color:white;padding:22px 20px}header .content,main{max-width:1150px;margin:auto}
+h1{font-size:clamp(25px,4vw,36px);margin:8px 0 4px}h2{font-size:19px;margin:0 0 14px}h3{font-size:16px;margin:9px 0}p{line-height:1.5}header p{color:#d3e3ff;margin:0}a{color:inherit}header a{display:inline-block;margin-bottom:10px;color:#cde4ff;text-decoration:none;font-weight:700}
+main{padding:22px 16px 65px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:18px;box-shadow:0 10px 26px #1b37630a}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.layout{display:grid;grid-template-columns:310px 1fr;gap:18px}input,select,textarea{width:100%;padding:11px;border:1px solid #afc3dd;border-radius:10px;font:inherit;color:var(--ink);background:white}label{display:block;font-weight:700;margin:10px 0 5px;font-size:13px}button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:11px 15px;background:#edf3ff;color:#19447c;cursor:pointer}button:hover{filter:brightness(.97)}button:disabled{opacity:.5;cursor:wait}.primary{background:var(--primary);color:white}.red{background:#fce7e7;color:#a52222}.ghost{border:1px solid #d2dfee}.wide{width:100%}.row>*{flex:1 1 auto}.tiny{font-size:12px;color:var(--muted)}.status{color:#1559a4;white-space:pre-wrap;font-size:13px}.status.error{color:#b62332}.hide,[hidden]{display:none!important}.class-item{border:1px solid #dce6f3;padding:12px;margin:8px 0;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px}.class-item.active{background:#e5efff;border-color:#2a6fdb}.student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:14px}.student-card{border:1px solid #dde8f6;border-radius:13px;padding:12px;background:#f9fbff}.student-card .orb{width:90px;height:90px;display:block;margin:0 auto 8px}.student-card strong{display:block;text-align:center;overflow-wrap:anywhere}.student-card small{display:block;text-align:center;color:var(--muted);margin:5px 0 10px}.student-card .row button{padding:8px;font-size:12px}.pill{background:#e3f1ff;border-radius:100px;padding:6px 10px;font-size:12px;color:#1e5aa3;display:inline-block}dialog{border:none;border-radius:18px;padding:22px;max-width:min(94vw,450px);width:100%;box-shadow:0 30px 100px #12224b4d}dialog::backdrop{background:#07133299}dialog h2{margin:0 0 12px}.edit-orb{width:170px;height:170px;margin:12px auto;display:block}.split{display:grid;grid-template-columns:1fr 1fr;gap:9px}#classList{max-height:440px;overflow:auto}.sectionNote{padding:10px 12px;background:#eef6ff;border-radius:11px;font-size:13px;color:#47627b}
+@media(max-width:780px){.layout{grid-template-columns:1fr}.panel{padding:15px}.student-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.row button{flex:auto}}
+</style>
+</head>
+<body>
+<header><div class="content"><a href="/">← Cổng giáo viên</a><h1>🏫 Quản lý lớp học</h1><p>Danh sách học sinh và viên bi dùng chung cho Đua bi, AI Pose Quiz và trò chơi tiếp theo</p></div></header>
+<main>
+<section class="panel" id="loginPanel">
+<h2>🔐 Đăng nhập tài khoản giáo viên</h2><p class="tiny">Sử dụng tài khoản MotionClass / AI Pose Quiz. Chỉ giáo viên sở hữu mới được xem lớp và ảnh học sinh.</p>
+<form id="loginForm"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="email" placeholder="Địa chỉ email"><label for="loginPass">Mật khẩu</label><input id="loginPass" type="password" required autocomplete="current-password" placeholder="Mật khẩu"><div class="row" style="margin-top:12px"><button class="primary" type="submit">Đăng nhập</button></div></form>
+</section>
+<div id="appPanel" hidden>
+<section class="panel row" style="justify-content:space-between"><div><strong>Đang đăng nhập: <span id="userEmail"></span></strong><div class="tiny">Dữ liệu lớp và ảnh được lưu riêng tư trên Supabase MotionClass.</div></div><button id="logoutButton">Đăng xuất</button></section>
+<div class="layout">
+<aside><section class="panel"><h2>📚 Danh sách lớp</h2>
+<form id="classForm"><label for="className">Tên lớp</label><input id="className" required maxlength="100" placeholder="Ví dụ: 5A2"><div class="split"><div><label for="classGrade">Khối</label><input id="classGrade" maxlength="30" placeholder="Lớp 5"></div><div><label for="classYear">Năm học</label><input id="classYear" maxlength="40" placeholder="2026–2027"></div></div><div class="row" style="margin-top:10px"><button class="primary wide" type="submit">＋ Tạo lớp mới</button></div></form>
+<div id="classList"></div></section></aside>
+<section>
+<div class="panel" id="emptyState"><h2>Chọn một lớp học</h2><p>Thêm lớp ở cột bên trái rồi chọn lớp để xem học sinh, chỉnh sửa ảnh, màu và hình viên bi.</p></div>
+<div id="classWorkspace" hidden>
+<section class="panel">
+<div class="row" style="justify-content:space-between"><h2 id="selectedClassTitle">Lớp học</h2><div class="row"><button id="editClass">Sửa lớp</button><button id="deleteClass" class="red">Xóa lớp</button></div></div>
+<p class="tiny">Thêm từng học sinh hoặc nhập hàng loạt. Viên bi được tạo từ ảnh chân dung, màu và hiệu ứng; cùng một cấu hình được sử dụng trong Đua bi.</p>
+<div class="row"><button id="newStudent" class="primary">＋ Thêm học sinh</button><button id="showBulk">☷ Nhập danh sách</button><a id="openRace" href="/marble-race/" style="border:1px solid #d7e3f8;border-radius:10px;padding:10px;font-weight:750;text-decoration:none">🏁 Mở Đua bi</a></div>
+<div id="bulkPanel" hidden><label for="bulkNames">Dán danh sách học sinh — một tên mỗi dòng</label><textarea id="bulkNames" rows="5" placeholder="Nguyễn Văn An&#10;Trần Thị Bình"></textarea><button id="bulkAdd" class="primary" type="button">Nhập học sinh vào lớp</button></div>
+</section>
+<section class="panel"><div class="row" style="justify-content:space-between"><h2>👥 Học sinh <span class="pill" id="studentsCount">0 em</span></h2></div>
+<div id="studentsGrid" class="student-grid"></div></section>
+</div>
+</section></div></div>
+<div class="panel"><div id="status" class="status" role="status">Chào mừng đến hệ thống quản lý lớp học.</div></div>
+</main>
+<dialog id="studentDialog"><form id="studentForm">
+<h2 id="studentDialogTitle">Thêm học sinh</h2>
+<canvas id="orbPreview" class="edit-orb" width="170" height="170"></canvas>
+<label for="studentName">Họ và tên</label><input id="studentName" required maxlength="120">
+<label for="studentCode">Mã học sinh (không bắt buộc)</label><input id="studentCode" maxlength="50" placeholder="Không dùng thông tin định danh nhạy cảm">
+<div class="split"><div><label for="orbColor">Màu viên bi</label><select id="orbColor"></select></div><div><label for="orbStyle">Kiểu viên bi</label><select id="orbStyle"><option value="0">Cơ bản</option><option value="1">Vòng sáng</option><option value="2">Sao Thổ</option><option value="3">Viền năng lượng</option><option value="4">Ánh sáng chuyển động</option></select></div></div>
+<label for="studentPhoto">Ảnh chân dung (tùy chọn)</label><input id="studentPhoto" type="file" accept="image/*"><p class="tiny">Ảnh được cắt vuông, nén trên thiết bị và lưu trong kho riêng tư; không tải ảnh lớp gốc lên máy chủ.</p>
+<div class="row"><button type="button" id="removePhoto">Xóa ảnh</button><button type="button" id="downloadOrb">Tải ảnh viên bi PNG</button></div>
+<div class="row" style="margin-top:12px"><button type="button" id="cancelStudent">Hủy</button><button class="primary" id="saveStudent" type="submit">Lưu học sinh</button></div></form></dialog>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/pose-quiz/supabase-config.js"></script>
+<script src="/classrooms/classroom-store.js"></script>
+<script src="/classrooms/classroom-manager.js"></script>
+</body></html>
