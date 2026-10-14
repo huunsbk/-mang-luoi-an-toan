@@ -55,7 +55,10 @@ footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
 <label for="question">Câu hỏi</label><textarea id="question" rows="3" maxlength="1600" placeholder="Nhập nội dung câu hỏi..."></textarea>
 <div class="two"><div><label for="optionA">A</label><input id="optionA" maxlength="800"></div><div><label for="optionB">B</label><input id="optionB" maxlength="800"></div><div><label for="optionC">C</label><input id="optionC" maxlength="800"></div><div><label for="optionD">D</label><input id="optionD" maxlength="800"></div></div>
 <div class="two"><div><label for="correct">Đáp án đúng</label><select id="correct"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div><div><label for="visibility">Phạm vi chia sẻ</label><select id="visibility"><option value="private">Riêng tư</option><option value="public">Công khai</option><option value="group">Nhóm (giữ nguyên nếu đã có)</option></select></div></div>
-<div id="editorImage" class="helper" hidden></div>
+<div id="editorImage" class="helper" hidden></div><div><label for="questionImageFile">Ảnh minh họa (JPEG, PNG, WebP)</label>
+<input id="questionImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/*">
+<div class="row" style="margin-top:8px"><button id="uploadQuestionImage">↑ Tải ảnh vào câu hỏi</button><button id="removeQuestionImage" class="danger">Xóa ảnh minh họa</button></div>
+<p class="muted">Lưu câu hỏi trước khi tải ảnh. Hình được nén và lưu riêng tư, có thể dùng chung với AI Pose Quiz và Đua bi.</p></div>
 <div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
 <div id="editStatus" class="notice" role="status">Tạo câu hỏi mới hoặc chọn một câu ở danh sách bên trái.</div></div>
 <div class="panel"><h2>🎙️ Quản lý giọng đọc AI</h2>
