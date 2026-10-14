@@ -780,7 +780,15 @@ async function obtainGeminiClipRaw(text,signal){
  const res=await fetch('/api/marble-tts',{method:'POST',signal,headers:{
   'Content-Type':'application/json','X-Marble-Teacher-Code':$('aiVoicePin').value
  },body:JSON.stringify({text})});
- if(!res.ok){const info=await res.json().catch(()=>({}));throw Error(info.error||'Gemini AI Studio không phản hồi.')}
+ if(!res.ok){
+  const info=await res.json().catch(()=>({}));
+  const error=new Error(info.error||'Gemini AI Studio không phản hồi (HTTP '+res.status+').');
+  error.status=res.status;
+  error.code=info.code||(res.status===429?'RATE_LIMIT':'HTTP_ERROR');
+  const retrySeconds=Number(res.headers.get('Retry-After'));
+  error.retryAfterMs=Number.isFinite(retrySeconds)&&retrySeconds>0?retrySeconds*1000:60000;
+  throw error;
+ }
  const clip=await res.blob();
  if(!clip.size||!clip.type.includes('audio'))throw Error('Âm thanh không hợp lệ.');
  aiClips.set(memoryKey,clip);if(aiClips.size>120){const oldest=aiClips.keys().next().value;aiClips.delete(oldest);decodedAiClips.delete(oldest)}
@@ -819,16 +827,28 @@ function correctAnswerSpeech(question){return 'Đáp án đúng là phương án
 function speechKey(content){return (geminiInfo.voiceVersion||'initial')+':'+content}
 function speechCached(content){return aiClips.has(speechKey(content))}
 let speechPrepQueue=[],speechPrepQueued=new Set(),speechPrepActive=0,speechPrepGoal=[],speechPrepFailed=0,speechPrepPaused=false;
+let speechPrepLastError='',speechPrepQuotaCount=0,speechPrepNextAt=0,speechPrepWaitUntil=0,speechPrepTimer=null;
+// Keep pre-generation sequential to respect even small Google requests-per-minute quotas.
+const SPEECH_PREP_SPACING_MS=15000;
 function showSpeechPrepStatus(){
  const target=$('aiPrepStatus');if(!target)return;
  const total=speechPrepGoal.length;
  if(!total){target.textContent='Chưa có nội dung được chọn để chuẩn bị.';return}
  const ready=speechPrepGoal.filter(speechCached).length;
- target.textContent=(ready===total?'✅ Đã sẵn sàng giọng AI':'⚡ Đang chuẩn bị giọng AI')+
-  ': '+ready+'/'+total+' đoạn âm thanh'+(speechPrepActive?' • đang tạo '+speechPrepActive:'')+
-  (speechPrepFailed?' • '+speechPrepFailed+' yêu cầu chưa thành công':'')+
-  (speechPrepPaused?' • đã tạm dừng do giới hạn hoặc lỗi AI':'')+
-  '. Âm thanh đã có được phát ngay, không gọi lại AI.';
+ const left=Math.max(0,Math.ceil((Math.max(speechPrepNextAt,speechPrepWaitUntil)-Date.now())/1000));
+ let message=ready===total?'✅ Đã sẵn sàng giọng AI':
+  (speechPrepPaused?'⏸ Đã tạm dừng tạo giọng AI':'⚡ Đang chuẩn bị giọng AI');
+ message+=': '+ready+'/'+total+' đoạn âm thanh.';
+ if(ready!==total){
+  if(speechPrepActive)message+=' Đang tạo 1 đoạn.';
+  else if(!speechPrepPaused&&left)message+=' Chờ '+left+' giây trước lần tạo tiếp.';
+  else if(!speechPrepPaused&&speechPrepQueue.length)message+=' Đang xếp hàng '+speechPrepQueue.length+' đoạn.';
+  if(speechPrepQuotaCount)message+=' Google đã giới hạn lượt tạo (HTTP 429).';
+  if(speechPrepLastError)message+=' '+speechPrepLastError;
+  if(speechPrepPaused)message+=' Kiểm tra hạn mức trong Google AI Studio; nhấn "Chuẩn bị" để thử tiếp sau khi hạn mức được cấp lại.';
+  if(speechPrepFailed)message+=' '+speechPrepFailed+' đoạn gặp lỗi khác.';
+ }
+ target.textContent=message+' Những đoạn đã lưu sẽ phát ngay, không tạo lại.';
 }
 function buildSpeechPrepList(){
  const questions=studyQuestions.slice(0,Math.min(studyQuestions.length,students.length));
@@ -845,28 +865,59 @@ function prioritizeSpeech(content){
  }
  runSpeechPrepWorkers();
 }
+function scheduleSpeechPrepNext(wait){
+ if(speechPrepTimer){clearTimeout(speechPrepTimer);speechPrepTimer=null}
+ speechPrepTimer=setTimeout(()=>{speechPrepTimer=null;runSpeechPrepWorkers()},Math.max(200,wait));
+}
 function runSpeechPrepWorkers(){
- if(speechPrepPaused||!isAiLessonReady())return;
- while(speechPrepActive<3&&speechPrepQueue.length){
-  const content=speechPrepQueue.shift();
-  speechPrepQueued.delete(content);
-  if(speechCached(content))continue;
-  speechPrepActive++;
-  (async()=>{
-   try{
-    const clip=await obtainGeminiClip(content);
-    // Decode off the classroom interaction path whenever audio is unlocked.
-    if(audioCtx&&audioCtx.state==='running')await decodePreparedClip(content,clip).catch(()=>{});
-   }catch(err){
-    speechPrepFailed++;
-    if(/giới hạn|429|quota|rate/i.test(err.message||''))speechPrepPaused=true;
-   }finally{
-    speechPrepActive--;
-    showSpeechPrepStatus();
-    if(!speechPrepPaused)runSpeechPrepWorkers();
-   }
-  })();
+ if(speechPrepPaused||!isAiLessonReady()||speechPrepActive)return;
+ while(speechPrepQueue.length&&speechCached(speechPrepQueue[0])){
+  speechPrepQueued.delete(speechPrepQueue.shift());
  }
+ if(!speechPrepQueue.length){showSpeechPrepStatus();return}
+ const wait=Math.max(0,speechPrepNextAt-Date.now(),speechPrepWaitUntil-Date.now());
+ if(wait>0){scheduleSpeechPrepNext(wait);showSpeechPrepStatus();return}
+ if(speechPrepTimer){clearTimeout(speechPrepTimer);speechPrepTimer=null}
+ const content=speechPrepQueue.shift();
+ speechPrepQueued.delete(content);
+ speechPrepActive=1;
+ speechPrepNextAt=Date.now()+SPEECH_PREP_SPACING_MS;
+ (async()=>{
+  try{
+   const clip=await obtainGeminiClip(content);
+   speechPrepQuotaCount=0;speechPrepLastError='';
+   if(audioCtx&&audioCtx.state==='running')await decodePreparedClip(content,clip).catch(()=>{});
+  }catch(err){
+   if(err.status===429||err.code==='RATE_LIMIT'){
+    speechPrepQuotaCount++;
+    // Retry one queued item after a pause, never burst 17 failed calls.
+    const backoff=Math.min(300000,60000*Math.pow(2,Math.min(3,speechPrepQuotaCount-1)));
+    speechPrepWaitUntil=Date.now()+Math.max(backoff,err.retryAfterMs||0);
+    if(!speechPrepQueued.has(content)){speechPrepQueue.unshift(content);speechPrepQueued.add(content)}
+    speechPrepLastError='API đã chạm giới hạn; không gửi thêm yêu cầu đồng thời.';
+    if(speechPrepQuotaCount>=3){
+      speechPrepPaused=true;
+      speechPrepLastError='Đã thử lại 3 lần vẫn gặp giới hạn API (429).';
+    }
+   }else{
+    speechPrepFailed++;
+    if(err.status===401||err.status===403){
+      speechPrepPaused=true;
+      speechPrepLastError=err.message||'Mã truy cập giọng AI không đúng.';
+    }else{
+      speechPrepLastError=err.message||'Không thể tạo một đoạn âm thanh.';
+      if(speechPrepFailed>=3){
+        speechPrepPaused=true;
+        speechPrepLastError+=' Đã dừng sau 3 lỗi để tránh gọi API liên tục.';
+      }
+    }
+   }
+  }finally{
+   speechPrepActive=0;
+   showSpeechPrepStatus();
+   if(!speechPrepPaused)runSpeechPrepWorkers();
+  }
+ })();
 }
 function prepareSpeechClips(fromTeacher=false){
  if(!isLearning()||!$('voiceName').checked){if(fromTeacher)toast('Hãy bật chế độ Học tập và giọng đọc.');return}
@@ -877,14 +928,21 @@ function prepareSpeechClips(fromTeacher=false){
  }
  if(!inspectQuestions(false)||!students.length){if(fromTeacher)toast('Vui lòng nhập danh sách học sinh và câu hỏi hợp lệ.');return}
  speechPrepGoal=buildSpeechPrepList();
- // Drop obsolete queued material after a class list or question bank edit.
+ // Keep successfully cached clips, discard obsolete queued questions/names.
  const needed=new Set(speechPrepGoal);
  speechPrepQueue=speechPrepQueue.filter(t=>needed.has(t));
  speechPrepQueued=new Set(speechPrepQueue);
- speechPrepFailed=0;speechPrepPaused=false;
- const fresh=speechPrepGoal.filter(t=>!speechCached(t)&&!aiClipRequests.has(speechKey(t))&&!speechPrepQueued.has(t));
- // Prepare reusable encouragement first, then unique questions, then student names.
- for(const text of fresh){speechPrepQueued.add(text);speechPrepQueue.push(text)}
+ if(fromTeacher){
+  if(speechPrepPaused){
+   speechPrepPaused=false;speechPrepQuotaCount=0;
+   speechPrepFailed=0;speechPrepLastError='';
+  }
+ }
+ for(const text of speechPrepGoal){
+  if(!speechCached(text)&&!aiClipRequests.has(speechKey(text))&&!speechPrepQueued.has(text)){
+   speechPrepQueued.add(text);speechPrepQueue.push(text);
+  }
+ }
  showSpeechPrepStatus();runSpeechPrepWorkers();
 }
 async function decodePreparedClip(content,blob){
