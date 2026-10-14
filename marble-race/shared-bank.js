@@ -201,6 +201,61 @@ async function downloadPack(){
  document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),6000);
  status('✅ Đã tạo gói ZIP: '+items.length+' câu, '+n+' tệp âm thanh hiện có.');
 }
+async function quickSave(includeVoice=false){
+ const current=hooks.currentQuestions();
+ if(!current.length)throw Error('Hãy nhập ít nhất một câu hỏi hợp lệ trước khi lưu.');
+ if(current.length>100)throw Error('Mỗi lượt lưu tối đa 100 câu, hãy chia ngân hàng thành nhiều đợt.');
+ const subject=$('quickBankSubject').value.trim(),lesson=$('quickBankLesson').value.trim();
+ const visibility=$('quickBankPublic').checked?'public':'private';
+ if(!subject||!lesson)throw Error('Hãy nhập môn học và bài học để phân loại câu hỏi.');
+ if(includeVoice&&!hooks.isNghi())throw Error('Để lưu kèm giọng đọc, hãy chọn nguồn giọng NGHI-TTS trước.');
+ try{await authCheck()}catch(err){
+  $('sharedBankPanel').open=true;
+  $('bankEmail').focus();
+  throw Error('Hãy đăng nhập MotionClass trong mục Ngân hàng câu hỏi bên dưới rồi bấm Lưu lại.');
+ }
+ const all=await api('bank.list',{subject:'ALL',lesson:'ALL',search:''});
+ const mine=(all.items||[]).filter(q=>q.owned);
+ const originals=current.map(q=>{
+  const linked=mine.find(x=>x.id===q.id);
+  const match=mine.find(x=>x.text.trim()===q.text.trim()&&x.correct===q.correct&&x.subject===subject&&x.lesson===lesson&&x.options.every((v,i)=>v.trim()===q.options[i].trim()));
+  const found=linked||match;
+  return{...q,id:found?.id,subject,lesson,visibility,expected_updated_at:found?.updatedAt};
+ });
+ const send=originals.map(({id,num,...item})=>({id,...item}));
+ $('quickBankStatus').textContent='☁ Đang lưu '+send.length+' câu hỏi lên ngân hàng MotionClass...';
+ const result=await api('bank.save_many',{items:send});
+ if(result.items?.length!==send.length)throw Error('Số câu hỏi máy chủ xác nhận không đầy đủ, vui lòng kiểm tra lại trước khi lưu tiếp.');
+ hooks.linkSaved(originals,result.items);
+ await fetchAllFacets();
+ const ids=result.items.map(r=>r.id);
+ const saved=await api('bank.list',{subject:'ALL',lesson:'ALL',search:''});
+ const owned=(saved.items||[]).filter(item=>ids.includes(item.id)&&item.owned);
+ let voicesSaved=0,already=0;
+ if(includeVoice){
+  const voice=hooks.voice().id;
+  const prior=await api('audio.list',{ids,voice_id:voice});
+  for(const row of owned){
+   for(const part of ['full','answer']){
+    const text=row.spoken[part];
+    const digest=await sha256(text);
+    if((prior.items||[]).some(x=>x.id===row.id&&x.part===part&&x.textHash===digest)){already++;continue}
+    if(hooks.voice().id!==voice)throw Error('Đã chuyển giọng NGHI-TTS trong khi lưu. Đã lưu câu hỏi, vui lòng thử tạo giọng lại.');
+    $('quickBankStatus').textContent='🎙️ Đang tạo giọng '+voice+' cho câu '+(voicesSaved+already+1)+'/'+(owned.length*2)+'...';
+    const clip=await hooks.generateClip(text);
+    if(hooks.voice().id!==voice)throw Error('Giọng đã thay đổi, ngừng lưu âm thanh để tránh nhầm.');
+    await uploadAudio(row,part,clip);hooks.storeClip(text,clip);voicesSaved++;
+   }
+  }
+ }
+ $('quickBankStatus').textContent='✅ Đã lưu '+result.items.length+' câu hỏi ('+result.created+' mới, '+result.updated+' cập nhật).'+(includeVoice?' Âm thanh: '+voicesSaved+' đoạn mới, '+already+' đoạn đã có.':'');
+ status('☁ Đã cập nhật ngân hàng câu hỏi chung, có thể lấy lại trên các trò chơi khác.');
+}
+async function authCheck(){
+ if(!client)throw Error('Chưa kết nối Supabase');
+ const {data:{session:s},error}=await client.auth.getSession();
+ if(error||!s?.access_token)throw Error('Chưa đăng nhập');
+}
 function bind(){
  $('bankLogin').onclick=()=>withButton('bankLogin',async()=>{
   const email=$('bankEmail').value.trim(),password=$('bankPassword').value;
@@ -220,6 +275,12 @@ function bind(){
   render();
  };
  $('bankImport').onclick=()=>withButton('bankImport',chooseQuestions);
+ $('quickBankSave').onclick=()=>withButton('quickBankSave',async()=>{
+  try{await quickSave(false)}catch(e){$('quickBankStatus').textContent='⚠ '+errorMessage(e);throw e}
+ });
+ $('quickBankSaveAudio').onclick=()=>withButton('quickBankSaveAudio',async()=>{
+  try{await quickSave(true)}catch(e){$('quickBankStatus').textContent='⚠ '+errorMessage(e);throw e}
+ });
  $('bankLoadVoice').onclick=()=>withButton('bankLoadVoice',()=>loadSavedVoice());
  $('bankSaveVoice').onclick=()=>withButton('bankSaveVoice',saveVoices);
  $('bankExport').onclick=()=>withButton('bankExport',downloadPack);
