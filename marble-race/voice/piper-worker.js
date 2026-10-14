@@ -6,7 +6,8 @@
  * Third-party WASM + model files are downloaded during first initialization.
  */
 'use strict';
-const MODEL_NAME='deepman3909';
+const SUPPORTED_MODELS=new Set(["adam1","banmai","calmwoman3688","chieuthanh","deepman3909","duyoryx3175","lacphi","maiphuong","manhdung","minhkhang","minhquang","minhthu","mytam2","mytam2794","ngochuyen","ngochuyennew","ngocngan3701","phuongtrang","taian2","taian4","thanhphuong2","thientam","tranthanh3870","vietthao3886","yannew"]);
+let activeVoice=null;
 const MODEL_BASE='/marble-race/voice/';
 const PHONEMIZER_BASE='https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/build/piper_phonemize';
 const ORT_DIST='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
@@ -19,12 +20,21 @@ async function fetchCached(url){
  if(cache){try{const cached=await cache.match(url);if(cached)return cached}catch(_e){}}
  const response=await fetch(url,{mode:'cors'});
  if(!response.ok)throw Error('Không tải được tài nguyên giọng đọc (HTTP '+response.status+'): '+url);
- if(cache){try{await cache.put(url,response.clone())}catch(_e){}}
+ if(cache){try{
+  await cache.put(url,response.clone());
+  if(url.endsWith('.onnx')){
+   const existing=await cache.keys();
+   const models=existing.filter(r=>/\/voice\/[^/]+\.onnx$/.test(new URL(r.url).pathname));
+   for(const old of models.slice(0,-2))await cache.delete(old);
+  }
+ }catch(_e){}}
  return response;
 }
-async function init(){
- if(model)return;
- report('loading','Đang tải mô hình NGHI-TTS khoảng 64 MB. Lần đầu có thể mất vài phút.');
+async function init(modelName){
+ if(!SUPPORTED_MODELS.has(modelName))throw Error('Giọng NGHI-TTS không được hỗ trợ.');
+ if(model&&activeVoice===modelName)return;
+ if(model)throw Error('Cần khởi tạo lại bộ tạo giọng khi đổi mô hình.');
+ report('loading','Đang tải mô hình '+modelName+' (~64 MB). Chỉ tải giọng đang chọn.');
  // Import the Piper phonemizer's Emscripten-generated classic script.
  importScripts(PHONEMIZER_BASE+'.js');
  if(typeof self.createPiperPhonemize!=='function')throw Error('Không thể khởi tạo bộ chuyển âm vị Piper.');
@@ -34,8 +44,8 @@ async function init(){
  ort.env.wasm.simd=true;
  ort.env.wasm.wasmPaths=ORT_DIST;
  const [cfgResponse,modelResponse]=await Promise.all([
-   fetchCached(MODEL_BASE+MODEL_NAME+'.onnx.json'),
-   fetchCached(MODEL_BASE+MODEL_NAME+'.onnx')
+   fetchCached(MODEL_BASE+modelName+'.onnx.json'),
+   fetchCached(MODEL_BASE+modelName+'.onnx')
  ]);
  config=await cfgResponse.json();
  if(!config.phoneme_id_map||config.espeak?.voice!=='vi')throw Error('Cấu hình giọng Piper không phải tiếng Việt.');
@@ -43,7 +53,8 @@ async function init(){
  if(bytes.byteLength<30000000)throw Error('Tệp mô hình ONNX không đầy đủ.');
  report('initializing','Đang nạp giọng nam tiếng Việt vào bộ nhớ.');
  model=await ort.InferenceSession.create(bytes,{executionProviders:['wasm']});
- report('ready','Giọng NGHI-TTS đã sẵn sàng trên thiết bị.');
+ activeVoice=modelName;
+ report('ready','Giọng '+modelName+' đã sẵn sàng trên thiết bị.');
 }
 async function idsFor(text){
  const input=JSON.stringify([{text:text.trim()}]);
@@ -113,15 +124,16 @@ async function synth(text){
  return wav(merged,config.audio.sample_rate||22050);
 }
 self.onmessage=async event=>{
- const {type,id,text}=event.data||{};
+ const {type,id,text,modelName}=event.data||{};
  try{
   if(type==='init'){
-   if(!ready)ready=init();
+   if(!ready)ready=init(modelName||'deepman3909');
    await ready;
-   self.postMessage({type:'ready',id,model:MODEL_NAME});
+   self.postMessage({type:'ready',id,model:activeVoice});
   }else if(type==='speak'){
-   if(!ready)ready=init();
+   if(!ready)ready=init(modelName||'deepman3909');
    await ready;
+   if(modelName&&activeVoice!==modelName)throw Error('Mô hình giọng đã thay đổi.');
    if(typeof text!=='string'||text.length>1800)throw Error('Độ dài văn bản không hợp lệ.');
    const audio=await synth(text);
    self.postMessage({type:'audio',id,audio},[audio]);
