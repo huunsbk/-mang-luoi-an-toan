@@ -201,6 +201,16 @@ async function downloadPack(){
  document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),6000);
  status('✅ Đã tạo gói ZIP: '+items.length+' câu, '+n+' tệp âm thanh hiện có.');
 }
+async function listAllAccessible(){
+ const items=[];let offset=0;
+ for(let page=0;page<40;page++){
+  const result=await api('bank.list',{subject:'ALL',lesson:'ALL',search:'',offset,limit:250});
+  items.push(...(result.items||[]));
+  if(result.nextOffset==null)break;
+  offset=result.nextOffset;
+ }
+ return items;
+}
 async function quickSave(includeVoice=false){
  const current=hooks.currentQuestions();
  if(!current.length)throw Error('Hãy nhập ít nhất một câu hỏi hợp lệ trước khi lưu.');
@@ -214,8 +224,7 @@ async function quickSave(includeVoice=false){
   $('bankEmail').focus();
   throw Error('Hãy đăng nhập MotionClass trong mục Ngân hàng câu hỏi bên dưới rồi bấm Lưu lại.');
  }
- const all=await api('bank.list',{subject:'ALL',lesson:'ALL',search:''});
- const mine=(all.items||[]).filter(q=>q.owned);
+ const mine=(await listAllAccessible()).filter(q=>q.owned);
  const originals=current.map(q=>{
   const linked=mine.find(x=>x.id===q.id);
   const match=mine.find(x=>x.text.trim()===q.text.trim()&&x.correct===q.correct&&x.subject===subject&&x.lesson===lesson&&x.options.every((v,i)=>v.trim()===q.options[i].trim()));
@@ -229,8 +238,7 @@ async function quickSave(includeVoice=false){
  hooks.linkSaved(originals,result.items);
  await fetchAllFacets();
  const ids=result.items.map(r=>r.id);
- const saved=await api('bank.list',{subject:'ALL',lesson:'ALL',search:''});
- const owned=(saved.items||[]).filter(item=>ids.includes(item.id)&&item.owned);
+ const owned=(await listAllAccessible()).filter(item=>ids.includes(item.id)&&item.owned);
  let voicesSaved=0,already=0;
  if(includeVoice){
   const voice=hooks.voice().id;
