@@ -103,44 +103,53 @@ class Handler(BaseHTTPRequestHandler):
         # NGHI-TTS local voice model files. Fixed, allowlisted upstream only.
         # The 64 MB ONNX model is redirected to HuggingFace's CORS-enabled CDN,
         # not streamed through the Vercel function. Inference stays on the client.
-        if path=="/marble-race/voice/deepman3909.onnx.json":
-            try:
-                source="https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/config.json"
-                req=urllib.request.Request(source,headers={"User-Agent":"marble-race-nghi-tts/1.0"})
-                with urllib.request.urlopen(req,timeout=12) as response:
-                    body=response.read(10000)
-                config=json.loads(body)
-                if config.get("espeak",{}).get("voice")!="vi" or not config.get("phoneme_id_map"):
-                    return self._json({"error":"Cấu hình giọng không hợp lệ"},502)
-                self.send_response(200)
-                self.send_header("Content-Type","application/json; charset=utf-8")
-                self.send_header("Content-Length",str(len(body)))
-                self.send_header("Cache-Control","public, max-age=86400")
-                self.send_header("X-Content-Type-Options","nosniff")
-                self.end_headers();self.wfile.write(body)
-            except Exception:
-                self._json({"error":"Không tải được cấu hình mô hình NGHI-TTS."},502)
-            return
-        if path=="/marble-race/voice/deepman3909.onnx":
+        # Allowlist NGHI-TTS voices; only the selected model (~64 MB) is downloaded.
+        voice_match=re.fullmatch(r"/marble-race/voice/([a-z0-9]+)\\.onnx(\\.json)?",path)
+        available_voices={'adam1','banmai','calmwoman3688','chieuthanh','deepman3909','duyoryx3175','lacphi','maiphuong','manhdung','minhkhang','minhquang','minhthu','mytam2','mytam2794','ngochuyen','ngochuyennew','ngocngan3701','phuongtrang','taian2','taian4','thanhphuong2','thientam','tranthanh3870','vietthao3886','yannew'}
+        if voice_match:
+            voice=voice_match.group(1)
+            if voice not in available_voices:
+                return self._json({"error":"Giọng NGHI-TTS không được hỗ trợ"},404)
+            if voice_match.group(2):
+                try:
+                    upstream="https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/config.json"
+                    req=urllib.request.Request(upstream,headers={"User-Agent":"marble-race-nghi-tts/1.0"})
+                    with urllib.request.urlopen(req,timeout=12) as response:
+                        body=response.read(10000)
+                    settings=json.loads(body)
+                    if settings.get("espeak",{}).get("voice")!="vi" or not settings.get("phoneme_id_map"):
+                        return self._json({"error":"Cấu hình giọng không hợp lệ"},502)
+                    self.send_response(200)
+                    self.send_header("Content-Type","application/json; charset=utf-8")
+                    self.send_header("Content-Length",str(len(body)))
+                    self.send_header("Cache-Control","public, max-age=86400")
+                    self.send_header("X-Content-Type-Options","nosniff")
+                    self.end_headers()
+                    self.wfile.write(body)
+                except Exception:
+                    self._json({"error":"Không tải được cấu hình giọng NGHI-TTS"},502)
+                return
             try:
                 class NoFollow(urllib.request.HTTPRedirectHandler):
                     def redirect_request(self,req,fp,code,msg,headers,url):
                         return None
-                op=urllib.request.build_opener(NoFollow)
-                remote="https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/deepman3909.onnx"
+                opener=urllib.request.build_opener(NoFollow)
+                remote=f"https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/{voice}.onnx"
                 redirect=None
-                for _ in range(4):
+                for _ in range(5):
                     try:
-                        with op.open(urllib.request.Request(remote,headers={"User-Agent":"marble-race-nghi-tts/1.0"}),timeout=12):
+                        with opener.open(urllib.request.Request(remote,headers={"User-Agent":"marble-race-nghi-tts/1.0"}),timeout=12):
                             raise ValueError("Missing model CDN redirect")
                     except urllib.error.HTTPError as err:
-                        if err.code not in (301,302,303,307,308):raise
+                        if err.code not in (301,302,303,307,308):
+                            raise
                         redirect=urllib.parse.urljoin(remote,err.headers.get("Location",""))
                         host=urllib.parse.urlsplit(redirect).hostname or ""
                         if urllib.parse.urlsplit(redirect).scheme!="https":
                             raise ValueError("Invalid model location")
                         if host=="huggingface.co":
-                            remote=redirect;continue
+                            remote=redirect
+                            continue
                         if not host.endswith(".cdn.hf.co"):
                             raise ValueError("Untrusted model host")
                         break
@@ -154,7 +163,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length","0")
                 self.end_headers()
             except Exception:
-                self._json({"error":"Không xác định được đường tải mô hình NGHI-TTS."},502)
+                self._json({"error":"Không xác định được đường tải mô hình NGHI-TTS"},502)
             return
 
         static_routes = {
