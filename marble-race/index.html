@@ -132,7 +132,26 @@
   <aside class="panel settings" aria-label="Cài đặt đường đua">
    <div class="mode-switch" aria-label="Chọn chế độ trò chơi" role="group"><button class="mode-choice" data-mode="select" aria-pressed="true">🏆 CHỌN HỌC SINH</button><button class="mode-choice" data-mode="learn" aria-pressed="false">📚 HỌC TẬP</button></div>
    <div class="section"><div class="section-head"><h2 class="section-title">① Danh sách học sinh</h2><span class="count" id="listCount">0 em</span></div><textarea id="names" spellcheck="false" placeholder="Dán tên mỗi học sinh trên một dòng. Có thể dán trực tiếp từ Excel.&#10;Nguyễn Văn An&#10;Trần Thị Bình"></textarea><div class="btnrow"><button class="btn blue fill" id="create">👥 Tạo viên bi</button><button class="btn red" id="clear">🗑 Xóa</button></div><div class="btnrow"><label class="btn fill file-label" style="text-align:center">📷 Tải nhiều ảnh<input id="multiPhotos" accept="image/*" type="file" multiple></label><button class="btn" id="reshuffle">🎨 Đổi màu bi</button></div><div class="btnrow"><button class="btn blue full" id="classPhotoOpen" type="button">📸 ẢNH CHUNG CẢ LỚP · CHỌN MẶT &amp; GÁN TÊN</button></div><div class="sub" style="margin-top:7px">Chụp một ảnh cả lớp, chạm lần lượt vào khuôn mặt rồi chọn đúng tên học sinh. Ảnh gốc không được tải lên máy chủ; chỉ ảnh chân dung đã cắt được lưu trên trình duyệt này.</div></div>
-   <div class="section" id="learningQuestionSection" hidden><div class="section-head"><h2 class="section-title">📚 Ngân hàng câu hỏi</h2><span class="study-tag">HỌC TẬP</span></div><div class="sub" style="margin-bottom:9px">Dán các câu trắc nghiệm. Mỗi câu gồm nội dung, A/B/C/D và đáp án đúng. Trò chơi xếp hạng toàn bộ học sinh trước khi bắt đầu hỏi.</div><textarea id="questionsInput" class="question-input" spellcheck="false" aria-label="Nhập ngân hàng câu hỏi" placeholder="Câu 1: Bộ phận nào dùng để nhập chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Chuột&#10;D. Loa&#10;Đáp án đúng: B"></textarea><div class="btnrow"><button class="btn blue fill" id="checkQuestions">✓ Kiểm tra câu hỏi</button><button class="btn fill" id="demoQuestions">✨ Câu hỏi mẫu</button></div><div id="questionInfo" class="question-info" aria-live="polite">Chưa có câu hỏi</div><div class="switchrow"><label for="voiceName">🔊 Đọc tên, câu hỏi và các phương án; đọc kết quả sau khi chấm</label><input class="switch" type="checkbox" id="voiceName" checked></div><div class="field" id="deviceVoiceLabel"><label for="voiceSelect">🎙️ Giọng hệ thống của thiết bị (dự phòng)</label></div><select id="voiceSelect" class="voice-select" aria-label="Chọn giọng đọc tiếng Việt"><option value="auto">Tự động — ưu tiên giọng nam miền Bắc</option></select><div class="field"><label for="aiVoiceMode">Nguồn giọng đọc</label><select id="aiVoiceMode" style="padding:8px;border-radius:8px;color:#fff;background:#15386c;border:1px solid #678ac4"><option value="studio">✨ Google AI Studio</option><option value="nghi">🎙️ NGHI-TTS · xử lý trên thiết bị</option><option value="device">Giọng thiết bị</option></select></div>
+   <div class="section" id="learningQuestionSection" hidden><div class="section-head"><h2 class="section-title">📚 Ngân hàng câu hỏi</h2><span class="study-tag">HỌC TẬP</span></div><div class="sub" style="margin-bottom:9px">Dán các câu trắc nghiệm. Mỗi câu gồm nội dung, A/B/C/D và đáp án đúng. Trò chơi xếp hạng toàn bộ học sinh trước khi bắt đầu hỏi.</div><textarea id="questionsInput" class="question-input" spellcheck="false" aria-label="Nhập ngân hàng câu hỏi" placeholder="Câu 1: Bộ phận nào dùng để nhập chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Chuột&#10;D. Loa&#10;Đáp án đúng: B"></textarea><div class="btnrow"><button class="btn blue fill" id="checkQuestions">✓ Kiểm tra câu hỏi</button><button class="btn fill" id="demoQuestions">✨ Câu hỏi mẫu</button></div><div id="questionInfo" class="question-info" aria-live="polite">Chưa có câu hỏi</div><details id="sharedBankPanel" style="margin:12px 0;border:1px solid #6a9fd2;border-radius:12px;padding:12px;background:#102958">
+<summary style="font-weight:800;cursor:pointer;color:#f3d77b">☁️ NGÂN HÀNG CÂU HỎI CHUNG</summary>
+<div class="sub" style="margin:8px 0">Dùng câu hỏi AI Pose Quiz từ Supabase MotionClass; quyền riêng tư vẫn được giữ nguyên.</div>
+<div id="bankLoginSection">
+<input id="bankEmail" type="email" autocomplete="email" placeholder="Email tài khoản AI Pose Quiz" aria-label="Email MotionClass" style="width:100%;padding:9px;border-radius:7px;margin-bottom:6px">
+<input id="bankPassword" type="password" autocomplete="current-password" placeholder="Mật khẩu" aria-label="Mật khẩu MotionClass" style="width:100%;padding:9px;border-radius:7px;margin-bottom:6px">
+<div class="btnrow"><button id="bankLogin" class="btn blue fill" type="button">🔐 Đăng nhập MotionClass</button></div></div>
+<div id="bankUserSection" hidden>
+<div id="bankWho" class="sub" style="margin:8px 0"></div>
+<div class="btnrow"><button id="bankRefresh" class="btn fill" type="button">⟳ Lấy câu hỏi</button><button id="bankLogout" class="btn" type="button">Đăng xuất</button></div>
+<div class="field"><label for="bankSubject">Môn học</label></div><select id="bankSubject" class="voice-select"><option value="ALL">Tất cả môn học</option></select>
+<div class="field"><label for="bankLesson">Bài học</label></div><select id="bankLesson" class="voice-select"><option value="ALL">Tất cả bài học</option></select>
+<input id="bankSearch" placeholder="🔍 Tìm câu hỏi..." aria-label="Tìm câu hỏi Supabase" style="width:100%;margin:8px 0;padding:9px;border-radius:7px">
+<div class="btnrow"><button id="bankSelectAll" class="btn fill" type="button">✓ Chọn tất cả</button><button id="bankImport" class="btn blue fill" type="button">＋ Thêm vào Đua bi</button></div>
+<div id="bankList" style="max-height:270px;overflow:auto;border:1px solid #395b92;border-radius:8px;margin:8px 0;padding:5px"></div>
+<div class="sub">Âm thanh được lưu theo từng câu hỏi và giọng đọc; trò chơi sau có thể dùng lại qua API.</div>
+<div class="btnrow"><button id="bankSaveVoice" class="btn gold fill" type="button">🔊 Tạo &amp; lưu giọng NGHI-TTS</button></div>
+<div class="btnrow"><button id="bankLoadVoice" class="btn fill" type="button">⬇ Nạp giọng đã lưu</button><button id="bankExport" class="btn fill" type="button">📦 Tải ZIP học liệu</button></div></div>
+<div id="bankStatus" class="sub" role="status" aria-live="polite" style="margin:8px 0">Chưa kết nối Supabase.</div>
+</details><div class="switchrow"><label for="voiceName">🔊 Đọc tên, câu hỏi và các phương án; đọc kết quả sau khi chấm</label><input class="switch" type="checkbox" id="voiceName" checked></div><div class="field" id="deviceVoiceLabel"><label for="voiceSelect">🎙️ Giọng hệ thống của thiết bị (dự phòng)</label></div><select id="voiceSelect" class="voice-select" aria-label="Chọn giọng đọc tiếng Việt"><option value="auto">Tự động — ưu tiên giọng nam miền Bắc</option></select><div class="field"><label for="aiVoiceMode">Nguồn giọng đọc</label><select id="aiVoiceMode" style="padding:8px;border-radius:8px;color:#fff;background:#15386c;border:1px solid #678ac4"><option value="studio">✨ Google AI Studio</option><option value="nghi">🎙️ NGHI-TTS · xử lý trên thiết bị</option><option value="device">Giọng thiết bị</option></select></div>
 <div id="nghiVoiceWrap" style="display:none;margin:12px 0">
   <div class="field"><label for="nghiVoiceSelect">🎙️ Chọn giọng trong NGHI-TTS</label></div>
   <select id="nghiVoiceSelect" class="voice-select" aria-label="Chọn mô hình giọng NGHI-TTS">
@@ -175,7 +194,7 @@
    <div class="quiz-main">
     <h2 class="quiz-title" id="quizTitle">⭐ THỬ THÁCH CỦA EM ⭐</h2>
     <div class="quiz-student"><img id="quizOrb" alt="Viên bi học sinh"><div><p class="quiz-rank" id="quizRank">🏁 Về đích thứ 1</p><div class="quiz-student-name" id="quizStudentName"></div></div></div>
-    <div class="quiz-question"><div class="quiz-q-label" id="quizQLabel">CÂU HỎI 01</div><div class="quiz-q-text" id="quizQuestionText"></div></div>
+    <div class="quiz-question"><div class="quiz-q-label" id="quizQLabel">CÂU HỎI 01</div><div class="quiz-q-text" id="quizQuestionText"></div><img id="bankQuizImage" alt="Hình minh họa câu hỏi" hidden style="display:block;max-width:100%;max-height:200px;object-fit:contain;margin:8px auto;border-radius:8px"></div>
     <div class="quiz-options" id="quizOptions" role="group" aria-label="Bốn phương án trả lời"></div>
     <div class="quiz-feedback" id="quizFeedback" role="status" aria-live="polite"><span class="quiz-feedback-icon">🎯</span><span id="quizFeedbackText">Em hãy suy nghĩ và chọn một đáp án nhé!</span></div>
     <div class="quiz-buttons"><button class="quiz-quiet" id="quizBack">🏁 Xem thứ hạng</button><button class="quiz-quiet" id="quizReadAloud" type="button">🔊 Nghe lại câu hỏi</button><button class="quiz-next" id="quizNext" disabled>HỌC SINH TIẾP THEO ➜</button></div>
@@ -239,8 +258,8 @@ async function initAvatars(){await Promise.all(students.map(async s=>{s.image=aw
 function makeStudent(name,i){return{id:randomId(),name,avatar:i%24,color:i%COLORS.length,style:i%5,photo:null,image:null,orb:null}}
 function parsing(raw){return raw.split(/\r?\n|;/).map(line=>line.replace(/^\s*\d+\s*[.)\-:]\s*/,'').split('\t').map(c=>c.trim()).filter(Boolean).at(-1)||'').map(s=>s.trim()).filter(Boolean).slice(0,150)}
 function applyNames(){if(game?.running){toast('Tạm dừng cuộc đua trước khi thay danh sách');return}const names=parsing($('names').value);if(!names.length){toast('Thầy/cô hãy dán danh sách học sinh trước.');return}const pool=new Map();for(const s of students){const k=normalize(s.name);if(!pool.has(k))pool.set(k,[]);pool.get(k).push(s)}studyFinishers=[];studyAnswers.clear();students=names.map((n,i)=>{const old=pool.get(normalize(n))?.shift();return old?{...old,name:n}:makeStudent(n,i)});chosenIds=new Set([...chosenIds].filter(id=>students.some(s=>s.id===id)));initAvatars().then(()=>{renderRoster();save();resetPreview()});toast(`Đã tạo ${students.length} viên bi 3D!`)}
-function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:students.map(({id,name,avatar,color,style,photo})=>({id,name,avatar,color,style,photo})),selected:[...chosenIds],duration:getN(),music:$('music').value,sfx:$('sfx').value,winVol:$('winVol').value,lights:$('lights').checked,autoCamera:$('autoCamera').checked,reducedMotion:$('reducedMotion').checked,exclude:$('exclude').checked,shuffle:$('shuffle').checked,voiceName:$('voiceName').checked,aiVoiceMode:$('aiVoiceMode').value,voiceChoice:$('voiceSelect').dataset.preferred||$('voiceSelect').value||'auto',nghiVoice:$('nghiVoiceSelect').value,mode:studyMode,questionText:$('questionsInput').value,studyFinishers,studyAnswers:[...studyAnswers]}));}catch(e){console.warn('Không thể lưu bộ nhớ',e);toast('Bộ nhớ trình duyệt đã đầy; ảnh mới có thể không lưu được.')}}
-function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;$('aiVoiceMode').value=['device','studio','nghi'].includes(data.aiVoiceMode)?data.aiVoiceMode:'studio';$('voiceSelect').dataset.preferred=data.voiceChoice||'auto';$('nghiVoiceSelect').value=NGHI_VOICE_IDS.has(data.nghiVoice)?data.nghiVoice:'deepman3909';studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();refreshSpeechVoices();refreshTeacherSource();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
+function save(){try{localStorage.setItem(STORAGE,JSON.stringify({students:students.map(({id,name,avatar,color,style,photo})=>({id,name,avatar,color,style,photo})),selected:[...chosenIds],duration:getN(),music:$('music').value,sfx:$('sfx').value,winVol:$('winVol').value,lights:$('lights').checked,autoCamera:$('autoCamera').checked,reducedMotion:$('reducedMotion').checked,exclude:$('exclude').checked,shuffle:$('shuffle').checked,voiceName:$('voiceName').checked,aiVoiceMode:$('aiVoiceMode').value,voiceChoice:$('voiceSelect').dataset.preferred||$('voiceSelect').value||'auto',nghiVoice:$('nghiVoiceSelect').value,mode:studyMode,questionText:$('questionsInput').value,bankRefs:[...sharedQuestionRefs].slice(-250),studyFinishers,studyAnswers:[...studyAnswers]}));}catch(e){console.warn('Không thể lưu bộ nhớ',e);toast('Bộ nhớ trình duyệt đã đầy; ảnh mới có thể không lưu được.')}}
+function load(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data?.students?.length){students=data.students.map((s,i)=>({...makeStudent(s.name,i),...s}));chosenIds=new Set(data.selected||[]);$('duration').value=data.duration??40;for(const k of ['music','sfx','winVol'])$(k).value=data[k]??$(k).value;for(const k of ['lights','autoCamera','reducedMotion','exclude','shuffle'])$(k).checked=data[k]??$(k).checked;$('voiceName').checked=data.voiceName??true;$('aiVoiceMode').value=['device','studio','nghi'].includes(data.aiVoiceMode)?data.aiVoiceMode:'studio';$('voiceSelect').dataset.preferred=data.voiceChoice||'auto';$('nghiVoiceSelect').value=NGHI_VOICE_IDS.has(data.nghiVoice)?data.nghiVoice:'deepman3909';studyMode=data.mode==='learn'?'learn':'select';$('questionsInput').value=data.questionText||'';sharedQuestionRefs=new Map(Array.isArray(data.bankRefs)?data.bankRefs:[]);studyFinishers=Array.isArray(data.studyFinishers)?data.studyFinishers.filter(f=>students.some(s=>s.id===f.id)):[];studyAnswers=new Map(Array.isArray(data.studyAnswers)?data.studyAnswers.filter(([id])=>studyFinishers.some(f=>f.id===id)):[])}else students=NAMES_SAMPLE.map(makeStudent)}catch(e){students=NAMES_SAMPLE.map(makeStudent)}$('names').value=students.map(s=>s.name).join('\n');updateSettings();refreshSpeechVoices();refreshTeacherSource();inspectQuestions(false);setStudyMode(studyMode,true);initAvatars().then(()=>{renderRoster();resetPreview()})}
 function updateSettings(){document.documentElement.classList.toggle('reduce-motion',$('reducedMotion').checked);const t=getN();$('durationValue').textContent=t;$('bounceValue').textContent='100%';$('zoneCount').textContent=Math.max(4,Math.round(t/4))+' chặng';for(const k of ['music','sfx','winVol'])$(k+'V').textContent=$(k).value+'%';$('timer').textContent='00:'+String(t).padStart(2,'0');if(t>=60)$('timer').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');$('progress').textContent=`🏁 ${Math.max(4,Math.round(t/4))} chặng • Camera ${$('autoCamera').checked?'tự động':'toàn cảnh'}`}
 function renderRoster(){if(isLearning()){const root=$('roster');$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=studyAnswers.size;renderStudyRoster();return}const root=$('roster');root.replaceChildren();$('rosterCount').textContent=students.length;$('listCount').textContent=students.length+' em';$('headerCount').textContent=students.length;$('headerDone').textContent=chosenIds.size;let count=0;for(const s of students){count++;const r=document.createElement('div');r.className='person';r.title='Nhấn để thay ảnh: '+s.name;r.style.setProperty('--c',COLORS[s.color%COLORS.length]);const nu=document.createElement('div');nu.className='num-tag';nu.textContent=count;const img=document.createElement('img');img.className='face';img.alt='';img.src=s.photo||avatarSvg(s.avatar);const text=document.createElement('div');text.className='person-name';text.textContent=s.name;const badge=document.createElement('div');badge.className='person-state'+(chosenIds.has(s.id)?' done':'');badge.textContent=chosenIds.has(s.id)?'Đã chọn':'Đang chơi';r.append(nu,img,text,badge);r.addEventListener('click',()=>photoDialog(s.id));root.appendChild(r)}}
 
@@ -569,6 +588,7 @@ function tick(ms){const dt=clamp(lastFrame?(ms-lastFrame)/1000:0,0,.05);lastFram
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&game?.running&&!paused){paused=true;$('pause').textContent='▶ Tiếp tục';$('stateText').textContent='ĐANG TẠM DỪNG'}});window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('classPhotoOverlay').hidden){classClose();return}$('winOverlay').hidden=true;$('photoOverlay').hidden=true;$('rankOverlay').hidden=true;$('quizOverlay').hidden=true}if(e.code==='Space'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='BUTTON'){e.preventDefault();if(game?.running)$('pause').click()}});
 /* ================ MARBLE RACE — HỌC TẬP / KIẾN THỨC ================ */
 let studyMode='select';
+let sharedQuestionRefs=new Map();
 let studyQuestions=[],studyFinishers=[],studyAnswers=new Map(),studyIndex=0;
 const isLearning=()=>studyMode==='learn';
 const answerKeys=['A','B','C','D'];
@@ -598,8 +618,29 @@ function parseQuestionBank(raw){
  commit();if(!qs.length&&!errors.length)errors.push('Chưa có câu hỏi. Hãy nhập theo mẫu “Câu 1: ...”.');
  return{questions:qs,errors};
 }
+function studyQuestionSignature(q){return JSON.stringify([q.text.trim(),...answerKeys.map(k=>q.options[k].trim()),q.correct])}
+function hydrateSharedQuestionLinks(){
+ for(const q of studyQuestions){const ref=sharedQuestionRefs.get(studyQuestionSignature(q));if(ref){q.bankId=ref.id;q.bankSpoken=ref.spoken;q.bankImageUrl=ref.imageUrl||null}}
+}
+function importSharedQuestions(items){
+ if(game?.running)throw Error('Hãy kết thúc cuộc đua trước khi nhập câu hỏi.');
+ const old=parseQuestionBank($('questionsInput').value);
+ if(old.errors.length&&$('questionsInput').value.trim())throw Error('Hãy sửa câu hỏi chưa hợp lệ đang soạn trước khi nhập từ Supabase.');
+ const original=new Set(old.questions.map(studyQuestionSignature)),lines=[];let number=old.questions.length+1;
+ for(const item of items){
+  if(!item||!item.text||!Array.isArray(item.options)||item.options.length!==4||!answerKeys.includes(item.correct))continue;
+  const normal=x=>String(x||'').replace(/\s+/g,' ').trim();
+  const q={text:normal(item.text),options:{},correct:item.correct};
+  for(let i=0;i<4;i++)q.options[answerKeys[i]]=normal(item.options[i]);
+  const signature=studyQuestionSignature(q);if(original.has(signature))continue;
+  original.add(signature);sharedQuestionRefs.set(signature,{id:item.id,spoken:item.spoken,imageUrl:item.imageUrl||null});
+  lines.push('Câu '+number+++': '+q.text+'\n'+answerKeys.map(k=>k+'. '+q.options[k]).join('\n')+'\nĐáp án đúng: '+q.correct);
+ }
+ if(lines.length){$('questionsInput').value=($('questionsInput').value.trim()+'\n\n'+lines.join('\n\n')).trim();inspectQuestions(false);save()}
+ return lines.length;
+}
 function inspectQuestions(showErrors=true){
- const result=parseQuestionBank($('questionsInput').value);studyQuestions=result.questions;
+ const result=parseQuestionBank($('questionsInput').value);studyQuestions=result.questions;hydrateSharedQuestionLinks();
  const msg=$('questionInfo');msg.classList.toggle('error',result.errors.length>0);
  msg.textContent=result.errors.length?`⚠ ${result.errors.length} vấn đề cần sửa:\n${result.errors.slice(0,5).join('\n')}${result.errors.length>5?'\n...':''}`:`✅ Hợp lệ ${result.questions.length} câu hỏi • 4 phương án/câu • có đáp án chính xác.`;
  if(result.errors.length&&showErrors)toast('Vui lòng sửa định dạng ngân hàng câu hỏi.');
@@ -954,16 +995,17 @@ const goodSpeech='Chính xác! Chúc mừng em!';
 const badSpeech='Chưa chính xác. Em hãy cố gắng nhé!';
 function studentSpeech(name){return 'Mời em '+name+' trả lời câu hỏi.'}
 function questionSpeech(question){
+ if(question.bankSpoken?.full)return question.bankSpoken.full;
  const text=question.text.trim();
  const questionLine=/[.!?]$/.test(text)?text:text+'.';
- return 'Câu số '+question.num+'. '+questionLine+' '+
+ return questionLine+' '+
   answerKeys.map(key=>{
    const value=question.options[key].trim();
    return 'Phương án '+key+'. '+value+(/[.!?]$/.test(value)?'':'.');
   }).join(' ')+
   ' Em hãy suy nghĩ và lựa chọn một đáp án.';
 }
-function correctAnswerSpeech(question){return 'Đáp án đúng là phương án '+question.correct+'. '+question.options[question.correct]+'.'}
+function correctAnswerSpeech(question){return question.bankSpoken?.answer||'Đáp án đúng là phương án '+question.correct+'. '+question.options[question.correct]+'.'}
 function speechKey(content){return ($('aiVoiceMode').value==='nghi'?'nghi:'+getSelectedNghiVoice():(geminiInfo.voiceVersion||'initial'))+':'+content}
 function speechCached(content){return aiClips.has(speechKey(content))}
 let speechPrepQueue=[],speechPrepQueued=new Set(),speechPrepActive=0,speechPrepGoal=[],speechPrepFailed=0,speechPrepPaused=false;
@@ -993,7 +1035,7 @@ function showSpeechPrepStatus(){
 function buildSpeechPrepList(){
  const questions=studyQuestions.slice(0,Math.min(studyQuestions.length,students.length));
  const list=[goodSpeech,badSpeech];
- for(const question of questions)list.push(questionSpeech(question));
+ for(const question of questions)list.push('Câu số '+question.num+'.',questionSpeech(question));
  for(const student of students)list.push(studentSpeech(student.name));
  for(const question of questions)list.push(correctAnswerSpeech(question));
  return [...new Set(list.filter(text=>text.length>0&&text.length<=1800))];
@@ -1187,7 +1229,7 @@ async function speakStudySequence(parts,force=false){
  }
 }
 function speakStudent(name,question){
- const segments=[studentSpeech(name),questionSpeech(question)];
+ const segments=[studentSpeech(name),'Câu số '+question.num+'.',questionSpeech(question)];
  playPreparedSpeech(segments);
 }
 function renderQuiz(){
@@ -1199,6 +1241,8 @@ function renderQuiz(){
  $('quizOrb').src=makeOrb(s).toDataURL('image/png');
  $('quizQLabel').textContent=`CÂU ${question.num} • BỘ CÂU HỎI ${studyIndex%studyQuestions.length+1}/${studyQuestions.length}`;
  $('quizQuestionText').textContent=question.text;
+ const qimage=$('bankQuizImage');qimage.hidden=!question.bankImageUrl;qimage.style.display=question.bankImageUrl?'block':'none';
+ if(question.bankImageUrl){qimage.src=question.bankImageUrl}else qimage.removeAttribute('src');
  const opts=$('quizOptions');opts.replaceChildren();
  for(const key of answerKeys){const btn=document.createElement('button');btn.type='button';btn.className='quiz-answer';btn.dataset.key=key;
  const letter=document.createElement('span');letter.className='letter';letter.textContent=key;
@@ -1304,9 +1348,22 @@ function setupLearningUI(){
 }
 
 setupLearningUI();
+window.MarbleSharedBankHooks={
+ importQuestions:importSharedQuestions,
+ questions:()=>studyQuestions.filter(q=>q.bankId).map(q=>({id:q.bankId,question:q,spoken:{full:questionSpeech(q),answer:correctAnswerSpeech(q)}})),
+ voice:()=>({kind:$('aiVoiceMode').value,id:'nghi:'+getSelectedNghiVoice()}),
+ generateClip:async text=>getLocalPiperClip(text),
+ storeClip:(text,blob)=>aiClips.set(speechKey(text),blob),
+ isNghi:()=>$('aiVoiceMode').value==='nghi',
+ prepare:()=>prepareSpeechClips(false)
+};
 // Test harness: inspect pure UI state and advance the game without waiting real time.
 window.__marbleTest={getState:()=>({studentCount:students.length,zoneCount:game?.course?.n,courseHeight:game?.course?.height,elapsed:game?.time,running:!!game?.running,done:!!game?.done,selected:chosenIds.size,winner:game?.winner?.s?.name,ballCount:game?.balls?.length,modalOpen:!$('winOverlay').hidden,mode:studyMode,finishCount:game?.finishers?.length,studyFinishers:studyFinishers.map(f=>f.id),answered:studyAnswers.size,correct:[...studyAnswers.values()].filter(a=>a.correct).length,rankingOpen:!$('rankOverlay').hidden,quizOpen:!$('quizOverlay').hidden,questionCount:studyQuestions.length,bounceFactor:game?.bounceFactor,unfinished:game?.balls?.filter(b=>!b.finished).length,timerText:$('timer').textContent}),advance:(seconds)=>{if(!game?.running)return;const n=Math.floor(seconds*60);for(let i=0;i<n&&game.running;i++)physics(game,1/60);draw()},preview:()=>{resetPreview();draw()}};
 load();requestAnimationFrame(tick);
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/pose-quiz/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="/marble-race/shared-bank.js"></script>
 </body></html>
