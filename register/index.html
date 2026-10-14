@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng ký tài khoản giáo viên | MotionClass</title>
+<meta name="description" content="Đăng ký tài khoản giáo viên để sử dụng ngân hàng câu hỏi, Đua bi và quản lý lớp học trên MotionClass.">
+<style>
+:root{--ink:#15294c;--muted:#586b85;--primary:#245cce;--line:#dce5f2;--danger:#a62b40}
+*{box-sizing:border-box}
+body{min-height:100vh;margin:0;background:radial-gradient(circle at 15% 4%,#d6e9ff,transparent 46%),radial-gradient(circle at 85% 88%,#eae4ff,transparent 42%),#f4f8fd;color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+header{background:linear-gradient(120deg,#10234e,#214899);color:#fff;padding:18px max(18px,calc((100vw - 1040px)/2))}
+header .bar{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+header a{color:#e2f0ff;text-decoration:none;font-weight:700}
+main{max-width:1050px;margin:0 auto;padding:32px 16px 75px;display:grid;grid-template-columns:1fr 1.15fr;gap:24px;align-items:start}
+.intro{padding:22px 15px 15px}
+h1{font-size:clamp(27px,4vw,40px);line-height:1.2;margin:0 0 17px}h2{font-size:23px;margin:0 0 8px}
+.intro p{color:var(--muted);font-size:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:23px;padding:28px;box-shadow:0 22px 65px #17416f12}
+label{font-size:13px;font-weight:750;display:block;margin:13px 0 5px}
+input{font:inherit;border:1px solid #b7c9df;border-radius:11px;width:100%;padding:12px;color:var(--ink);min-width:0;background:white}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #7db5ff;outline-offset:2px}
+small,.small{font-size:12px;color:var(--muted)}.small{margin:5px 0}
+button,.action{font:inherit;font-weight:750;padding:12px 16px;cursor:pointer;border:0;border-radius:11px;text-align:center;text-decoration:none;display:inline-block}
+button:disabled{opacity:.56;cursor:wait}
+.primary{background:var(--primary);color:#fff}
+.secondary{background:#eef4ff;color:#204d99}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.password{position:relative}.password input{padding-right:75px}
+.password button{position:absolute;right:6px;top:5px;padding:7px;font-size:12px;background:#edf3ff;color:#234980}
+.feedback{margin-top:14px;border-radius:12px;background:#eaf4ff;color:#174782;padding:13px;white-space:pre-line;font-size:14px}
+.feedback.error{background:#fff0f2;color:var(--danger)}
+.feedback.success{background:#e7f9f2;color:#096c51}
+.steps{padding:0;list-style:none;display:grid;gap:16px;margin:22px 0}.steps li{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#435d7a}
+.num{background:#dceaff;color:#1c58bd;border-radius:99px;width:27px;height:27px;display:grid;place-items:center;font-weight:850;flex:none}
+.links{display:flex;flex-wrap:wrap;gap:9px;margin-top:19px}.links a{background:#e6efff;text-decoration:none;border-radius:10px;color:#23519e;padding:9px 12px;font-size:13px;font-weight:700}
+[hidden]{display:none!important}
+@media(max-width:780px){main{grid-template-columns:1fr;padding-top:17px;gap:10px}.intro{padding:14px 4px}.card{padding:22px 16px}}
+</style>
+</head>
+<body>
+<header><div class="bar"><a href="/">🎓 Cổng giáo viên số</a><nav class="row"><a href="/question-bank/">Ngân hàng câu hỏi</a><a href="/classrooms/">Quản lý lớp</a></nav></div></header>
+<main>
+<section class="intro">
+<h1>👩‍🏫 Một tài khoản, nhiều công cụ dạy học</h1>
+<p>Tạo tài khoản giáo viên MotionClass để quản lý ngân hàng câu hỏi, giọng đọc AI, lớp học và sử dụng trên Đua bi, AI Pose Quiz.</p>
+<ol class="steps">
+<li><span class="num">1</span><span>Nhập họ tên, email của thầy/cô và đặt mật khẩu an toàn.</span></li>
+<li><span class="num">2</span><span>Nếu được yêu cầu, mở thư xác nhận email và nhấn liên kết kích hoạt.</span></li>
+<li><span class="num">3</span><span>Đăng nhập bằng cùng tài khoản trên các công cụ giáo viên.</span></li>
+</ol>
+<p class="small">Tài khoản được quản lý bởi Supabase Auth của MotionClass. Đăng ký chỉ tạo tài khoản giáo viên thông thường, không cấp quyền quản trị hệ thống.</p>
+<div class="links"><a href="/question-bank/">📚 Ngân hàng câu hỏi</a><a href="/marble-race/">🏁 Đua bi</a><a href="/pose-quiz/">🙋 AI Pose Quiz</a></div>
+</section>
+<section class="card">
+<div id="registerArea">
+<h2>Đăng ký tài khoản mới</h2>
+<p class="small">Nếu đã có tài khoản AI Pose Quiz, không cần đăng ký lại.</p>
+<form id="registerForm">
+<label for="teacherName">Họ và tên giáo viên</label>
+<input id="teacherName" name="full_name" autocomplete="name" maxlength="100" minlength="2" required placeholder="Nguyễn Văn A">
+<label for="teacherEmail">Email đăng ký</label>
+<input id="teacherEmail" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="giaovien@example.com">
+<label for="teacherPassword">Mật khẩu</label>
+<div class="password"><input id="teacherPassword" name="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="Từ 8 ký tự, gồm chữ và số"><button id="showPassword" type="button" aria-label="Hiện mật khẩu" aria-pressed="false">Hiện</button></div>
+<label for="confirmPassword">Nhập lại mật khẩu</label>
+<div class="password"><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="Nhập lại mật khẩu"><button id="showConfirm" type="button" aria-label="Hiện mật khẩu nhập lại" aria-pressed="false">Hiện</button></div>
+<p class="small">Dùng mật khẩu riêng, không chia sẻ tài khoản cho học sinh. Mật khẩu không được lưu vào trang web.</p>
+<button id="registerButton" type="submit" class="primary" style="width:100%;margin-top:12px">Tạo tài khoản giáo viên</button>
+</form>
+</div>
+<div id="registeredArea" hidden>
+<h2 id="successHeading">Kiểm tra email xác nhận</h2>
+<p id="successDetail"></p>
+<p class="small">Nếu không thấy thư, kiểm tra thư rác (Spam). Sau khi kích hoạt, sử dụng liên kết bên dưới để vào trang quản lý.</p>
+<div class="row"><button id="resendButton" class="secondary" type="button">Gửi lại thư xác nhận</button></div>
+</div>
+<div id="activeArea" hidden>
+<h2>✅ Tài khoản đã sẵn sàng</h2>
+<p id="activeDetail">Đã xác thực tài khoản MotionClass.</p>
+<a href="/question-bank/" class="action primary" style="width:100%">Vào ngân hàng câu hỏi →</a>
+<div class="links"><a href="/classrooms/">Quản lý lớp học</a><a href="/marble-race/">Đua bi</a></div>
+</div>
+<div id="authStatus" class="feedback" role="status" aria-live="polite">Nhập thông tin để tạo tài khoản giáo viên.</div>
+<div class="links"><a href="/question-bank/">← Đăng nhập tại Ngân hàng câu hỏi</a><a href="/pose-quiz/">Đăng nhập AI Pose Quiz</a></div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/pose-quiz/supabase-config.js"></script>
+<script src="/register/register.js"></script>
+</body>
+</html>
