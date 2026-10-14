@@ -74,9 +74,9 @@ async function selectClass(id){
  students=list;renderStudents();setStatus('Đã nạp '+students.length+' học sinh của lớp '+active.name+'.');
 }
 function previewImage(s,canvas){
- const img=s.photoUrl?new Image():null;
+ const img=new Image();
  function paint(){const c=api.orbCanvas(s,img);const ctx=canvas.getContext('2d');ctx.clearRect(0,0,170,170);ctx.drawImage(c,0,0)}
- if(img){img.crossOrigin='anonymous';img.onload=paint;img.onerror=()=>paint();img.src=s.photoUrl;}else paint();
+ img.crossOrigin='anonymous';img.onload=paint;img.onerror=()=>paint();img.src=s.photoUrl||api.avatarSvg(s.avatar??0);
 }
 function renderStudents(){
  $('studentsCount').textContent=students.length+' em';
@@ -121,7 +121,7 @@ function openEditor(student=null){
  refreshEditorOrb();$('studentDialog').showModal();
 }
 function refreshEditorOrb(){
- const preview={name:$('studentName').value||'?',color:Number($('orbColor').value),style:Number($('orbStyle').value)};
+ const preview={name:$('studentName').value||'?',avatar:editing?.avatar??students.length%24,color:Number($('orbColor').value),style:Number($('orbStyle').value)};
  const canvas=$('orbPreview');
  if(newFile){
   const url=URL.createObjectURL(newFile),img=new Image();
