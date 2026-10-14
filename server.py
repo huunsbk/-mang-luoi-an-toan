@@ -12,6 +12,25 @@ FEEDBACK_MAP_API_URL="https://exfnarddchxzfewlztwb.supabase.co/functions/v1/feed
 UUID_RE=re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",re.I)
 BASE_DIR=os.path.dirname(os.path.abspath(__file__))
 
+# The teacher portal routes requests through this single Python handler.
+# Delegate /api/marble-tts before JSON parsing (POST needs the raw body).
+_marble_tts_module=None
+def dispatch_marble_tts(request, method):
+    global _marble_tts_module
+    try:
+        if _marble_tts_module is None:
+            import importlib.util
+            tts_path=os.path.join(BASE_DIR,"api","marble-tts.py")
+            spec=importlib.util.spec_from_file_location("marble_tts_route",tts_path)
+            if spec is None or spec.loader is None:
+                raise RuntimeError("Cannot load Marble TTS module")
+            module=importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            _marble_tts_module=module
+        return getattr(_marble_tts_module.handler,"do_"+method)(request)
+    except Exception:
+        return request._json({"error":"Dịch vụ giọng đọc AI tạm thời không khả dụng."},503)
+
 def rpc(name,payload,timeout=8):
     data=json.dumps({"rpc":name,"payload":payload},ensure_ascii=False).encode("utf-8")
     req=urllib.request.Request(
@@ -73,6 +92,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed=urllib.parse.urlparse(self.path);path=parsed.path;query=urllib.parse.parse_qs(parsed.query)
+        if path=="/api/marble-tts":return dispatch_marble_tts(self,"GET")
         if path in ("/","/index.html"):
             try:
                 with open(os.path.join(BASE_DIR,"index.html"),"rb") as f:body=f.read()
@@ -193,7 +213,9 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"error":"Not found"},404)
 
     def do_POST(self):
-        parsed=urllib.parse.urlparse(self.path);body=self._body_json()
+        parsed=urllib.parse.urlparse(self.path)
+        if parsed.path=="/api/marble-tts":return dispatch_marble_tts(self,"POST")
+        body=self._body_json()
         if parsed.path=="/api/room":
             room=str(body.get("room",""));token=str(body.get("host_token",""));question=str(body.get("question","")).strip()
             try:word_limit=int(body.get("word_limit",3))
