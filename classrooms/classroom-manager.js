@@ -182,5 +182,22 @@ function init(){
  }
  authRefresh().catch(error=>setStatus('⚠ '+message(error),true));
 }
+window.ClassroomManagerBridge={
+ context:()=>({classId:active?.id||null,className:active?.name||'',students:students.map(st=>({...st}))}),
+ async assignCroppedPhoto(classId,studentId,blob){
+  if(!user||!active||active.id!==classId)throw Error('Lớp đã thay đổi, vui lòng mở lại ảnh lớp.');
+  const student=students.find(st=>st.id===studentId);
+  if(!student)throw Error('Học sinh không còn trong danh sách.');
+  if(!(blob instanceof Blob)||blob.type!=='image/jpeg'||blob.size>2*1024*1024||blob.size<100)
+   throw Error('Ảnh đại diện phải là JPEG hợp lệ dưới 2 MB.');
+  await api.savePhoto(client,classId,student,blob);
+  if(!active||active.id!==classId)throw Error('Lớp đã thay đổi trong khi lưu ảnh.');
+  await selectClass(classId);
+  const current=students.find(st=>st.id===studentId);
+  setStatus('✅ Đã lưu ảnh chân dung cho '+student.name+'. Viên bi được cập nhật trong lớp học.');
+  return {...current};
+ },
+ getOrbAvatar:(student)=>student.photoUrl||api.avatarSvg(student.avatar??0)
+};
 init();
 })();
