@@ -9,6 +9,7 @@ Optional:
 """
 import base64
 import hmac
+import hashlib
 import json
 import os
 import time
@@ -52,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
         _json(self, 200, {
             "configured": _configured(),
             "voiceType": "custom" if voice.startswith("voice_") else "preset",
-            "voiceVersion": voice[:80],
+            "voiceVersion": hashlib.sha256(voice.encode("utf-8")).hexdigest()[:16],
             "needsTeacherCode": True
         })
 
