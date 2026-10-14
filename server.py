@@ -117,6 +117,7 @@ class Handler(BaseHTTPRequestHandler):
             "/marble-race": ("marble-race/index.html", "text/html; charset=utf-8"),
             "/marble-race/": ("marble-race/index.html", "text/html; charset=utf-8"),
             "/marble-race/index.html": ("marble-race/index.html", "text/html; charset=utf-8"),
+            "/marble-race/voice/piper-worker.js": ("marble-race/voice/piper-worker.js", "application/javascript; charset=utf-8"),
             "/boc-tham": ("boc-tham/index.html", "text/html; charset=utf-8"),
             "/boc-tham/": ("boc-tham/index.html", "text/html; charset=utf-8"),
             "/boc-tham/index.html": ("boc-tham/index.html", "text/html; charset=utf-8"),
