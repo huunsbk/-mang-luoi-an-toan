@@ -268,7 +268,15 @@ async function showAudio(){
     const play=document.createElement('button');play.textContent='▶ Nghe';play.type='button';
     play.onclick=async()=>{try{await new Audio(file.url).play()}catch(e){report('audioStatus',issue(e),true)}};
     const link=document.createElement('a');link.href=file.url;link.target='_blank';link.rel='noopener';link.download=part+'.wav';link.textContent='↓ WAV';link.className='buttonlink';
-    container.append(play,link);
+    const del=document.createElement('button');del.type='button';del.textContent='🗑';del.title='Xóa tệp âm thanh này';
+    del.disabled=!editing.owned;
+    del.onclick=()=>run(async()=>{
+     if(!confirm('Xóa âm thanh “'+label+'” cho giọng '+$('voiceModel').value+'?'))return;
+     await api('audio.delete',{id:editing.id,voice_id:'nghi:'+$('voiceModel').value,part});
+     await showAudio();
+     report('audioStatus','Đã xóa bản âm thanh '+label+'. Câu hỏi và các đoạn khác được giữ nguyên.');
+    });
+    container.append(play,link,del);
    }else{const old=document.createElement('small');old.textContent='Cũ · cần tạo lại';container.append(old)}
   }else{const empty=document.createElement('small');empty.textContent='Chưa có âm thanh';container.append(empty)}
   box.append(container);
@@ -285,7 +293,6 @@ async function voiceFor(items,parts){
   for(const part of parts){
    if(voice!=='nghi:'+$('voiceModel').value)throw Error('Giọng đang được đổi, đã dừng để tránh gán nhầm.');
    const content=item.spoken?.[part];if(!content)continue;
-   if(metadata.some(m=>m.part===part&&m.textHash===null))continue;
    const fingerprint=await hash(content);
    if(metadata.some(m=>m.part===part&&m.textHash===fingerprint)){skipped++;continue}
    report('audioStatus','🎙️ '+model+' · '+item.text.slice(0,45)+' · '+PARTS[part]+' ...');
