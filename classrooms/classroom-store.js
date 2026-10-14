@@ -101,19 +101,22 @@ async function signPhoto(c,path){
  if(error)throw Error(error.message);
  return data.signedUrl;
 }
-function orbCanvas(student,img=null){
- const c=document.createElement('canvas');c.width=c.height=170;
- const x=c.getContext('2d'),mid=85,r=72,color=COLORS[bounded(student.color,0,11)],style=bounded(student.style,0,4);
- const aura=x.createRadialGradient(mid,mid,35,mid,mid,85);aura.addColorStop(0,'#fff0');aura.addColorStop(.72,color+'16');aura.addColorStop(.94,color+'77');aura.addColorStop(1,color+'00');x.fillStyle=aura;x.fillRect(0,0,170,170);
- x.save();x.beginPath();x.arc(mid,mid,r,0,Math.PI*2);x.clip();const bg=x.createRadialGradient(65,53,2,mid,mid,92);bg.addColorStop(0,'#e2ffff');bg.addColorStop(.38,color+'bd');bg.addColorStop(.74,'#103463');bg.addColorStop(1,'#050e2b');x.fillStyle=bg;x.fillRect(11,11,148,148);
- if(img?.complete&&img.naturalWidth){x.save();x.beginPath();x.arc(mid,mid,52,0,Math.PI*2);x.clip();x.drawImage(img,33,33,104,104);x.restore()}
- else{x.font='bold 42px system-ui';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#fff';x.fillText(String(student.name||'?').trim().charAt(0).toUpperCase(),85,86)}
- const edge=x.createRadialGradient(72,60,32,mid,mid,73);edge.addColorStop(0,'#ffffff00');edge.addColorStop(.68,'#ffffff00');edge.addColorStop(.83,color+'28');edge.addColorStop(.94,'#d4faff9c');edge.addColorStop(1,'#f7ffffdb');x.fillStyle=edge;x.fillRect(10,10,150,150);x.restore();
- if(style===1){x.strokeStyle='#8cffffcc';x.lineWidth=3;x.beginPath();x.arc(mid,mid,66,-2.7,.2);x.stroke();x.strokeStyle='#f9a1ffcc';x.beginPath();x.arc(mid,mid,66,.4,2.7);x.stroke()}
- else if(style===2){x.strokeStyle='#ffd279';x.lineWidth=5;x.beginPath();x.ellipse(mid,mid,74,22,-.52,0,Math.PI*2);x.stroke()}
- else if(style===3){x.strokeStyle=color;x.lineWidth=6;x.beginPath();x.arc(mid,mid,68,.4,3);x.stroke()}
- else if(style===4){x.strokeStyle='#83f7ff';x.lineWidth=6;for(let i=0;i<3;i++){x.beginPath();x.arc(mid,mid,67,i*2.09,i*2.09+1.35);x.stroke()}}
- return c;
-}
-window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,orbCanvas,COLORS,BUCKET};
+function avatarSvg(seed){const skins=['#f5c7a7','#e9b18f','#d9a483','#ecc4a7','#c99872','#f5d2b7'];const hairs=['#35253d','#1e2a40','#533a30','#282331','#4c3524'];const clothes=['#60b4fa','#d477ae','#6ac6a8','#9f8dec','#efa461','#64b3b5'];const s=seed%24,h=seed%5;const hair=hairs[(s*7+3)%5],skin=skins[s%6],cloth=clothes[(s*3+1)%6],back=COLORS[(s*5+2)%COLORS.length];const long=s%3===0;const fringe=s%4===0;
+const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><defs><radialGradient id="bg"><stop stop-color="#fbffff"/><stop offset="1" stop-color="${back}"/></radialGradient><linearGradient id="shirt" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="${cloth}"/></linearGradient></defs><rect width="128" height="128" fill="url(#bg)"/><circle cx="102" cy="24" r="28" fill="#fff" opacity=".2"/><path d="M0 128 C10 88 41 89 64 89 C89 89 119 94 128 128" fill="url(#shirt)"/><path d="M42 94 L63 118 84 94" fill="#fcfcff"/><path d="M58 103 L64 109 70 103 67 125 62 125Z" fill="#2d6eaf"/>${long?`<path d="M33 58 Q25 12 63 15 Q103 9 100 59 L109 104 83 98 41 98 25 104Z" fill="${hair}"/>`:`<path d="M31 61 Q23 15 66 17 Q105 16 98 66 L85 50 40 55Z" fill="${hair}"/>`}<ellipse cx="64" cy="63" rx="28" ry="35" fill="${skin}"/><path d="M35 53 Q38 13 68 21 Q100 19 96 56 Q78 ${fringe?64:44} 66 39 Q48 59 35 53" fill="${hair}"/><ellipse cx="52" cy="65" rx="3.6" ry="4.6" fill="#222b43"/><ellipse cx="76" cy="65" rx="3.6" ry="4.6" fill="#222b43"/><circle cx="53" cy="63" r="1.2" fill="white"/><circle cx="77" cy="63" r="1.2" fill="white"/><path d="M56 80 Q64 88 72 80" stroke="#ad5969" stroke-width="2.8" fill="none" stroke-linecap="round"/><circle cx="43" cy="76" r="6" fill="#f48f99" opacity=".26"/><circle cx="86" cy="76" r="6" fill="#f48f99" opacity=".26"/></svg>`;
+return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)}
+
+function makeOrb(s){if(s.orb)return s.orb;const c=document.createElement('canvas');c.width=c.height=170;const x=c.getContext('2d');const mid=85,r=72,color=COLORS[s.color%COLORS.length],style=s.style%5;
+const aura=x.createRadialGradient(mid,mid,35,mid,mid,85);aura.addColorStop(0,'#fff0');aura.addColorStop(.72,color+'16');aura.addColorStop(.94,color+'77');aura.addColorStop(1,color+'00');x.fillStyle=aura;x.fillRect(0,0,170,170);
+x.save();x.beginPath();x.arc(mid,mid,r,0,Math.PI*2);x.clip();const bg=x.createRadialGradient(65,53,2,mid,mid,92);bg.addColorStop(0,'#e2ffff');bg.addColorStop(.38,color+'bd');bg.addColorStop(.74,'#103463');bg.addColorStop(1,'#050e2b');x.fillStyle=bg;x.fillRect(11,11,148,148);
+if(s.image){x.save();x.globalAlpha=.98;x.beginPath();x.arc(mid,mid,52,0,Math.PI*2);x.clip();x.drawImage(s.image,33,33,104,104);x.restore()}
+const edge=x.createRadialGradient(72,60,32,mid,mid,73);edge.addColorStop(0,'#ffffff00');edge.addColorStop(.68,'#ffffff00');edge.addColorStop(.83,color+'28');edge.addColorStop(.94,'#d4faff9c');edge.addColorStop(1,'#f7ffffdb');x.fillStyle=edge;x.fillRect(10,10,150,150);x.restore();
+if(style===1){x.strokeStyle='#8cffffcc';x.lineWidth=3;x.beginPath();x.arc(mid,mid,66,-2.7,.2);x.stroke();x.strokeStyle='#f9a1ffcc';x.beginPath();x.arc(mid,mid,66,.4,2.7);x.stroke()}
+else if(style===2){x.strokeStyle='#ffd279';x.lineWidth=5;x.beginPath();x.ellipse(mid,mid,74,22,-.52,0,Math.PI*2);x.stroke();x.strokeStyle='#fffae0';x.lineWidth=1.4;x.stroke()}
+else if(style===3){x.strokeStyle=color;x.lineWidth=6;x.beginPath();x.arc(mid,mid,68,.4,3);x.stroke();for(let i=0;i<5;i++){let a=i*1.2;x.fillStyle='#fff2e2';x.beginPath();x.arc(mid+Math.cos(a)*65,mid+Math.sin(a)*65,2.4,0,7);x.fill()}}
+else if(style===4){x.strokeStyle='#83f7ff';x.shadowBlur=10;x.shadowColor=color;x.lineWidth=6;for(let i=0;i<3;i++){x.beginPath();x.arc(mid,mid,67,i*2.09,i*2.09+1.35);x.stroke()}x.shadowBlur=0}
+else{x.strokeStyle='#ffffffbb';x.lineWidth=2;x.beginPath();x.arc(mid,mid,66,0,7);x.stroke()}
+x.save();x.beginPath();x.arc(mid,mid,68,0,7);x.clip();let gloss=x.createLinearGradient(32,20,137,144);gloss.addColorStop(0,'#fff9');gloss.addColorStop(.16,'#fffa');gloss.addColorStop(.32,'#fff1');gloss.addColorStop(.7,'#fff0');gloss.addColorStop(1,'#b5f9ff6e');x.fillStyle=gloss;x.beginPath();x.ellipse(66,40,48,24,-.45,0,7);x.fill();x.strokeStyle='#fff8';x.lineWidth=3;x.beginPath();x.arc(mid,mid,61,3.4,5.65);x.stroke();x.restore();s.orb=c;return c}
+
+function orbCanvas(student,img=null){return makeOrb({...student,image:img,orb:null,color:bounded(student.color,0,11),style:bounded(student.style,0,4)})}
+window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,orbCanvas,avatarSvg,COLORS,BUCKET};
 })();
