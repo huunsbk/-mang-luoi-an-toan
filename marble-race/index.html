@@ -822,13 +822,15 @@ function showSpeechPrepStatus(){
  target.textContent=(ready===total?'✅ Đã sẵn sàng giọng AI':'⚡ Đang chuẩn bị giọng AI')+
   ': '+ready+'/'+total+' đoạn âm thanh'+(speechPrepActive?' • đang tạo '+speechPrepActive:'')+
   (speechPrepFailed?' • '+speechPrepFailed+' yêu cầu chưa thành công':'')+
+  (speechPrepPaused?' • đã tạm dừng do giới hạn hoặc lỗi AI':'')+
   '. Âm thanh đã có được phát ngay, không gọi lại AI.';
 }
 function buildSpeechPrepList(){
- const questions=studyQuestions;
+ const questions=studyQuestions.slice(0,Math.min(studyQuestions.length,students.length));
  const list=[goodSpeech,badSpeech];
- for(const question of questions){list.push(questionSpeech(question),correctAnswerSpeech(question))}
+ for(const question of questions)list.push(questionSpeech(question));
  for(const student of students)list.push(studentSpeech(student.name));
+ for(const question of questions)list.push(correctAnswerSpeech(question));
  return [...new Set(list.filter(text=>text.length>0&&text.length<=1800))];
 }
 function prioritizeSpeech(content){
@@ -870,6 +872,10 @@ function prepareSpeechClips(fromTeacher=false){
  }
  if(!inspectQuestions(false)||!students.length){if(fromTeacher)toast('Vui lòng nhập danh sách học sinh và câu hỏi hợp lệ.');return}
  speechPrepGoal=buildSpeechPrepList();
+ // Drop obsolete queued material after a class list or question bank edit.
+ const needed=new Set(speechPrepGoal);
+ speechPrepQueue=speechPrepQueue.filter(t=>needed.has(t));
+ speechPrepQueued=new Set(speechPrepQueue);
  speechPrepFailed=0;speechPrepPaused=false;
  const fresh=speechPrepGoal.filter(t=>!speechCached(t)&&!aiClipRequests.has(speechKey(t))&&!speechPrepQueued.has(t));
  // Prepare reusable encouragement first, then unique questions, then student names.
