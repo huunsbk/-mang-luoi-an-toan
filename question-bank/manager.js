@@ -272,7 +272,7 @@ function showPreview(item){
 function openScreen(screen,item=null,updateHash=true){
  if(!['list','preview','edit','audio','import'].includes(screen))screen='list';
  if(!canLeaveEditor())return false;
- if(['preview','edit','audio'].includes(screen)&&!item?.id)return false;
+ if(['preview','audio'].includes(screen)&&!item?.id)return false;
  if(item&&screen==='edit'&&!item.owned)return false;
  activeScreen=screen;
  document.querySelectorAll('.library-screen').forEach(view=>{view.hidden=view.id!==screen+'View'});
@@ -311,7 +311,7 @@ function restoreRoute(){
  else openScreen('list',null,false);
 }
 async function reload(preserveEditor=true){
- const old=preserveEditor?editing?.id:null,sub=$('filterSubject').value,lesson=$('filterLesson').value;
+ const old=preserveEditor?editing?.id:null,sub=$('filterSubject').value,lesson=$('filterLesson').value,grade=$('filterGrade').value;
  let offset=0,data=null;const collected=[];
  for(let page=0;page<40;page++){
   data=await api('bank.list',{subject:'ALL',lesson:'ALL',search:'',offset,limit:250});
@@ -322,6 +322,7 @@ async function reload(preserveEditor=true){
  rows=collected;
  selected=new Set([...selected].filter(id=>rows.some(x=>x.id===id)));
  fill($('filterSubject'),data.facets?.subjects||[],'Tất cả môn học',sub);
+ fill($('filterGrade'),[...new Set(rows.map(gradeOf))],'Tất cả khối lớp',grade);
  const lessons=[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))];
  fill($('filterLesson'),lessons,'Tất cả bài học',lesson);
  const active=rows.find(x=>x.id===old);
@@ -340,7 +341,7 @@ async function login(e){
 async function sessionChanged(user){
  $('loginPanel').hidden=!!user;$('appPanel').hidden=!user;$('userLabel').textContent=user?'👤 '+user.email:'';
  if(!user){rows=[];selected.clear();renderList();return}
- await reload(false);
+ await reload(false);restoreRoute();
 }
 async function saveQuestion(){
  await run(async()=>{
@@ -348,13 +349,13 @@ async function saveQuestion(){
   const result=await api('bank.save',{item});
   const saved=result.items?.[0];if(!saved)throw Error('Máy chủ chưa trả về mã câu hỏi mới.');
   report('editStatus','✅ Đã '+(saved.created?'tạo':'cập nhật')+' câu hỏi trong ngân hàng.');await reload(false);
-  showEditor(rows.find(r=>r.id===saved.id)||null);
+  const updated=rows.find(r=>r.id===saved.id);editSnapshot=snapshot();if(updated)openScreen('preview',updated);
  });
 }
 async function deleteQuestion(){
  if(!editing?.owned)return;
  if(!confirm('Xóa vĩnh viễn câu hỏi này cùng các âm thanh dùng chung?'))return;
- await run(async()=>{await api('bank.delete',{id:editing.id});showEditor(null);await reload(false);report('editStatus','Đã xóa câu hỏi thành công.')});
+ await run(async()=>{await api('bank.delete',{id:editing.id});selected.delete(editing.id);editSnapshot=snapshot();showEditor(null);await reload(false);openScreen('list');setListMessage('Đã xóa câu hỏi thành công.')});
 }
 async function jpegFile(file){
  if(!file||!file.type.startsWith("image/"))throw Error('Hãy chọn tệp ảnh JPEG, PNG hoặc WebP.');
@@ -397,7 +398,7 @@ async function bulkDelete(){
  await run(async()=>{
   let count=0;
   for(const r of owned){await api('bank.delete',{id:r.id});count++}
-  await reload(false);report('editStatus','Đã xóa '+count+' câu hỏi.');
+  await reload(false);setListMessage('Đã xóa '+count+' câu hỏi.');
  });
 }
 function parseText(text){
@@ -445,7 +446,7 @@ async function bulkSave(){
   if(!filtered.length){report('bulkStatus','Các câu hỏi này đã tồn tại; không tạo bản trùng.');return}
   const result=await api('bank.save_many',{items:filtered});
   $('bulkText').value='';report('bulkStatus','✅ Đã lưu '+result.created+' câu. Bỏ qua '+(items.length-filtered.length)+' câu trùng.');
-  await reload();
+  await reload();openScreen('list');setListMessage('Đã nhập thành công '+result.created+' câu hỏi.');
  });
 }
 function download(name,data,type){
@@ -576,11 +577,23 @@ async function init(){
  $('reloadBank').onclick=()=>run(()=>reload());
  $('filterSubject').onchange=()=>{fill($('filterLesson'),[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))],'Tất cả bài học','ALL');renderList()};
  $('filterLesson').onchange=renderList;$('filterSearch').oninput=renderList;$('onlyMine').onchange=renderList;$('filterAudio').onchange=renderList;
- $('newQuestion').onclick=()=>showEditor(null);
+ $('newQuestion').onclick=newQuestionScreen;
+ $('openImport').onclick=()=>openScreen('import');
+ document.querySelectorAll('.backToList').forEach(b=>b.onclick=()=>openScreen('list'));
+ document.querySelectorAll('.scope-tab').forEach(b=>b.onclick=()=>{scope=b.dataset.scope||'all';renderList()});
+ $('groupBy').onchange=renderList;$('filterGrade').onchange=renderList;
+ $('checkVisible').onchange=e=>{for(const r of getFilteredRows()){if(e.target.checked)selected.add(r.id);else selected.delete(r.id)}renderList()};
+ $('previewEdit').onclick=()=>{if(editing?.owned)openScreen('edit',editing)};
+ $('previewAudio').onclick=()=>{if(editing)openScreen('audio',editing)};
+ $('previewCopy').onclick=cloneCurrent;
+ $('audioToPreview').onclick=()=>{if(editing)openScreen('preview',editing)};
+ $('audioToEdit').onclick=()=>{if(editing?.owned)openScreen('edit',editing)};
+ window.addEventListener('popstate',restoreRoute);
+ window.addEventListener('hashchange',()=>{if(!$('appPanel').hidden)restoreRoute()});
  $('saveQuestion').onclick=saveQuestion;$('deleteQuestion').onclick=deleteQuestion;$('bulkDelete').onclick=bulkDelete;
  $('uploadQuestionImage').onclick=uploadQuestionImage;$('removeQuestionImage').onclick=deleteQuestionImage;
- $('duplicateQuestion').onclick=()=>{if(!editing)return;const clone={...editing,id:null,owned:true,visibility:'private',updatedAt:null};showEditor(clone);$('editId').value='';editing=null;editingStamp=null;report('editStatus','Đang nhân bản thành câu hỏi mới.')};
- $('selectAll').onclick=()=>{rows.filter(r=>r.owned&&(!$('onlyMine').checked||r.owned)).forEach(r=>selected.add(r.id));renderList()};
+ $('duplicateQuestion').onclick=cloneCurrent;
+ $('selectAll').onclick=()=>{getFilteredRows().forEach(r=>selected.add(r.id));renderList()};
  $('unselectAll').onclick=()=>{selected.clear();renderList()};
  $('exportJson').onclick=()=>exportQuestions(false);$('exportCsv').onclick=()=>exportQuestions(true);
  $('bulkPreview').onclick=()=>{try{const items=bulkItems();report('bulkStatus','✅ Hợp lệ '+items.length+' câu. Chọn Lưu tất cả để đưa vào ngân hàng.')}catch(e){report('bulkStatus','⚠ '+issue(e),true)}};
