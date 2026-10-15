@@ -243,8 +243,11 @@ function create(ctx){
   try{
    const check=await ctx.studioCheck();
    if('studio:'+check.voiceVersion!==voice)throw Error('Giọng AI Studio đã thay đổi. Cần phân tích lại.');
+   let processedInRun=0;
+   // Decode at most four batches at once: avoids accumulating too much audio in iPhone memory.
    for(let i=0;i<groups.length;i++){
-    const g=groups[i];if(cancel||myGeneration!==generation)break;if(g.done)continue;
+    const g=groups[i];if(cancel||myGeneration!==generation||processedInRun>=4)break;if(g.done)continue;
+    processedInRun++;
     status('Đang gọi Google AI Studio cho lô '+(i+1)+'/'+groups.length+' ('+g.entries.length+' đoạn).');
     try{
      const cut=await requestBatch(g);
@@ -257,7 +260,10 @@ function create(ctx){
      break;
     }
    }
-   if(groups.every(g=>g.done))status('Đã tạo '+pending.length+' đoạn WAV. Hãy nghe lần lượt và duyệt trước khi lưu.');
+   const remain=groups.filter(g=>!g.done).length;
+   if(!remain)status('Đã tạo '+pending.length+' đoạn WAV. Hãy nghe lần lượt và duyệt trước khi lưu.');
+   else if(!cancel&&groups.some(g=>g.generated)&&!groups.some(g=>g.error))
+     status('Đã tạo '+pending.length+' đoạn để nghe duyệt. Còn '+remain+' lô; sau khi kiểm tra các đoạn hiện tại, nhấn Tạo và cắt WAV lần nữa.');
   }finally{running=false;setButtons()}
  }
  async function save(){
