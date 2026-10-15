@@ -33,6 +33,17 @@ STYLE = (
     "Do not add, omit, translate or rephrase any spoken words."
 )
 
+BATCH_STYLE = (
+    "Read the Vietnamese text in the exact order it appears. "
+    "Each paragraph separated by blank lines is an independent audio unit. "
+    "Stop speaking for at least 0.7 seconds in complete silence between units. "
+    "Speak only the provided words; do not say paragraph labels, the spaces, "
+    "separator marks, or any introductory or closing remarks. "
+    "Do not paraphrase, add or omit words. Single adult male speaker, "
+    "standard Northern Vietnamese (Hanoi) accent, natural warm teacher voice, "
+    "clear diction, moderate pace."
+)
+
 def _json(handler, status, payload, retry_after=None):
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     handler.send_response(status)
@@ -81,6 +92,9 @@ class handler(BaseHTTPRequestHandler):
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             text = payload.get("text", "")
+            batch = payload.get("batch", False)
+            if not isinstance(batch, bool):
+                return _json(self, 422, {"error": "Chế độ gom lô không hợp lệ."})
             if not isinstance(text, str) or not 1 <= len(text.strip()) <= 1800:
                 return _json(self, 422, {"error": "Nội dung đọc phải có từ 1 đến 1800 ký tự."})
         except (ValueError, UnicodeDecodeError, AttributeError):
@@ -96,7 +110,7 @@ class handler(BaseHTTPRequestHandler):
                 "type": "user_input",
                 "content": [{
                     "type": "text", "text": text.strip(),
-                    "annotations": [{"type": "speech_metadata", "style": STYLE}]
+                    "annotations": [{"type": "speech_metadata", "style": BATCH_STYLE if batch else STYLE}]
                 }]
             }],
             "response_format": {"type": "audio"},
