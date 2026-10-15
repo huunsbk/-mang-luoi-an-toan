@@ -7,7 +7,7 @@ const PARTS={full:'Đọc cả câu + A–D',question:'Nội dung câu hỏi',op
 const K=['A','B','C','D'];
 let supabase=null,rows=[],selected=new Set(),editing=null,editingStamp=null,busy=false,files=[],audioURLs=new Map(),queue=0;
 let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0,audioInventorySerial=0;
-let scope='all',activeScreen='list',visibleRows=[],editSnapshot='',isRestoringRoute=false;
+let scope='all',activeScreen='list',visibleRows=[],editSnapshot='',isRestoringRoute=false,batchAudio=null;
 let studioInfo={configured:false,voiceVersion:''},studioStoredVoiceId='',studioPreviewAudio=null,studioPreviewURL='';
 function report(where,message,error=false){const el=$(where);el.textContent=message;el.classList.toggle('error',error)}
 function issue(e){return String(e?.message||e||'Lỗi không xác định').slice(0,400)}
@@ -342,7 +342,7 @@ function showPreview(item){
  $('previewCopy').disabled=!item.owned;
 }
 function openScreen(screen,item=null,updateHash=true){
- if(!['list','preview','edit','audio','import'].includes(screen))screen='list';
+ if(!['list','preview','edit','audio','import','batch'].includes(screen))screen='list';
  if(!canLeaveEditor())return false;
  if(['preview','audio'].includes(screen)&&!item?.id)return false;
  if(item&&screen==='edit'&&!item.owned)return false;
@@ -351,9 +351,10 @@ function openScreen(screen,item=null,updateHash=true){
  if(['preview','edit','audio'].includes(screen)){showEditor(item);if(screen==='preview')showPreview(item)}
  if(screen==='edit')editSnapshot=snapshot();
  if(screen==='audio')$('audioPageTitle').textContent='🎙 Giọng đọc: '+item.text;
+ if(screen==='batch')batchAudio?.open();
  if(screen==='list')renderList();
  if(updateHash){
-  const hash=screen==='list'?'#library':screen==='import'?'#import':screen==='edit'&&!item?.id?'#new':'#'+screen+'/'+encodeURIComponent(item?.id||'');
+  const hash=screen==='list'?'#library':screen==='import'?'#import':screen==='batch'?'#batch':screen==='edit'&&!item?.id?'#new':'#'+screen+'/'+encodeURIComponent(item?.id||'');
   if(location.hash!==hash)history.pushState({screen,id:item?.id},'',hash);
  }
  window.scrollTo({top:0,behavior:'instant'});
@@ -378,6 +379,7 @@ function restoreRoute(){
  const screen=route[0]==='new'?'edit':route[0]==='library'?'list':route[0];
  const item=rows.find(x=>x.id===route[1]);
  if(screen==='import')openScreen('import',null,false);
+ else if(screen==='batch')openScreen('batch',null,false);
  else if(screen==='edit'&&route[0]==='new')newQuestionScreen();
  else if(['preview','edit','audio'].includes(screen)&&item)openScreen(screen,item,false);
  else openScreen('list',null,false);
@@ -667,7 +669,13 @@ async function init(){
  $('reloadBank').onclick=()=>run(()=>reload());
  $('filterSubject').onchange=()=>{fill($('filterLesson'),[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))],'Tất cả bài học','ALL');renderList()};
  $('filterLesson').onchange=renderList;$('filterSearch').oninput=renderList;$('onlyMine').onchange=renderList;$('filterAudio').onchange=renderList;
+ batchAudio=window.QuestionBatchAudio?.create({
+  rows:()=>rows,current:()=>editing,selected:()=>selected,api,hash,upload:uploadVoice,
+  studioCheck:checkStudioTTS,refresh:()=>refreshAudioState(true),notify:()=>markSync('audio.put')
+ });
  $('newQuestion').onclick=newQuestionScreen;
+ $('openBatchAudio').onclick=()=>openScreen('batch');
+ $('goBatchAudio').onclick=()=>openScreen('batch');
  $('openImport').onclick=()=>openScreen('import');
  document.querySelectorAll('.backToList').forEach(b=>b.onclick=()=>openScreen('list'));
  document.querySelectorAll('.scope-tab').forEach(b=>b.onclick=()=>{scope=b.dataset.scope||'all';renderList()});
@@ -691,7 +699,10 @@ async function init(){
  $('bulkFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>1024*1024)throw Error('Tệp tối đa 1 MB.');$('bulkText').value=await file.text();report('bulkStatus','Đã nạp tệp '+file.name+'. Nhấn Kiểm tra.')}catch(err){report('bulkStatus','⚠ '+issue(err),true)}};
  $('audioRefresh').onclick=()=>run(()=>refreshAudioState(true));
  $('audioGenerate').onclick=()=>run(async()=>{if(!editing?.id)throw Error('Hãy lưu câu hỏi trước khi tạo giọng.');await voiceFor([editing],Object.keys(PARTS))});
- $('audioBatch').onclick=()=>run(async()=>{const chosen=rows.filter(r=>selected.has(r.id)&&r.owned);if(!chosen.length)throw Error('Hãy chọn các câu hỏi của bạn ở danh sách.');await voiceFor(chosen,['full','answer'])});
+ $('audioBatch').onclick=()=>{
+  if($('audioProvider').value==='studio'){openScreen('batch');return}
+  void run(async()=>{const chosen=rows.filter(r=>selected.has(r.id)&&r.owned);if(!chosen.length)throw Error('Hãy chọn các câu hỏi của bạn ở danh sách.');await voiceFor(chosen,['full','answer'])});
+ };
  $('voiceModel').onchange=()=>{voiceEngine.stop();showAudio().catch(e=>report('audioStatus',issue(e),true))};
  $('audioProvider').onchange=()=>{
   voiceEngine.stop();switchVoiceProvider($('audioProvider').value);
