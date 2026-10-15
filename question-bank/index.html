@@ -22,6 +22,15 @@ button,.buttonlink{border:0;border-radius:10px;background:#e9f0fe;color:#174a9a;
 .audio-panel{border:2px solid #b9d1f3;background:linear-gradient(180deg,#f8fbff,#fff 52%)}
 .audio-overview{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#edf5ff;padding:11px;border-radius:12px;margin:12px 0}
 .audio-overview strong{color:#1a55a5}.audio-chip{border-radius:20px;padding:3px 8px;font-size:12px;display:inline-block;font-weight:750}
+.voice-pill-wrap{position:relative;display:inline-flex;align-items:center;margin:4px 7px 4px 0;vertical-align:middle}
+.voice-pill-wrap .audio-chip{padding:6px 10px;line-height:1.35}
+.voice-pill-wrap.has-delete .audio-chip{padding-right:21px}
+.voice-pill-wrap .voice-delete{position:absolute;right:-6px;top:-8px;z-index:1;
+ display:flex;align-items:center;justify-content:center;width:21px;height:21px;min-width:21px;
+ border-radius:50%;border:1px solid #ffc3c7;background:#fff;color:#b51d35;
+ font-size:16px;font-weight:800;line-height:1;padding:0;box-shadow:0 2px 5px #193b6a23;cursor:pointer}
+.voice-pill-wrap .voice-delete:hover,.voice-pill-wrap .voice-delete:focus-visible{background:#c7223b;border-color:#c7223b;color:white;outline-offset:2px}
+.voice-pill-wrap .voice-delete:disabled{opacity:.5;cursor:wait}
 .audio-chip.ready{background:#dcf8ea;color:#16704d}.audio-chip.stale{background:#fff1d4;color:#93600d}.audio-chip.empty{background:#ecf0f6;color:#536781}
 .audio-cell.ready{background:#effbf4;border-color:#b7e4ce}.audio-cell.stale{background:#fffaf0;border-color:#ecd59b}
 .voice-chips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
