@@ -122,7 +122,11 @@ function create(ctx){
    const previous=new Set();
    for(let i=0;i<selectedRows.length;i+=60){
     const files=(await ctx.api('audio.list',{ids:selectedRows.slice(i,i+60).map(r=>r.id),voice_id:voice})).items||[];
-    for(const file of files)previous.add(file.id+'/'+file.part);
+    for(const file of files){
+     const original=selectedRows.find(x=>x.id===file.id);
+     const text=String(original?.spoken?.[file.part]||'').trim();
+     if(text&&file.textHash===await ctx.hash(text))previous.add(file.id+'/'+file.part);
+    }
    }
    const entries=[];
    for(const q of selectedRows)for(const part of PARTS){
@@ -282,19 +286,19 @@ function create(ctx){
     const current=lookup.get(x.entry.id);
     if(await ctx.hash(current?.spoken?.[x.entry.part]||'')!==x.entry.hash)
      throw Error('Nội dung câu hỏi đã thay đổi. Dừng lưu để tránh gắn nhầm WAV.');
-    if(existing.get(x.entry.id).some(r=>r.part===x.entry.part)){
+    if(existing.get(x.entry.id).some(r=>r.part===x.entry.part&&r.textHash===x.entry.hash)){
      skipped++;x.approved=false;continue;
     }
     await ctx.upload(x.entry.id,voice,x.entry.part,wavPCM(x.channels,x.rate,x.start,x.end));
-    uploaded++;x.approved=false;existing.get(x.entry.id).push({part:x.entry.part});
+    uploaded++;x.approved=false;existing.get(x.entry.id).push({part:x.entry.part,textHash:x.entry.hash});
     status('Đang lưu WAV đã duyệt '+uploaded+'/'+approved.length+' lên Supabase...');
    }
-   pending=pending.filter(x=>x.approved);
+   const saved=new Set(approved.filter(x=>!x.approved).map(x=>x.entry.id+'/'+x.entry.part));
+   pending=pending.filter(x=>!saved.has(x.entry.id+'/'+x.entry.part));
    $('batchReviews').replaceChildren();
-   // Uploaded audio leaves the local pending queue; nonapproved jobs are retained for review in future iterations.
-   pending=[];revokeAll();
+   pending.forEach((segment,index)=>$('batchReviews').append(review(segment,index)));
    await ctx.refresh();ctx.notify();
-   status('✅ Đã lưu '+uploaded+' WAV đã duyệt, bỏ qua '+skipped+' tệp trùng. Các câu hỏi và giọng NGHI-TTS không thay đổi.');
+   status('✅ Đã lưu '+uploaded+' WAV đã duyệt, bỏ qua '+skipped+' tệp trùng. Còn '+pending.length+' đoạn chưa duyệt; chúng vẫn ở trên trang để nghe tiếp.');
   }catch(e){status('⚠ Đã lưu '+uploaded+' WAV trước khi dừng: '+err(e),true)}
   finally{running=false;setButtons()}
  }
