@@ -577,11 +577,11 @@ async function showAudio(){
  const serial=++audioPanelSerial,box=$('audioGrid'),item=editing;
  box.replaceChildren();drawAudioSummary(item);
  if(!item?.id){report('audioStatus','Chọn câu hỏi đã lưu để nghe hoặc tải tệp âm thanh.');return}
- const model=$('voiceModel').value,voice='nghi:'+model;
+ const voice=activeVoiceId(),model=voice.replace(':','-');
  const metadata=await audioMetadata([item.id]);
- if(serial!==audioPanelSerial||editing?.id!==item.id||$('voiceModel').value!==model)return;
+ if(serial!==audioPanelSerial||editing?.id!==item.id||activeVoiceId()!==voice)return;
  const fingerprints=await Promise.all(Object.keys(PARTS).map(async part=>[part,item.spoken?.[part]?await hash(item.spoken[part]):null]));
- if(serial!==audioPanelSerial||editing?.id!==item.id||$('voiceModel').value!==model)return;
+ if(serial!==audioPanelSerial||editing?.id!==item.id||activeVoiceId()!==voice)return;
  const digests=new Map(fingerprints);let usable=0,stale=0;
  for(const [part,label] of Object.entries(PARTS)){
   const container=document.createElement('div');container.className='audio-cell';
@@ -623,30 +623,41 @@ async function showAudio(){
   else{const missing=document.createElement('span');missing.textContent='Chưa có tệp WAV';missing.className='muted';container.append(missing)}
   box.append(container);
  }
- report('audioStatus','Đã tìm thấy '+usable+'/7 tệp WAV của giọng '+model+'.'+(stale?' Có '+stale+' tệp cũ cần cập nhật.':'')+' Những tệp hiện hành có thể nghe và tải trực tiếp.');
+ report('audioStatus','Đã tìm thấy '+usable+'/7 WAV của '+voiceIdLabel(voice)+'.'+(stale?' Có '+stale+' tệp cũ cần cập nhật.':'')+' Những tệp hiện hành có thể nghe và tải trực tiếp.');
  drawAudioSummary(item);
 }
 async function voiceFor(items,parts){
- const mine=items.filter(i=>i.owned);
- if(!mine.length)throw Error('Chỉ chủ sở hữu câu hỏi được tạo và lưu giọng lên kho.');
- const model=$('voiceModel').value,voice='nghi:'+model;
+ const mine=items.filter(item=>item.owned);
+ if(!mine.length)throw Error('Chỉ chủ sở hữu câu hỏi được tạo và lưu giọng.');
+ const provider=$('audioProvider').value;
+ if(provider==='studio'){
+  await checkStudioTTS();
+  if(!studioInfo.configured)throw Error('AI Studio chưa sẵn sàng trên Vercel.');
+  if(!$('studioTeacherPin').value.trim())throw Error('Hãy nhập mã truy cập AI Studio dành cho giáo viên.');
+ }
+ const voice=currentGenerationVoiceId();
+ if(!/^nghi:[a-z0-9]{2,45}$/.test(voice)&&!/^studio:[a-f0-9]{16}$/.test(voice))
+  throw Error('Mã giọng không hợp lệ; hãy kiểm tra lại kết nối.');
  let completed=0,skipped=0;
  for(const item of mine){
-  const metadata=await audioMetadata([item.id]);
+  const metadata=(await api('audio.list',{ids:[item.id],voice_id:voice})).items||[];
   for(const part of parts){
-   if(voice!=='nghi:'+$('voiceModel').value)throw Error('Giọng đang được đổi, đã dừng để tránh gán nhầm.');
+   if(provider!==$('audioProvider').value||voice!==currentGenerationVoiceId())
+    throw Error('Giọng đã được thay đổi. Đã dừng tạo để tránh lưu nhầm.');
    const content=item.spoken?.[part];if(!content)continue;
    const fingerprint=await hash(content);
    if(metadata.some(m=>m.part===part&&m.textHash===fingerprint)){skipped++;continue}
-   report('audioStatus','🎙️ '+model+' · '+item.text.slice(0,45)+' · '+PARTS[part]+' ...');
-   const clip=await voiceEngine.make(model,content);
-   if(voice!=='nghi:'+$('voiceModel').value)throw Error('Đã thay đổi giọng, hủy lưu âm thanh.');
+   report('audioStatus',(provider==='studio'?'✨ AI Studio':'🎙️ NGHI-TTS')+' · '+item.text.slice(0,45)+' · '+PARTS[part]+'...');
+   const clip=provider==='studio'?await makeStudioClip(content):await voiceEngine.make($('voiceModel').value,content);
+   if(provider!==$('audioProvider').value||voice!==currentGenerationVoiceId())
+    throw Error('Giọng đã thay đổi khi đang tạo; đoạn này không được lưu.');
    await uploadVoice(item.id,voice,part,clip);completed++;
   }
  }
+ if(provider==='studio')studioStoredVoiceId=voice;
  await refreshAudioState(true);
  markSync('audio.put');
- report('audioStatus','✅ Đã lưu '+completed+' đoạn âm thanh mới · '+skipped+' đoạn đã có được giữ lại.');
+ report('audioStatus','✅ Đã lưu '+completed+' WAV mới bằng '+voiceIdLabel(voice)+', giữ nguyên '+skipped+' đoạn đã có.');
 }
 async function init(){
  if(!cfg?.url||!cfg?.publishableKey||!window.supabase){report('editStatus','Không tải được kết nối MotionClass.',true);return}
@@ -682,6 +693,12 @@ async function init(){
  $('audioGenerate').onclick=()=>run(async()=>{if(!editing?.id)throw Error('Hãy lưu câu hỏi trước khi tạo giọng.');await voiceFor([editing],Object.keys(PARTS))});
  $('audioBatch').onclick=()=>run(async()=>{const chosen=rows.filter(r=>selected.has(r.id)&&r.owned);if(!chosen.length)throw Error('Hãy chọn các câu hỏi của bạn ở danh sách.');await voiceFor(chosen,['full','answer'])});
  $('voiceModel').onchange=()=>{voiceEngine.stop();showAudio().catch(e=>report('audioStatus',issue(e),true))};
+ $('audioProvider').onchange=()=>{
+  voiceEngine.stop();switchVoiceProvider($('audioProvider').value);
+  showAudio().catch(e=>report('audioStatus',issue(e),true));
+ };
+ $('studioCheck').onclick=()=>void checkStudioTTS();
+ $('studioPreview').onclick=playStudioPreview;
  window.addEventListener('storage',event=>{if(event.key==='motionclass:shared-bank-sync')refreshAudioState(true)});
  window.addEventListener('focus',()=>{if(Date.now()-audioLastCheck>1800)refreshAudioState(true)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-audioLastCheck>1800)refreshAudioState(true)});
