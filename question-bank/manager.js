@@ -725,6 +725,7 @@ async function init(){
   rows:()=>rows,current:()=>editing,selected:()=>selected,gradeOf,audioInfo,api,hash,upload:uploadVoice,
   studioCheck:checkStudioTTS,refresh:()=>refreshAudioState(true),notify:()=>markSync('audio.put')
  });
+ window.Classroom20?.create({selectedQuestions:()=>batchAudio.selectedQuestions(),api,hash,studioCheck:checkStudioTTS,upload:uploadVoice,nghiMake:(model,text)=>voiceEngine.make(model,text),refresh:()=>refreshAudioState(true),notify:()=>markSync('audio.put')});
  $('newQuestion').onclick=newQuestionScreen;
  $('openBatchAudio').onclick=()=>openScreen('batch');
  $('goBatchAudio').onclick=()=>openScreen('batch');
