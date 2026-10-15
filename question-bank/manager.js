@@ -62,7 +62,7 @@ function switchVoiceProvider(value,keepStored=false){
  $('nghiVoiceControls').hidden=studio;
  $('studioVoiceControls').hidden=!studio;
  $('studioDetails').hidden=!studio;
- if(studio&&!studioInfo.voiceVersion)void checkStudioTTS();
+ // Provider selection only changes UI; the caller awaits AI Studio discovery before opening a new voice.
 }
 async function checkStudioTTS(){
  $('studioStatus').textContent='⏳ Đang kiểm tra Google AI Studio...';
@@ -695,7 +695,10 @@ async function init(){
  $('voiceModel').onchange=()=>{voiceEngine.stop();showAudio().catch(e=>report('audioStatus',issue(e),true))};
  $('audioProvider').onchange=()=>{
   voiceEngine.stop();switchVoiceProvider($('audioProvider').value);
-  showAudio().catch(e=>report('audioStatus',issue(e),true));
+  void(async()=>{
+   if($('audioProvider').value==='studio'&&!studioInfo.voiceVersion)await checkStudioTTS();
+   await showAudio();
+  })().catch(e=>report('audioStatus',issue(e),true));
  };
  $('studioCheck').onclick=()=>void checkStudioTTS();
  $('studioPreview').onclick=playStudioPreview;
