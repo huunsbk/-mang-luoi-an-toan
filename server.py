@@ -8,43 +8,17 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 
-FEEDBACK_MAP_API_URL="https://exfnarddchxzfewlztwb.supabase.co/functions/v1/feedback-map-api"
+SUPABASE_URL="https://ykckqcykxfhpfqptckxk.supabase.co"
+API_KEY="sb_publishable_2pfQHPjlGmtgOgGO0qaHXA_zGrwUZwT"
 UUID_RE=re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",re.I)
 BASE_DIR=os.path.dirname(os.path.abspath(__file__))
 
-# The teacher portal routes requests through this single Python handler.
-# Delegate /api/marble-tts before JSON parsing (POST needs the raw body).
-_marble_tts_module=None
-def dispatch_marble_tts(request, method):
-    global _marble_tts_module
-    try:
-        if _marble_tts_module is None:
-            import importlib.util
-            tts_path=os.path.join(BASE_DIR,"api","marble-tts.py")
-            spec=importlib.util.spec_from_file_location("marble_tts_route",tts_path)
-            if spec is None or spec.loader is None:
-                raise RuntimeError("Cannot load Marble TTS module")
-            module=importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            _marble_tts_module=module
-        return getattr(_marble_tts_module.handler,"do_"+method)(request)
-    except Exception:
-        return request._json({"error":"Dịch vụ giọng đọc AI tạm thời không khả dụng."},503)
-
 def rpc(name,payload,timeout=8):
-    data=json.dumps({"rpc":name,"payload":payload},ensure_ascii=False).encode("utf-8")
-    req=urllib.request.Request(
-        FEEDBACK_MAP_API_URL,
-        data=data,
-        method="POST",
-        headers={"Content-Type":"application/json","User-Agent":"giaovien-psi-feedback-map/1.0"}
-    )
+    data=json.dumps(payload,ensure_ascii=False).encode("utf-8")
+    req=urllib.request.Request(f"{SUPABASE_URL}/rest/v1/rpc/{name}",data=data,method="POST",headers={"Content-Type":"application/json","apikey":API_KEY,"User-Agent":"mang-luoi-an-toan/4.0"})
     with urllib.request.urlopen(req,timeout=timeout) as r:
         raw=r.read().decode("utf-8")
-        result=json.loads(raw) if raw else {}
-        if result.get("error"):
-            raise RuntimeError(result.get("error"))
-        return result.get("data")
+        return json.loads(raw) if raw else None
 
 def clean_keyword(value):
     value=unicodedata.normalize("NFC",str(value or "")).upper()
@@ -92,143 +66,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed=urllib.parse.urlparse(self.path);path=parsed.path;query=urllib.parse.parse_qs(parsed.query)
-        if path=="/api/marble-tts":return dispatch_marble_tts(self,"GET")
         if path in ("/","/index.html"):
             try:
                 with open(os.path.join(BASE_DIR,"index.html"),"rb") as f:body=f.read()
                 self.send_response(200);self.send_header("Content-Type","text/html; charset=utf-8");self.send_header("Content-Length",str(len(body)));self.send_header("Cache-Control","no-store");self.end_headers();self.wfile.write(body)
             except Exception as e:self._json({"error":"Không tải được giao diện","detail":str(e)[:160]},500)
-            return
-
-        # NGHI-TTS local voice model files. Fixed, allowlisted upstream only.
-        # The 64 MB ONNX model is redirected to HuggingFace's CORS-enabled CDN,
-        # not streamed through the Vercel function. Inference stays on the client.
-        # Allowlist NGHI-TTS voices; only the selected model (~64 MB) is downloaded.
-        voice_match=re.fullmatch(r"/marble-race/voice/([a-z0-9]+)\.onnx(\.json)?",path)
-        available_voices={'adam1','banmai','calmwoman3688','chieuthanh','deepman3909','duyoryx3175','lacphi','maiphuong','manhdung','minhkhang','minhquang','minhthu','mytam2','mytam2794','ngochuyen','ngochuyennew','ngocngan3701','phuongtrang','taian2','taian4','thanhphuong2','thientam','tranthanh3870','vietthao3886','yannew'}
-        if voice_match:
-            voice=voice_match.group(1)
-            if voice not in available_voices:
-                return self._json({"error":"Giọng NGHI-TTS không được hỗ trợ"},404)
-            if voice_match.group(2):
-                try:
-                    upstream="https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/config.json"
-                    req=urllib.request.Request(upstream,headers={"User-Agent":"marble-race-nghi-tts/1.0"})
-                    with urllib.request.urlopen(req,timeout=12) as response:
-                        body=response.read(10000)
-                    settings=json.loads(body)
-                    if settings.get("espeak",{}).get("voice")!="vi" or not settings.get("phoneme_id_map"):
-                        return self._json({"error":"Cấu hình giọng không hợp lệ"},502)
-                    self.send_response(200)
-                    self.send_header("Content-Type","application/json; charset=utf-8")
-                    self.send_header("Content-Length",str(len(body)))
-                    self.send_header("Cache-Control","public, max-age=86400")
-                    self.send_header("X-Content-Type-Options","nosniff")
-                    self.end_headers()
-                    self.wfile.write(body)
-                except Exception:
-                    self._json({"error":"Không tải được cấu hình giọng NGHI-TTS"},502)
-                return
-            try:
-                class NoFollow(urllib.request.HTTPRedirectHandler):
-                    def redirect_request(self,req,fp,code,msg,headers,url):
-                        return None
-                opener=urllib.request.build_opener(NoFollow)
-                remote=f"https://huggingface.co/doof-ferb/nghitts-copy/resolve/main/piper-tts/{voice}.onnx"
-                redirect=None
-                for _ in range(5):
-                    try:
-                        with opener.open(urllib.request.Request(remote,headers={"User-Agent":"marble-race-nghi-tts/1.0"}),timeout=12):
-                            raise ValueError("Missing model CDN redirect")
-                    except urllib.error.HTTPError as err:
-                        if err.code not in (301,302,303,307,308):
-                            raise
-                        redirect=urllib.parse.urljoin(remote,err.headers.get("Location",""))
-                        host=urllib.parse.urlsplit(redirect).hostname or ""
-                        if urllib.parse.urlsplit(redirect).scheme!="https":
-                            raise ValueError("Invalid model location")
-                        if host=="huggingface.co":
-                            remote=redirect
-                            continue
-                        if not host.endswith(".cdn.hf.co"):
-                            raise ValueError("Untrusted model host")
-                        break
-                else:
-                    raise ValueError("No approved CDN location")
-                if not redirect:
-                    raise ValueError("Missing CDN URL")
-                self.send_response(302)
-                self.send_header("Location",redirect)
-                self.send_header("Cache-Control","private, max-age=600")
-                self.send_header("Content-Length","0")
-                self.end_headers()
-            except Exception:
-                self._json({"error":"Không xác định được đường tải mô hình NGHI-TTS"},502)
-            return
-
-        static_routes = {
-            "/forgot-password": ("forgot-password/index.html", "text/html; charset=utf-8"),
-            "/forgot-password/": ("forgot-password/index.html", "text/html; charset=utf-8"),
-            "/forgot-password/index.html": ("forgot-password/index.html", "text/html; charset=utf-8"),
-            "/forgot-password/recovery.js": ("forgot-password/recovery.js", "application/javascript; charset=utf-8"),
-            "/register": ("register/index.html", "text/html; charset=utf-8"),
-            "/register/": ("register/index.html", "text/html; charset=utf-8"),
-            "/register/index.html": ("register/index.html", "text/html; charset=utf-8"),
-            "/register/register.js": ("register/register.js", "application/javascript; charset=utf-8"),
-            "/question-bank": ("question-bank/index.html", "text/html; charset=utf-8"),
-            "/question-bank/": ("question-bank/index.html", "text/html; charset=utf-8"),
-            "/question-bank/index.html": ("question-bank/index.html", "text/html; charset=utf-8"),
-            "/question-bank/manager.js": ("question-bank/manager.js", "application/javascript; charset=utf-8"),
-            "/question-bank/batch-audio.js": ("question-bank/batch-audio.js", "application/javascript; charset=utf-8"),
-            "/question-bank/classroom20.js": ("question-bank/classroom20.js", "application/javascript; charset=utf-8"),
-            "/classrooms": ("classrooms/index.html", "text/html; charset=utf-8"),
-            "/classrooms/": ("classrooms/index.html", "text/html; charset=utf-8"),
-            "/classrooms/index.html": ("classrooms/index.html", "text/html; charset=utf-8"),
-            "/classrooms/classroom-store.js": ("classrooms/classroom-store.js", "application/javascript; charset=utf-8"),
-            "/classrooms/classroom-manager.js": ("classrooms/classroom-manager.js", "application/javascript; charset=utf-8"),
-            "/classrooms/class-photo-batch.js": ("classrooms/class-photo-batch.js", "application/javascript; charset=utf-8"),
-            "/marble-race/classroom-picker.js": ("marble-race/classroom-picker.js", "application/javascript; charset=utf-8"),
-            "/pose-quiz": ("pose-quiz/index.html", "text/html; charset=utf-8"),
-            "/pose-quiz/": ("pose-quiz/index.html", "text/html; charset=utf-8"),
-            "/pose-quiz/index.html": ("pose-quiz/index.html", "text/html; charset=utf-8"),
-            "/pose-quiz/supabase-config.js": ("pose-quiz/supabase-config.js", "application/javascript; charset=utf-8"),
-            "/pose-quiz/assets/default-bgm.mp3": ("pose-quiz/assets/default-bgm.mp3", "audio/mpeg"),
-            "/pose-quiz/assets/default-correct.mp3": ("pose-quiz/assets/default-correct.mp3", "audio/mpeg"),
-            "/pose-quiz/assets/default-wrong.mp3": ("pose-quiz/assets/default-wrong.mp3", "audio/mpeg"),
-            "/pose-quiz/assets/default-pose-none.webp": ("pose-quiz/assets/default-pose-none.webp", "image/webp"),
-            "/pose-quiz/assets/default-pose-raise-left.webp": ("pose-quiz/assets/default-pose-raise-left.webp", "image/webp"),
-            "/pose-quiz/assets/default-pose-raise-right.webp": ("pose-quiz/assets/default-pose-raise-right.webp", "image/webp"),
-            "/pose-quiz/assets/default-pose-both-up.webp": ("pose-quiz/assets/default-pose-both-up.webp", "image/webp"),
-            "/pose-quiz/assets/default-pose-cross-arms.webp": ("pose-quiz/assets/default-pose-cross-arms.webp", "image/webp"),
-            "/supabase-config.js": ("pose-quiz/supabase-config.js", "application/javascript; charset=utf-8"),
-            "/marble-race": ("marble-race/index.html", "text/html; charset=utf-8"),
-            "/marble-race/": ("marble-race/index.html", "text/html; charset=utf-8"),
-            "/marble-race/index.html": ("marble-race/index.html", "text/html; charset=utf-8"),
-            "/marble-race/voice/piper-worker.js": ("marble-race/voice/piper-worker.js", "application/javascript; charset=utf-8"),
-            "/marble-race/shared-bank.js": ("marble-race/shared-bank.js", "application/javascript; charset=utf-8"),
-            "/boc-tham": ("boc-tham/index.html", "text/html; charset=utf-8"),
-            "/boc-tham/": ("boc-tham/index.html", "text/html; charset=utf-8"),
-            "/boc-tham/index.html": ("boc-tham/index.html", "text/html; charset=utf-8"),
-            "/mang-luoi-an-toan": ("mang-luoi-an-toan/index.html", "text/html; charset=utf-8"),
-            "/mang-luoi-an-toan/": ("mang-luoi-an-toan/index.html", "text/html; charset=utf-8"),
-            "/mang-luoi-an-toan/index.html": ("mang-luoi-an-toan/index.html", "text/html; charset=utf-8"),
-        }
-        if path in static_routes:
-            rel, content_type = static_routes[path]
-            try:
-                full = os.path.join(BASE_DIR, rel)
-                with open(full, "rb") as f:
-                    body = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", content_type)
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("X-Content-Type-Options", "nosniff")
-                self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
-                self.end_headers()
-                self.wfile.write(body)
-            except Exception as e:
-                self._json({"error":"Không tải được mô-đun","detail":str(e)[:160]},500)
             return
 
         if path=="/api/room":
@@ -247,27 +89,9 @@ class Handler(BaseHTTPRequestHandler):
             try:return self._json({"ok":True,"answers":rpc("safety_get_answers",{"p_room_id":room}) or []})
             except Exception as e:return self._json({"error":"Không đọc được dữ liệu lớp học","detail":str(e)[:180]},502)
 
-        if path=="/api/results":
-            library_token=(query.get("library_token") or [""])[0]
-            if not UUID_RE.match(library_token):return self._json({"error":"Mã thư viện không hợp lệ"},400)
-            try:
-                rows=rpc("feedback_list_results",{"p_library_token":library_token}) or []
-                return self._json({"ok":True,"results":rows})
-            except Exception as e:return self._json({"error":"Không đọc được lịch sử kết quả","detail":str(e)[:180]},502)
-
-        if path=="/api/results/item":
-            library_token=(query.get("library_token") or [""])[0]
-            result_id=(query.get("result_id") or [""])[0]
-            if not UUID_RE.match(library_token) or not UUID_RE.match(result_id):return self._json({"error":"Mã kết quả không hợp lệ"},400)
-            try:
-                rows=rpc("feedback_get_result",{"p_library_token":library_token,"p_result_id":result_id}) or []
-                if not rows:return self._json({"error":"Không tìm thấy kết quả đã lưu"},404)
-                return self._json({"ok":True,"result":rows[0]})
-            except Exception as e:return self._json({"error":"Không mở được kết quả đã lưu","detail":str(e)[:180]},502)
-
         if path=="/api/health":
             room="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";token="cccccccc-cccc-4ccc-8ccc-cccccccccccc";person="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-            question="Điều gì giúp một hoạt động tương tác hiệu quả hơn";limit=3;base="https://giaovien-psi.vercel.app"
+            question="Theo thầy cô điều gì giúp trẻ em an toàn hơn";limit=3;base="https://mang-luoi-an-toan.vercel.app"
             try:
                 set_room=self._post_json_url(base+"/api/room",{"room":room,"host_token":token,"question":question,"word_limit":limit})
                 room_data=self._get_json_url(base+"/api/room?room="+room)
@@ -302,9 +126,7 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"error":"Not found"},404)
 
     def do_POST(self):
-        parsed=urllib.parse.urlparse(self.path)
-        if parsed.path=="/api/marble-tts":return dispatch_marble_tts(self,"POST")
-        body=self._body_json()
+        parsed=urllib.parse.urlparse(self.path);body=self._body_json()
         if parsed.path=="/api/room":
             room=str(body.get("room",""));token=str(body.get("host_token",""));question=str(body.get("question","")).strip()
             try:word_limit=int(body.get("word_limit",3))
@@ -316,40 +138,6 @@ class Handler(BaseHTTPRequestHandler):
                 rpc("safety_set_room",{"p_room_id":room,"p_host_token":token,"p_question":question,"p_word_limit":word_limit})
                 return self._json({"ok":True})
             except Exception as e:return self._json({"error":"Không lưu được câu hỏi","detail":str(e)[:180]},502)
-
-        if parsed.path=="/api/results/save":
-            room=str(body.get("room",""));host_token=str(body.get("host_token",""));library_token=str(body.get("library_token",""));title=str(body.get("title","")).strip()
-            display_settings=body.get("display_settings",{})
-            if not UUID_RE.match(room) or not UUID_RE.match(host_token) or not UUID_RE.match(library_token):return self._json({"error":"Mã lưu kết quả không hợp lệ"},400)
-            if not (1<=len(title)<=120):return self._json({"error":"Tên kết quả phải có từ 1 đến 120 ký tự"},400)
-            if not isinstance(display_settings,dict):return self._json({"error":"Thiết lập hiển thị không hợp lệ"},400)
-            try:
-                saved=rpc("feedback_save_result",{
-                    "p_room_id":room,
-                    "p_host_token":host_token,
-                    "p_library_token":library_token,
-                    "p_title":title,
-                    "p_display_settings":display_settings
-                }) or {}
-                return self._json(saved if isinstance(saved,dict) else {"ok":True,"result":saved})
-            except Exception as e:return self._json({"error":"Không lưu được kết quả","detail":str(e)[:180]},502)
-
-        if parsed.path=="/api/results/rename":
-            library_token=str(body.get("library_token",""));result_id=str(body.get("result_id",""));title=str(body.get("title","")).strip()
-            if not UUID_RE.match(library_token) or not UUID_RE.match(result_id):return self._json({"error":"Mã kết quả không hợp lệ"},400)
-            if not (1<=len(title)<=120):return self._json({"error":"Tên kết quả phải có từ 1 đến 120 ký tự"},400)
-            try:
-                renamed=rpc("feedback_rename_result",{"p_library_token":library_token,"p_result_id":result_id,"p_title":title}) or {}
-                return self._json(renamed if isinstance(renamed,dict) else {"ok":True})
-            except Exception as e:return self._json({"error":"Không đổi được tên kết quả","detail":str(e)[:180]},502)
-
-        if parsed.path=="/api/results/delete":
-            library_token=str(body.get("library_token",""));result_id=str(body.get("result_id",""))
-            if not UUID_RE.match(library_token) or not UUID_RE.match(result_id):return self._json({"error":"Mã kết quả không hợp lệ"},400)
-            try:
-                deleted=rpc("feedback_delete_result",{"p_library_token":library_token,"p_result_id":result_id}) or {}
-                return self._json(deleted if isinstance(deleted,dict) else {"ok":True})
-            except Exception as e:return self._json({"error":"Không xóa được kết quả","detail":str(e)[:180]},502)
 
         if parsed.path=="/api/submit":
             room=str(body.get("room",""));participant=str(body.get("participant",""));name=str(body.get("name","")).strip();answer=clean_keyword(body.get("answer",""))
