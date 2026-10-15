@@ -180,6 +180,7 @@ class Handler(BaseHTTPRequestHandler):
             "/question-bank/index.html": ("question-bank/index.html", "text/html; charset=utf-8"),
             "/question-bank/manager.js": ("question-bank/manager.js", "application/javascript; charset=utf-8"),
             "/question-bank/batch-audio.js": ("question-bank/batch-audio.js", "application/javascript; charset=utf-8"),
+            "/question-bank/classroom20.js": ("question-bank/classroom20.js", "application/javascript; charset=utf-8"),
             "/classrooms": ("classrooms/index.html", "text/html; charset=utf-8"),
             "/classrooms/": ("classrooms/index.html", "text/html; charset=utf-8"),
             "/classrooms/index.html": ("classrooms/index.html", "text/html; charset=utf-8"),
