@@ -8,6 +8,7 @@ const K=['A','B','C','D'];
 let supabase=null,rows=[],selected=new Set(),editing=null,editingStamp=null,busy=false,files=[],audioURLs=new Map(),queue=0;
 let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0,audioInventorySerial=0;
 let scope='all',activeScreen='list',visibleRows=[],editSnapshot='',isRestoringRoute=false;
+let studioInfo={configured:false,voiceVersion:''},studioStoredVoiceId='',studioPreviewAudio=null,studioPreviewURL='';
 function report(where,message,error=false){const el=$(where);el.textContent=message;el.classList.toggle('error',error)}
 function issue(e){return String(e?.message||e||'Lỗi không xác định').slice(0,400)}
 async function run(task){
@@ -44,6 +45,68 @@ function fill(el,values,all,previous){
 
 const MODEL_NAMES={deepman3909:'Nam trầm',chieuthanh:'Nam',duyoryx3175:'Nam',vietthao3886:'Nam',calmwoman3688:'Nữ',banmai:'Nữ',ngocngan3701:'Nữ'};
 function voiceLabel(model){return (MODEL_NAMES[model]||'Giọng')+' · '+model}
+function voiceIdLabel(voice){
+ if(voice.startsWith('studio:'))return '✨ Google AI Studio · '+voice.slice(7,15);
+ return '🎙️ '+voiceLabel(voice.replace(/^nghi:/,''));
+}
+function activeVoiceId(){
+ return $('audioProvider').value==='studio'?(studioStoredVoiceId||'studio:'+(studioInfo.voiceVersion||'')):'nghi:'+$('voiceModel').value;
+}
+function currentGenerationVoiceId(){
+ return $('audioProvider').value==='studio'?'studio:'+studioInfo.voiceVersion:'nghi:'+$('voiceModel').value;
+}
+function switchVoiceProvider(value,keepStored=false){
+ const studio=value==='studio';
+ $('audioProvider').value=studio?'studio':'nghi';
+ if(!keepStored)studioStoredVoiceId='';
+ $('nghiVoiceControls').hidden=studio;
+ $('studioVoiceControls').hidden=!studio;
+ $('studioDetails').hidden=!studio;
+ if(studio&&!studioInfo.voiceVersion)void checkStudioTTS();
+}
+async function checkStudioTTS(){
+ $('studioStatus').textContent='⏳ Đang kiểm tra Google AI Studio...';
+ try{
+  const response=await fetch('/api/marble-tts',{cache:'no-store'});
+  if(!response.ok)throw Error('Máy chủ AI Studio trả lỗi '+response.status);
+  const data=await response.json(),version=String(data.voiceVersion||'');
+  if(!/^[a-f0-9]{16}$/.test(version))throw Error('Không nhận được mã phiên bản giọng AI hợp lệ.');
+  studioInfo={configured:data.configured===true,voiceVersion:version};
+  $('studioStatus').textContent=studioInfo.configured?'✅ AI Studio sẵn sàng. Nhập mã giáo viên để tạo giọng hoặc nghe thử.':'⚠ AI Studio chưa được cấu hình trên Vercel. Các tệp WAV đã lưu vẫn nghe lại được.';
+  return studioInfo;
+ }catch(error){
+  studioInfo={configured:false,voiceVersion:''};
+  $('studioStatus').textContent='⚠ '+issue(error);
+  return studioInfo;
+ }
+}
+async function makeStudioClip(text){
+ if(!studioInfo.configured||!/^[a-f0-9]{16}$/.test(studioInfo.voiceVersion))throw Error('Google AI Studio chưa sẵn sàng. Hãy nhấn Kiểm tra AI Studio.');
+ const pin=$('studioTeacherPin').value;
+ if(!pin.trim())throw Error('Vui lòng nhập mã truy cập AI Studio dành cho giáo viên.');
+ if(String(text).length>1800)throw Error('Đoạn đọc quá dài với AI Studio (tối đa 1800 ký tự).');
+ const response=await fetch('/api/marble-tts',{method:'POST',
+   headers:{'Content-Type':'application/json','X-Marble-Teacher-Code':pin},body:JSON.stringify({text})});
+ if(!response.ok){const msg=await response.json().catch(()=>({}));throw Error(msg.error||'Google AI Studio báo lỗi HTTP '+response.status)}
+ const blob=await response.blob();
+ const header=String.fromCharCode(...new Uint8Array(await blob.slice(0,12).arrayBuffer()));
+ if(!header.startsWith('RIFF')||header.slice(8,12)!=='WAVE'||blob.size<45)throw Error('AI Studio không trả tệp WAV hợp lệ.');
+ return blob;
+}
+async function playStudioPreview(){
+ await run(async()=>{
+  if(!studioInfo.configured)await checkStudioTTS();
+  const content=editing?.spoken?.question||'Xin chào các em. Hôm nay chúng ta cùng học một bài thật thú vị.';
+  report('audioStatus','✨ Đang tạo đoạn nghe thử từ Google AI Studio...');
+  const clip=await makeStudioClip(content);
+  if(studioPreviewAudio){studioPreviewAudio.pause();studioPreviewAudio=null}
+  if(studioPreviewURL){URL.revokeObjectURL(studioPreviewURL);studioPreviewURL=''}
+  const url=URL.createObjectURL(clip);studioPreviewURL=url;
+  const a=new Audio(url);studioPreviewAudio=a;
+  a.onended=()=>{if(studioPreviewAudio===a){studioPreviewAudio=null;URL.revokeObjectURL(url);studioPreviewURL=''}};
+  await a.play();report('audioStatus','▶ Đang nghe thử giọng Google AI Studio (chưa lưu vào ngân hàng).');
+ });
+}
 function inventoryFor(id){return audioInventory.get(id)||[]}
 function audioInfo(row){
  const parts=inventoryFor(row.id),current=parts.filter(x=>x.current),stale=parts.filter(x=>!x.current);
@@ -91,15 +154,12 @@ function ensureVoiceOption(model){
 }
 function autoChooseVoice(item){
  if(!item?.id)return;
- const parts=inventoryFor(item.id);
- if(!parts.length)return;
+ const parts=inventoryFor(item.id);if(!parts.length)return;
  const choices=new Map();
- for(const record of parts){
-  const model=record.voiceId.replace(/^nghi:/,'');
-  choices.set(model,(choices.get(model)||0)+(record.current?10:1));
- }
- const winner=[...choices.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0];
- if(winner){ensureVoiceOption(winner);$('voiceModel').value=winner}
+ for(const part of parts)choices.set(part.voiceId,(choices.get(part.voiceId)||0)+(part.current?10:1));
+ const favorite=[...choices.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0];
+ if(favorite?.startsWith('studio:')){switchVoiceProvider('studio',true);studioStoredVoiceId=favorite;void checkStudioTTS()}
+ else if(favorite?.startsWith('nghi:')){switchVoiceProvider('nghi');const model=favorite.slice(5);ensureVoiceOption(model);$('voiceModel').value=model}
 }
 function drawAudioSummary(item){
  const area=$('audioOverview'),voices=$('audioVoiceList');area.replaceChildren();voices.replaceChildren();
@@ -120,12 +180,15 @@ function drawAudioSummary(item){
   groups.get(file.voiceId)[file.current?'ready':'stale']++;
  }
  for(const [voice,counts] of groups){
-  const model=voice.replace(/^nghi:/,'');
   const button=document.createElement('button');button.type='button';
-  button.className=$('voiceModel').value===model?'selected':'';
-  button.textContent='🎙️ '+voiceLabel(model)+' · '+counts.ready+'/7'+(counts.stale?' · '+counts.stale+' cũ':'');
-  button.title='Xem các tệp âm thanh của giọng '+model;
-  button.onclick=()=>{ensureVoiceOption(model);$('voiceModel').value=model;voiceEngine.stop();showAudio().catch(e=>report('audioStatus',issue(e),true))};
+  button.className=activeVoiceId()===voice?'selected':'';
+  button.textContent=voiceIdLabel(voice)+' · '+counts.ready+'/7'+(counts.stale?' · '+counts.stale+' cũ':'');
+  button.title='Xem các tệp âm thanh đã lưu của '+voiceIdLabel(voice);
+  button.onclick=()=>{
+   if(voice.startsWith('studio:')){switchVoiceProvider('studio',true);studioStoredVoiceId=voice}
+   else if(voice.startsWith('nghi:')){switchVoiceProvider('nghi');const model=voice.slice(5);ensureVoiceOption(model);$('voiceModel').value=model}
+   voiceEngine.stop();showAudio().catch(e=>report('audioStatus',issue(e),true));
+  };
   voices.append(button);
  }
  $('audioVoiceHint').textContent=groups.size?'Chọn một giọng đã lưu để nghe và tải WAV; những đoạn cũ cần tạo lại sau khi sửa câu hỏi.':'Chưa có giọng. Nhấn “Tạo / bổ sung đoạn còn thiếu” để lưu âm thanh.';
@@ -508,7 +571,7 @@ const voiceEngine=new LocalVoice();
 const hash=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
 async function audioMetadata(ids){
  if(!ids.length)return[];
- return (await api('audio.list',{ids,voice_id:'nghi:'+$('voiceModel').value})).items||[];
+ return (await api('audio.list',{ids,voice_id:activeVoiceId()})).items||[];
 }
 async function showAudio(){
  const serial=++audioPanelSerial,box=$('audioGrid'),item=editing;
