@@ -1,0 +1,67 @@
+name: Feedback Result History QA
+
+on:
+  push:
+    branches:
+      - feedback-result-history
+      - giaovien-portal
+    paths:
+      - 'server.py'
+      - 'mang-luoi-an-toan/**'
+      - 'qa/feedback-result-history.mjs'
+      - '.github/workflows/feedback-result-history-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Python and result routes
+        run: |
+          python3 -m py_compile server.py
+          grep -q 'feedback_save_result' server.py
+          grep -q 'feedback_list_results' server.py
+          grep -q 'feedback_get_result' server.py
+          grep -q 'feedback_rename_result' server.py
+          grep -q 'feedback_delete_result' server.py
+          grep -q 'Lưu kết quả' mang-luoi-an-toan/index.html
+          grep -q 'Kết quả đã lưu' mang-luoi-an-toan/index.html
+          if grep -Eqi 'Mạng lưới an toàn|Tên của thầy/cô|Mời thầy cô' mang-luoi-an-toan/index.html; then
+            echo "Legacy wording remains"
+            exit 1
+          fi
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Start real portal handler
+        run: |
+          python3 -c "from http.server import HTTPServer; from server import Handler; HTTPServer(('127.0.0.1',4180),Handler).serve_forever()" >/tmp/feedback-result-server.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4180/mang-luoi-an-toan/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/feedback-result-server.log
+          exit 1
+
+      - name: Run real save-reload-open-rename-delete flow
+        run: node qa/feedback-result-history.mjs
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/feedback-result-server.log || true

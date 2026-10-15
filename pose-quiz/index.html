@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Pose Quiz Game - V10 Multi-Person Target Lock</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/pose-quiz/supabase-config.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+        body { font-family: 'Quicksand', sans-serif; overflow: hidden; background: #0f172a; margin: 0; padding: 0; }
+        .camera-flip { transform: scaleX(-1); }
+        .correct-bg { background-color: rgba(34, 197, 94, 0.98); }
+        .wrong-bg { background-color: rgba(239, 68, 68, 0.98); }
+        .answer-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .character-bounce { animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .portal-home-fab{position:fixed;top:12px;left:12px;z-index:99999;padding:9px 12px;border-radius:12px;background:rgba(15,23,42,.92);color:#fff!important;text-decoration:none;font:800 13px/1.1 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}
+.portal-home-fab:hover{transform:translateY(-1px);background:#0f172a}
+/* Trong màn chơi, Cổng giáo viên ở hàng trên; CÂU + loa nằm riêng góc trái phía dưới để không chồng nhau. */
+.pose-game-header{position:relative;min-height:96px!important;padding:8px 10px 8px 10px!important;align-items:flex-start!important}
+.pose-game-header-left{position:absolute!important;left:12px!important;bottom:8px!important;z-index:30!important;gap:6px!important}
+.pose-game-header-right{margin-left:auto!important;gap:10px!important}
+
+@media(max-width:1100px){
+  .portal-home-fab{top:8px;left:8px;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:12px}
+  .portal-home-label{display:none}
+  .pose-game-header{min-height:92px!important}
+  .pose-game-header-left{left:8px!important;bottom:7px!important}
+  .pose-game-header-right{gap:6px!important}
+}
+@media(max-width:768px){
+  .pose-game-header{padding:6px!important;gap:4px!important;min-height:94px!important}
+  .pose-game-header-left{left:6px!important;bottom:6px!important;gap:4px!important}
+  .pose-game-question-no{font-size:12px!important;padding:5px 7px!important;border-radius:9px!important}
+  .pose-game-mute{width:30px!important;height:30px!important;font-size:16px!important}
+  .pose-volume-popover{left:0!important;right:auto!important;top:36px!important;width:190px!important;padding:10px!important}
+  .pose-game-header-right{gap:5px!important;max-width:calc(100% - 52px)!important;flex-wrap:wrap!important;justify-content:flex-end!important}
+  .pose-game-timer{padding-right:5px!important}
+  .pose-game-timer-label{font-size:7px!important;letter-spacing:.06em!important}
+  .pose-game-timer-value{font-size:20px!important}
+  .pose-game-check,.pose-game-pause{padding:7px 9px!important;font-size:12px!important;border-radius:12px!important;white-space:nowrap}
+  .pose-game-main{flex-direction:column!important}
+  .pose-game-content{width:100%!important;height:64%!important;min-height:0!important;border-right:0!important;border-bottom:2px solid #e2e8f0!important;padding:5px!important}
+  .pose-question-panel{padding:6px!important;border-radius:18px!important;min-height:0!important}
+  .pose-question-text{font-size:18px!important;margin-bottom:4px!important;line-height:1.12!important}
+  .pose-question-visual{width:92px!important;height:92px!important}
+  .pose-answers-grid{gap:5px!important;min-height:0!important}
+  .pose-answer-card{padding:4px!important;border-width:2px!important;border-radius:15px!important;min-width:0!important;overflow:hidden}
+  .pose-answer-letter{width:34px!important;height:34px!important;margin-right:5px!important;font-size:17px!important;border-radius:11px!important}
+  .pose-answer-text{font-size:11px!important;line-height:1.05!important;padding-right:2px!important}
+  .pose-answer-visual{width:40px!important;height:40px!important;border-radius:10px!important;border-width:1px!important}
+  .pose-camera-panel{width:100%!important;height:36%!important;min-height:0!important}
+  .pose-camera-status{left:6px!important;right:6px!important;bottom:6px!important;padding:6px!important;border-radius:12px!important}
+  .pose-camera-status-icon{width:34px!important;height:34px!important}
+  .pose-camera-status-name{font-size:13px!important}
+  .pose-camera-scan{display:none!important}
+
+  .pose-editor{height:100vh!important;overflow-y:auto!important}
+  .pose-editor-header{position:sticky!important;top:0;z-index:60;flex-direction:column!important;align-items:stretch!important;padding:10px 12px 10px 52px!important;gap:8px!important}
+  .pose-editor-title{font-size:17px!important}
+  .pose-editor-title-fields{flex-wrap:wrap!important}
+  .pose-editor-title-fields input{width:100%!important}
+  .pose-editor-actions{justify-content:flex-start!important;gap:5px!important}
+  .pose-editor-actions button,.pose-editor-actions label{padding:7px 9px!important;font-size:9px!important}
+  .pose-editor-body{display:block!important;overflow:visible!important}
+  .pose-editor-sidebar{width:100%!important;overflow:visible!important;padding:12px!important;box-shadow:none!important}
+  .pose-editor-content{padding:10px!important;overflow:visible!important}
+  .pose-editor-question-card{padding:12px!important;border-radius:20px!important}
+  .pose-editor-question-head{flex-direction:column!important;gap:10px!important}
+  .pose-editor-question-image{width:120px!important;align-self:center}
+  .pose-editor-answers{grid-template-columns:1fr!important;gap:8px!important}
+}
+</style>
+</head>
+<body>
+    <a class="portal-home-fab" href="/" title="Về Cổng công cụ giáo viên">🏠 <span class="portal-home-label">Cổng giáo viên</span></a>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        const SUPABASE_CONFIG = window.POSE_QUIZ_SUPABASE;
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_CONFIG.url,
+            SUPABASE_CONFIG.publishableKey,
+            {
+                auth: {
+                    persistSession: true,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                }
+            }
+        );
+
+        const API_URL = SUPABASE_CONFIG.url + '/functions/v1/pose-quiz-api';
+
+        const mediaSrc = (value) => {
+            if (!value) return null;
+            if (typeof value === 'string') return value;
+            return value.url || value.signedUrl || null;
+        };
+
+        const DEFAULT_AUDIO_ASSETS = {
+            bgm: { url: '/pose-quiz/assets/default-bgm.mp3', name: 'Nhạc nền mặc định' },
+            correct: { url: '/pose-quiz/assets/default-correct.mp3', name: 'Âm trả lời đúng mặc định' },
+            wrong: { url: '/pose-quiz/assets/default-wrong.mp3', name: 'Âm trả lời sai mặc định' }
+        };
+
+        const resolvedLessonAudioSrc = (settings, type) => {
+            const customSrc = mediaSrc(settings?.audio?.[type]?.data);
+            if (customSrc) return customSrc;
+            if ((type === 'correct' || type === 'wrong') && settings?.audio?.defaultFeedback === false) return null;
+            return DEFAULT_AUDIO_ASSETS[type]?.url || null;
+        };
+
+        const backendRequest = async (action, payload = {}, file = null) => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session?.access_token) throw new Error('Phiên đăng nhập đã hết hạn.');
+
+            const options = {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    apikey: SUPABASE_CONFIG.publishableKey
+                }
+            };
+
+            if (file) {
+                const form = new FormData();
+                form.append('file', file);
+                if (payload && Object.keys(payload).length) form.append('payload', JSON.stringify(payload));
+                options.body = form;
+            } else {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify({ action, ...payload });
+            }
+
+            const response = await fetch(API_URL + '?action=' + encodeURIComponent(action), options);
+            let result;
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error('Backend trả về dữ liệu không hợp lệ.');
+            }
+            if (!response.ok || result?.ok === false) {
+                throw new Error(result?.error?.message || `Lỗi backend (${response.status})`);
+            }
+            return result;
+        };
+
+        const DEFAULT_POSE_CONFIG = {
+            NONE: { label: 'Bình thường', icon: '🧍', image: '/pose-quiz/assets/default-pose-none.webp' },
+            RAISE_LEFT: { label: 'Giơ tay trái', icon: '🙋‍♂️', image: '/pose-quiz/assets/default-pose-raise-left.webp' },
+            RAISE_RIGHT: { label: 'Giơ tay phải', icon: '🙋‍♀️', image: '/pose-quiz/assets/default-pose-raise-right.webp' },
+            BOTH_UP: { label: 'Giơ hai tay', icon: '🙌', image: '/pose-quiz/assets/default-pose-both-up.webp' },
+            CROSS_ARMS: { label: 'Khoanh tay', icon: '🙅', image: '/pose-quiz/assets/default-pose-cross-arms.webp' }
+        };
+
+        const resolvedPoseAssetSrc = (settings, poseId) => (
+            mediaSrc(settings?.poseAssets?.[poseId]) || DEFAULT_POSE_CONFIG[poseId]?.image || null
+        );
+
+        let sharedAudioContext = null;
+        const unlockAudio = () => {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return null;
+                if (!sharedAudioContext) sharedAudioContext = new AudioCtx();
+                if (sharedAudioContext.state === 'suspended') sharedAudioContext.resume().catch(() => {});
+                return sharedAudioContext;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const playDefaultFeedbackTone = (isCorrect, volume = 0.9) => {
+            const ctx = unlockAudio();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const now = ctx.currentTime;
+                osc.type = isCorrect ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(isCorrect ? 660 : 220, now);
+                if (isCorrect) osc.frequency.exponentialRampToValueAtTime(990, now + 0.16);
+                else osc.frequency.exponentialRampToValueAtTime(150, now + 0.22);
+                gain.gain.setValueAtTime(Math.max(0.02, Math.min(1, volume)) * 0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (isCorrect ? 0.28 : 0.38));
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + (isCorrect ? 0.3 : 0.4));
+            } catch (_) {}
+        };
+
+        const analyzePose = (landmarks) => {
+            if (!landmarks) return 'NONE';
+            const leftWrist = landmarks[15];
+            const rightWrist = landmarks[16];
+            const leftShoulder = landmarks[11];
+            const rightShoulder = landmarks[12];
+            
+            const isLeftUp = leftWrist.y < leftShoulder.y;
+            const isRightUp = rightWrist.y < rightShoulder.y;
+
+            if (isLeftUp && isRightUp) return 'BOTH_UP';
+            if (isLeftUp) return 'RAISE_LEFT';
+            if (isRightUp) return 'RAISE_RIGHT';
+
+            const wristDistance = Math.sqrt(
+                Math.pow(leftWrist.x - rightWrist.x, 2) + 
+                Math.pow(leftWrist.y - rightWrist.y, 2)
+            );
+            if (wristDistance < 0.15) return 'CROSS_ARMS';
+
+            return 'NONE';
+        };
+
+        const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+        const IMPORTANT_POSE_POINTS = [11, 12, 13, 14, 15, 16, 23, 24];
+
+        const buildPoseDetection = (landmarks, index) => {
+            const usable = (landmarks || []).filter(point =>
+                Number.isFinite(point?.x) &&
+                Number.isFinite(point?.y) &&
+                (Number.isFinite(point?.visibility) ? point.visibility >= 0.2 : true)
+            );
+            if (!usable.length) return null;
+
+            const xs = usable.map(point => clamp01(point.x));
+            const ys = usable.map(point => clamp01(point.y));
+            const padX = 0.035;
+            const padY = 0.04;
+            const minX = clamp01(Math.min(...xs) - padX);
+            const maxX = clamp01(Math.max(...xs) + padX);
+            const minY = clamp01(Math.min(...ys) - padY);
+            const maxY = clamp01(Math.max(...ys) + padY);
+            const width = Math.max(0.02, maxX - minX);
+            const height = Math.max(0.02, maxY - minY);
+            const shoulderWidth = landmarks?.[11] && landmarks?.[12]
+                ? Math.hypot(landmarks[11].x - landmarks[12].x, landmarks[11].y - landmarks[12].y)
+                : 0;
+
+            return {
+                index,
+                landmarks,
+                box: {
+                    minX, maxX, minY, maxY, width, height,
+                    cx: (minX + maxX) / 2,
+                    cy: (minY + maxY) / 2
+                },
+                shoulderWidth
+            };
+        };
+
+        const getPoseQuality = (detection) => {
+            if (!detection) return { ok: false, level: 'lost', label: 'Không thấy học sinh đã chọn' };
+            const landmarks = detection.landmarks || [];
+            const important = IMPORTANT_POSE_POINTS.map(index => landmarks[index]).filter(Boolean);
+            const visibleCount = important.filter(point => !Number.isFinite(point.visibility) || point.visibility >= 0.45).length;
+            const visibilityAvg = important.length
+                ? important.reduce((sum, point) => sum + (Number.isFinite(point.visibility) ? point.visibility : 1), 0) / important.length
+                : 0;
+
+            if (detection.box.height < 0.28 || detection.shoulderWidth < 0.055) {
+                return { ok: false, level: 'far', label: 'Hơi xa camera — mời học sinh tiến gần hơn' };
+            }
+            if (detection.box.height > 0.96) {
+                return { ok: false, level: 'near', label: 'Quá gần camera — lùi lại một chút' };
+            }
+            if (visibleCount < 6 || visibilityAvg < 0.45) {
+                return { ok: false, level: 'occluded', label: 'Cơ thể bị che/khuất — cần thấy rõ vai, tay và hông' };
+            }
+            return { ok: true, level: 'good', label: 'Khoảng cách tốt — AI đã sẵn sàng nhận tư thế' };
+        };
+
+        const boxIoU = (a, b) => {
+            if (!a || !b) return 0;
+            const left = Math.max(a.minX, b.minX);
+            const top = Math.max(a.minY, b.minY);
+            const right = Math.min(a.maxX, b.maxX);
+            const bottom = Math.min(a.maxY, b.maxY);
+            const inter = Math.max(0, right - left) * Math.max(0, bottom - top);
+            const union = a.width * a.height + b.width * b.height - inter;
+            return union > 0 ? inter / union : 0;
+        };
+
+        const pickTrackedPose = (previous, detections) => {
+            if (!previous || !detections?.length) return null;
+            let best = null;
+            let bestScore = Infinity;
+            const predictedX = previous.cx + (previous.vx || 0);
+            const predictedY = previous.cy + (previous.vy || 0);
+
+            detections.forEach(detection => {
+                const centerDistance = Math.hypot(
+                    detection.box.cx - predictedX,
+                    detection.box.cy - predictedY
+                );
+                const sizeRatio = detection.box.height / Math.max(0.02, previous.height);
+                const overlap = boxIoU(previous, detection.box);
+                const allowedDistance = Math.max(0.18, Math.min(0.32, previous.width * 1.25));
+                const plausible = (centerDistance <= allowedDistance || overlap >= 0.08) && sizeRatio >= 0.5 && sizeRatio <= 1.9;
+                if (!plausible) return;
+
+                // PoseLandmarker VIDEO mode maintains internal tracks reasonably well.
+                // Prefer the same output slot when spatial evidence is also plausible,
+                // while still allowing recovery if MediaPipe reorders detections.
+                const slotBias = detection.index === previous.index ? -0.16 : 0.08;
+                const score = centerDistance * 1.6
+                    + Math.abs(Math.log(sizeRatio)) * 0.18
+                    + (1 - overlap) * 0.25
+                    + slotBias;
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = detection;
+                }
+            });
+            return best;
+        };
+
+        const drawDetection = (ctx, detection, color, label, strong = false) => {
+            if (!ctx || !detection) return;
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            const box = detection.box;
+            const x = box.minX * width;
+            const y = box.minY * height;
+            const w = box.width * width;
+            const h = box.height * height;
+
+            ctx.save();
+            try {
+                drawConnectors(ctx, detection.landmarks, POSE_CONNECTIONS, {
+                    color,
+                    lineWidth: strong ? 4 : 2
+                });
+                drawLandmarks(ctx, detection.landmarks, {
+                    color: strong ? '#ffffff' : color,
+                    lineWidth: 1,
+                    radius: strong ? 3 : 2
+                });
+            } catch (_) {}
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = strong ? 5 : 3;
+            ctx.setLineDash(strong ? [] : [8, 5]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.setLineDash([]);
+
+            if (label) {
+                ctx.font = '800 18px Quicksand, sans-serif';
+                const textWidth = ctx.measureText(label).width;
+                const labelW = Math.max(70, textWidth + 20);
+                const labelH = 30;
+                const labelX = Math.max(0, Math.min(width - labelW, x));
+                const labelY = Math.max(0, y - labelH);
+                ctx.fillStyle = color;
+                ctx.fillRect(labelX, labelY, labelW, labelH);
+                ctx.fillStyle = '#ffffff';
+                ctx.textBaseline = 'middle';
+
+                // Canvas được lật gương bằng CSS để khớp với video camera.
+                // Vẽ chữ lật trước một lần để sau khi CSS mirror, nhãn HS 1/HS 2...
+                // và ĐÃ KHÓA/GIỮ VỊ TRÍ hiển thị đúng chiều cho giáo viên.
+                ctx.save();
+                ctx.translate(labelX + labelW, 0);
+                ctx.scale(-1, 1);
+                ctx.fillText(label, 10, labelY + labelH / 2);
+                ctx.restore();
+            }
+            ctx.restore();
+        };
+
+
+
+        const AuthScreen = () => {
+            const [mode, setMode] = useState('login');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [busy, setBusy] = useState(false);
+            const [message, setMessage] = useState('');
+
+            const submit = async (e) => {
+                e.preventDefault();
+                setBusy(true);
+                setMessage('');
+                try {
+                    if (mode === 'login') {
+                        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                        if (error) throw error;
+                    } else {
+                        const { data, error } = await supabaseClient.auth.signUp({
+                            email,
+                            password,
+                            options: { emailRedirectTo: window.location.href.split(/[?#]/)[0] }
+                        });
+                        if (error) throw error;
+                        if (!data.session) {
+                            setMessage('Đã gửi email xác nhận. Hãy mở email để hoàn tất đăng ký rồi đăng nhập.');
+                        }
+                    }
+                } catch (err) {
+                    setMessage(err?.message || 'Không thể xác thực tài khoản.');
+                } finally {
+                    setBusy(false);
+                }
+            };
+
+            return (
+                <div className="w-screen h-screen bg-gradient-to-br from-indigo-700 via-purple-700 to-slate-900 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8">
+                        <div className="text-center mb-6">
+                            <div className="text-6xl mb-3">🙋‍♂️</div>
+                            <h1 className="text-3xl font-black text-indigo-700 uppercase tracking-tight">AI Pose Quiz</h1>
+                            <p className="text-slate-500 font-semibold mt-1">Đăng nhập để đồng bộ bài dạy và câu hỏi</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-5">
+                            <button type="button" onClick={() => { setMode('login'); setMessage(''); }} className={`py-2 rounded-lg font-black text-sm ${mode === 'login' ? 'bg-white text-indigo-700 shadow' : 'text-slate-500'}`}>ĐĂNG NHẬP</button>
+                            <button type="button" onClick={() => { setMode('register'); setMessage(''); }} className={`py-2 rounded-lg font-black text-sm ${mode === 'register' ? 'bg-white text-indigo-700 shadow' : 'text-slate-500'}`}>ĐĂNG KÝ</button>
+                        </div>
+                        <form onSubmit={submit} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-black text-slate-500 uppercase">Email</label>
+                                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-400 font-semibold" placeholder="giaovien@truong.edu.vn" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-black text-slate-500 uppercase">Mật khẩu</label>
+                                <input type="password" required minLength="6" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-400 font-semibold" placeholder="Tối thiểu 6 ký tự" />
+                            </div>
+                            {message && <div className="text-sm font-bold text-center text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">{message}</div>}
+                            <button disabled={busy} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white py-3.5 rounded-xl font-black text-lg shadow-lg">
+                                {busy ? 'ĐANG XỬ LÝ...' : mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}
+                            </button>
+                        </form>
+                        <div className="text-center mt-4"><a href="/forgot-password/" className="text-sm font-bold text-indigo-700 underline hover:text-indigo-900">🔑 Quên mật khẩu?</a></div>
+                        <p className="text-[11px] text-slate-400 text-center mt-5">Mỗi tài khoản chỉ xem và sửa các bài dạy của chính mình.</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const CloudLibrary = ({ setScreen, setSettings, setCloudId, onNewLesson }) => {
+            const [items, setItems] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState('');
+
+            const load = async () => {
+                setLoading(true);
+                setError('');
+                try {
+                    const result = await backendRequest('lessons.list');
+                    setItems(result.items || []);
+                } catch (err) {
+                    setError(err.message || 'Không tải được thư viện.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => { load(); }, []);
+
+            const openItem = async (item) => {
+                try {
+                    const result = await backendRequest('lessons.get', { id: item.id });
+                    setSettings(result.item.data);
+                    setCloudId(result.item.id);
+                    setScreen('EDITOR');
+                } catch (err) {
+                    alert('Không mở được bài dạy: ' + err.message);
+                }
+            };
+
+            const removeItem = async (id) => {
+                if (!confirm('Xóa bài dạy này khỏi đám mây?')) return;
+                try {
+                    await backendRequest('lessons.delete', { id });
+                    load();
+                } catch (err) {
+                    alert('Không xóa được bài dạy: ' + err.message);
+                }
+            };
+
+            return (
+                <div className="w-full h-full bg-slate-50 flex flex-col">
+                    <div className="bg-indigo-700 text-white p-5 px-8 flex items-center justify-between shadow-lg">
+                        <div>
+                            <h2 className="text-3xl font-black uppercase">☁️ Bài dạy cloud</h2>
+                            <p className="text-indigo-200 text-sm font-semibold">Dữ liệu và media được xử lý qua backend</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={onNewLesson} className="bg-emerald-500 hover:bg-emerald-400 px-5 py-2 rounded-xl font-black">+ BÀI MỚI</button>
+                            <button onClick={() => setScreen('MENU')} className="bg-white/15 hover:bg-white/25 px-5 py-2 rounded-xl font-black">← TRANG CHỦ</button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="max-w-5xl mx-auto">
+                            {loading && <div className="text-center text-slate-500 font-bold py-16">Đang tải thư viện từ backend...</div>}
+                            {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-5 font-bold">Không tải được dữ liệu: {error}</div>}
+                            {!loading && !error && items.length === 0 && <div className="text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 p-16 text-slate-500"><div className="text-6xl mb-4">☁️</div><div className="text-xl font-black">Chưa có bài dạy nào trên cloud</div><div className="mt-2">Bấm “Bài mới” hoặc vào “Soạn bài”.</div></div>}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                {items.map(item => (
+                                    <div key={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4">
+                                        <div className="flex-1">
+                                            <div className="text-[10px] font-black text-indigo-500 uppercase mb-1">{item.subject_name || 'Chưa phân loại'}</div>
+                                            <h3 className="text-xl font-black text-slate-800">{item.title || 'Bài dạy chưa đặt tên'}</h3>
+                                            <p className="text-xs text-slate-400 font-bold mt-1">Cập nhật: {new Date(item.updated_at).toLocaleString('vi-VN')}</p>
+                                            <p className="text-sm text-slate-500 font-semibold mt-2">{item.question_count || 0} câu hỏi</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => openItem(item)} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl font-black">MỞ</button>
+                                            <button onClick={() => removeItem(item.id)} className="bg-red-50 text-red-600 border border-red-100 px-4 rounded-xl font-black">XÓA</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const GroupManager = ({ setScreen, user }) => {
+            const [groups, setGroups] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState('');
+            const [newGroupName, setNewGroupName] = useState('');
+            const [joinCode, setJoinCode] = useState('');
+            const [busy, setBusy] = useState(false);
+
+            const loadGroups = async () => {
+                setLoading(true);
+                setError('');
+                try {
+                    const result = await backendRequest('groups.list');
+                    setGroups(result.groups || []);
+                } catch (err) {
+                    setError(err.message || 'Không tải được nhóm.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => { loadGroups(); }, []);
+
+            const createGroup = async () => {
+                const name = newGroupName.trim();
+                if (!name) return alert('Hãy nhập tên nhóm.');
+                setBusy(true);
+                try {
+                    await backendRequest('groups.create', { name });
+                    setNewGroupName('');
+                    await loadGroups();
+                } catch (err) {
+                    alert('Không tạo được nhóm: ' + err.message);
+                } finally {
+                    setBusy(false);
+                }
+            };
+
+            const joinGroup = async () => {
+                const code = joinCode.trim().toUpperCase();
+                if (!code) return alert('Hãy nhập mã nhóm.');
+                setBusy(true);
+                try {
+                    await backendRequest('groups.join', { code });
+                    setJoinCode('');
+                    await loadGroups();
+                } catch (err) {
+                    alert('Không tham gia được nhóm: ' + err.message);
+                } finally {
+                    setBusy(false);
+                }
+            };
+
+            const leaveOrDelete = async (group) => {
+                const isOwner = group.is_owner || group.owner_id === user.id;
+                if (!confirm(isOwner ? 'Xóa nhóm này? Câu đã chia sẻ sẽ chuyển về Riêng tư.' : 'Rời khỏi nhóm này?')) return;
+                try {
+                    await backendRequest(isOwner ? 'groups.delete' : 'groups.leave', { group_id: group.id });
+                    await loadGroups();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            const copyCode = async (code) => {
+                try {
+                    await navigator.clipboard.writeText(code);
+                    alert('Đã sao chép mã nhóm: ' + code);
+                } catch {
+                    prompt('Sao chép mã nhóm:', code);
+                }
+            };
+
+            return (
+                <div className="w-full h-full bg-slate-50 flex flex-col text-slate-800">
+                    <div className="bg-fuchsia-700 text-white px-8 py-5 flex items-center justify-between shadow-lg">
+                        <div>
+                            <h2 className="text-3xl font-black uppercase">👥 Nhóm chia sẻ</h2>
+                            <p className="text-fuchsia-200 text-sm font-semibold">Tạo nhóm riêng hoặc tham gia bằng mã nhóm</p>
+                        </div>
+                        <button onClick={() => setScreen('MENU')} className="bg-white/15 hover:bg-white/25 px-5 py-2 rounded-xl font-black">← TRANG CHỦ</button>
+                    </div>
+
+                    <div className="p-6 overflow-y-auto flex-1">
+                        <div className="max-w-5xl mx-auto space-y-6">
+                            <div className="grid md:grid-cols-2 gap-5">
+                                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                                    <h3 className="text-lg font-black text-fuchsia-700 mb-3">Tạo nhóm mới</h3>
+                                    <p className="text-sm text-slate-500 font-semibold mb-4">Hệ thống sinh mã nhóm 8 ký tự ở backend.</p>
+                                    <div className="flex gap-2">
+                                        <input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createGroup()} placeholder="Tên nhóm..." className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-fuchsia-400 font-bold" />
+                                        <button disabled={busy} onClick={createGroup} className="px-5 rounded-xl bg-fuchsia-600 text-white font-black disabled:opacity-50">TẠO</button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                                    <h3 className="text-lg font-black text-indigo-700 mb-3">Tham gia bằng mã</h3>
+                                    <p className="text-sm text-slate-500 font-semibold mb-4">Nhập mã 8 ký tự do chủ nhóm gửi.</p>
+                                    <div className="flex gap-2">
+                                        <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && joinGroup()} maxLength="8" placeholder="VD: A1B2C3D4" className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-400 font-black uppercase tracking-widest" />
+                                        <button disabled={busy} onClick={joinGroup} className="px-5 rounded-xl bg-indigo-600 text-white font-black disabled:opacity-50">THAM GIA</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-xl font-black">Nhóm của tôi</h3>
+                                    <span className="text-sm font-bold text-slate-400">{groups.length} nhóm</span>
+                                </div>
+                                {loading && <div className="text-center py-12 text-slate-500 font-bold">Đang tải nhóm...</div>}
+                                {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-5 font-bold">Không tải được nhóm: {error}</div>}
+                                {!loading && !error && groups.length === 0 && (
+                                    <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center text-slate-500">
+                                        <div className="text-5xl mb-3">👥</div>
+                                        <div className="font-black text-lg">Chưa tham gia nhóm nào</div>
+                                    </div>
+                                )}
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {groups.map(group => {
+                                        const isOwner = group.is_owner || group.owner_id === user.id;
+                                        return (
+                                            <div key={group.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="flex gap-2 items-center mb-1">
+                                                            <h4 className="text-lg font-black text-slate-800">{group.name}</h4>
+                                                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${isOwner ? 'bg-fuchsia-50 text-fuchsia-700' : 'bg-indigo-50 text-indigo-700'}`}>{isOwner ? 'CHỦ NHÓM' : 'THÀNH VIÊN'}</span>
+                                                        </div>
+                                                        <div className="text-xs text-slate-400 font-bold">Mã nhóm</div>
+                                                        <div className="text-2xl font-black tracking-[0.18em] text-indigo-700 mt-1">{group.join_code}</div>
+                                                        <div className="text-xs font-bold text-slate-400 mt-2">{group.member_count || 1} thành viên</div>
+                                                    </div>
+                                                    <button onClick={() => copyCode(group.join_code)} className="bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl text-xs font-black">SAO CHÉP</button>
+                                                </div>
+                                                <button onClick={() => leaveOrDelete(group)} className="mt-5 w-full py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-600 font-black text-xs uppercase">{isOwner ? 'Xóa nhóm' : 'Rời nhóm'}</button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const QuestionBank = ({ setScreen, settings, setSettings, user }) => {
+            const [items, setItems] = useState([]);
+            const [groups, setGroups] = useState([]);
+            const [subjects, setSubjects] = useState([]);
+            const [lessons, setLessons] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState('');
+            const [subjectFilter, setSubjectFilter] = useState('ALL');
+            const [lessonFilter, setLessonFilter] = useState('ALL');
+            const [shareFilter, setShareFilter] = useState('ALL');
+            const [searchText, setSearchText] = useState('');
+            const [selected, setSelected] = useState(() => new Set());
+
+            const load = async () => {
+                setLoading(true);
+                setError('');
+                try {
+                    const [bankResult, groupResult] = await Promise.all([
+                        backendRequest('bank.list', {
+                            subject_name: subjectFilter,
+                            lesson_name: lessonFilter,
+                            source: shareFilter,
+                            search: searchText
+                        }),
+                        backendRequest('groups.list')
+                    ]);
+                    setItems(bankResult.items || []);
+                    setSubjects(bankResult.facets?.subjects || []);
+                    setLessons(bankResult.facets?.lessons || []);
+                    setGroups(groupResult.groups || []);
+                } catch (err) {
+                    setError(err.message || 'Không tải được kho câu hỏi.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                const timer = setTimeout(() => load(), 180);
+                return () => clearTimeout(timer);
+            }, [subjectFilter, lessonFilter, shareFilter, searchText]);
+
+            const groupNames = useMemo(
+                () => Object.fromEntries(groups.map(group => [group.id, group.name])),
+                [groups]
+            );
+
+            useEffect(() => {
+                if (lessonFilter !== 'ALL' && lessons.length && !lessons.includes(lessonFilter)) {
+                    setLessonFilter('ALL');
+                }
+            }, [lessons, lessonFilter]);
+
+            const visibleItems = items;
+
+            const toggle = (id) => {
+                setSelected(prev => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                });
+            };
+
+            const toggleAllVisible = () => {
+                const ids = visibleItems.map(item => item.id);
+                const allSelected = ids.length > 0 && ids.every(id => selected.has(id));
+                setSelected(prev => {
+                    const next = new Set(prev);
+                    ids.forEach(id => allSelected ? next.delete(id) : next.add(id));
+                    return next;
+                });
+            };
+
+            const addSelectedToLesson = async () => {
+                const ids = [...selected];
+                if (!ids.length) return alert('Hãy chọn ít nhất một câu hỏi.');
+                try {
+                    const result = await backendRequest('bank.resolve', { ids });
+                    const imported = result.questions || [];
+                    setSettings({ ...settings, questions: [...settings.questions, ...imported] });
+                    alert(`Đã thêm ${imported.length} câu hỏi do backend xác thực vào bài đang soạn.`);
+                    setScreen('EDITOR');
+                } catch (err) {
+                    alert('Không lấy được câu hỏi: ' + err.message);
+                }
+            };
+
+            const ownSelectedIds = items
+                .filter(item => selected.has(item.id) && item.user_id === user.id)
+                .map(item => item.id);
+
+            const deleteSelected = async () => {
+                if (!ownSelectedIds.length) return alert('Không có câu hỏi do thầy/cô sở hữu trong phần đã chọn.');
+                if (!confirm(`Xóa ${ownSelectedIds.length} câu của thầy/cô khỏi kho?`)) return;
+                try {
+                    await backendRequest('bank.delete', { ids: ownSelectedIds });
+                    setSelected(prev => {
+                        const next = new Set(prev);
+                        ownSelectedIds.forEach(id => next.delete(id));
+                        return next;
+                    });
+                    load();
+                } catch (err) {
+                    alert('Không xóa được câu hỏi: ' + err.message);
+                }
+            };
+
+            const visibilityInfo = (item) => {
+                if (item.visibility === 'public') return { label: '🌐 Công khai', cls: 'bg-emerald-50 text-emerald-700' };
+                if (item.visibility === 'group') return { label: '👥 ' + (groupNames[item.group_id] || 'Nhóm riêng'), cls: 'bg-fuchsia-50 text-fuchsia-700' };
+                return { label: '🔒 Riêng tư', cls: 'bg-slate-100 text-slate-600' };
+            };
+
+            return (
+                <div className="w-full h-full bg-slate-50 flex flex-col text-slate-800 relative">
+                    <div className="bg-violet-700 text-white px-8 py-5 flex items-center justify-between shadow-lg">
+                        <div>
+                            <h2 className="text-3xl font-black uppercase">📚 Kho câu hỏi</h2>
+                            <p className="text-violet-200 text-sm font-semibold">Môn học → Bài học → Câu hỏi • Riêng tư / Công khai / Theo nhóm</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setScreen('EDITOR')} className="bg-white/15 hover:bg-white/25 px-4 py-2 rounded-xl font-black">← SOẠN BÀI</button>
+                            <button onClick={() => setScreen('MENU')} className="bg-white/15 hover:bg-white/25 px-4 py-2 rounded-xl font-black">TRANG CHỦ</button>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border-b border-slate-200 px-6 py-4">
+                        <div className="max-w-7xl mx-auto flex flex-wrap gap-3 items-center">
+                            <div className="text-sm font-black text-slate-600 mr-auto">
+                                Bài đang soạn: <span className="text-violet-700">{settings.subject || 'Chưa chọn môn'} / {settings.title || 'Chưa đặt tên bài'}</span>
+                            </div>
+                            <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
+                                <option value="ALL">Tất cả môn</option>
+                                {subjects.map(subject => <option key={subject} value={subject}>{subject}</option>)}
+                            </select>
+                            <select value={lessonFilter} onChange={(e) => setLessonFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
+                                <option value="ALL">Tất cả bài</option>
+                                {lessons.map(lesson => <option key={lesson} value={lesson}>{lesson}</option>)}
+                            </select>
+                            <select value={shareFilter} onChange={(e) => setShareFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
+                                <option value="ALL">Tất cả nguồn</option>
+                                <option value="MINE">Câu của tôi</option>
+                                <option value="PUBLIC">Công khai</option>
+                                <option value="GROUP">Nhóm chia sẻ</option>
+                            </select>
+                            <input value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Tìm nội dung..." className="w-56 max-w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-400 font-semibold text-sm" />
+                            <button onClick={toggleAllVisible} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-black text-sm">Chọn tất cả</button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="max-w-7xl mx-auto">
+                            {loading && <div className="text-center py-16 font-bold text-slate-500">Đang tải kho câu hỏi...</div>}
+                            {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-5 font-bold">Không tải được kho câu hỏi: {error}<div className="text-xs mt-2">Backend chưa sẵn sàng. Hãy kiểm tra kết nối.</div></div>}
+                            {!loading && !error && visibleItems.length === 0 && (
+                                <div className="text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 p-14 text-slate-500">
+                                    <div className="text-6xl mb-3">📭</div>
+                                    <div className="text-xl font-black">Chưa có câu hỏi phù hợp</div>
+                                    <p className="mt-2">Có thể thay đổi bộ lọc hoặc lưu câu hỏi mới từ màn hình soạn bài.</p>
+                                </div>
+                            )}
+
+                            <div className="space-y-3 pb-24">
+                                {visibleItems.map((item, idx) => {
+                                    const isSelected = selected.has(item.id);
+                                    const correct = item.question?.answers?.find(ans => ans.isCorrect);
+                                    const visibility = visibilityInfo(item);
+                                    const isMine = item.user_id === user.id;
+                                    return (
+                                        <button key={item.id} onClick={() => toggle(item.id)} className={`w-full text-left bg-white border-2 rounded-2xl p-4 shadow-sm transition-all ${isSelected ? 'border-violet-500 ring-4 ring-violet-100' : 'border-slate-100 hover:border-violet-200'}`}>
+                                            <div className="flex gap-4 items-start">
+                                                <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center flex-shrink-0 font-black ${isSelected ? 'bg-violet-600 border-violet-600 text-white' : 'border-slate-300 text-transparent'}`}>✓</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-wrap gap-2 items-center mb-2">
+                                                        <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg text-[10px] font-black uppercase">{item.subject_name || 'Chưa phân loại'}</span>
+                                                        <span className="bg-violet-50 text-violet-700 px-2 py-1 rounded-lg text-[10px] font-black uppercase">{item.lesson_name}</span>
+                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${visibility.cls}`}>{visibility.label}</span>
+                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${isMine ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>{isMine ? 'Câu của tôi' : 'Được chia sẻ'}</span>
+                                                        {item.question?.image && <span className="bg-cyan-50 text-cyan-700 px-2 py-1 rounded-lg text-[10px] font-black">🖼️ ẢNH</span>}
+                                                        {item.question?.audio?.data && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-lg text-[10px] font-black">🔊 ÂM THANH</span>}
+                                                        <span className="text-[10px] text-slate-400 font-bold">#{idx + 1}</span>
+                                                    </div>
+                                                    <div className="text-base font-black text-slate-800">{item.question?.text || 'Câu hỏi không có nội dung'}</div>
+                                                    {correct && <div className="mt-2 text-xs font-bold text-emerald-600">Đáp án đúng: {correct.text}</div>}
+                                                </div>
+                                                {item.question?.image && <img src={mediaSrc(item.question.image)} className="w-20 h-20 object-contain rounded-xl border border-slate-100 bg-slate-50" />}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 px-6 py-4 shadow-2xl">
+                        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                            <div className="font-black text-slate-600">Đã chọn: <span className="text-violet-700 text-xl">{selected.size}</span> câu</div>
+                            <div className="flex gap-3">
+                                <button onClick={deleteSelected} disabled={!ownSelectedIds.length} className="px-5 py-3 rounded-xl bg-red-50 text-red-600 border border-red-100 font-black disabled:opacity-40">Xóa câu của tôi ({ownSelectedIds.length})</button>
+                                <button onClick={addSelectedToLesson} disabled={!selected.size} className="px-7 py-3 rounded-xl bg-violet-600 text-white font-black shadow-lg disabled:opacity-40">+ Thêm {selected.size || ''} câu vào bài đang soạn</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [screen, setScreen] = useState('MENU');
+            const [score, setScore] = useState(0);
+            const [session, setSession] = useState(null);
+            const [authReady, setAuthReady] = useState(false);
+            const [backendReady, setBackendReady] = useState(false);
+            const [backendError, setBackendError] = useState('');
+            const [cloudId, setCloudId] = useState(null);
+            
+            const [settings, setSettings] = useState(() => {
+                return {
+                    subject: "Tin học",
+                    title: "Bài dạy AI Pose Quiz",
+                    bankVisibility: "private",
+                    bankGroupId: "",
+                    timeLimit: 20,
+                    checkInterval: 20,
+                    numAnswers: 4,
+                    poseAssets: {
+                        NONE: null,
+                        RAISE_LEFT: null,
+                        RAISE_RIGHT: null,
+                        BOTH_UP: null,
+                        CROSS_ARMS: null
+                    },
+                    questions: [
+                        {
+                            id: Date.now(),
+                            text: "Em hãy tạo dáng 'Giơ tay trái' giống bạn nhỏ nhé!",
+                            image: null,
+                            audio: { data: null, name: "" },
+                            answers: [
+                                { text: "Giơ tay trái thật cao lên nhé", pose: "RAISE_LEFT", isCorrect: true, image: null },
+                                { text: "Giơ tay phải giống như chào", pose: "RAISE_RIGHT", isCorrect: false, image: null },
+                                { text: "Cả hai tay giơ lên trời", pose: "BOTH_UP", isCorrect: false, image: null },
+                                { text: "Khoanh tay trước ngực", pose: "CROSS_ARMS", isCorrect: false, image: null }
+                            ]
+                        }
+                    ],
+                    audio: {
+                        correct: { data: null, name: "" },
+                        wrong: { data: null, name: "" },
+                        bgm: { data: null, name: "" },
+                        bgmVolume: 0.3,
+                        feedbackVolume: 0.9,
+                        questionVolume: 1,
+                        defaultFeedback: true
+                    },
+                    theme: {
+                        background: null,
+                        overlay: 0.68,
+                        fit: "cover"
+                    }
+                };
+            });
+
+            useEffect(() => {
+                let active = true;
+                supabaseClient.auth.getSession().then(({ data }) => {
+                    if (!active) return;
+                    setSession(data.session || null);
+                    setAuthReady(true);
+                });
+                const { data: listener } = supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
+                    if (!active) return;
+                    setSession(nextSession || null);
+                    setAuthReady(true);
+                });
+                return () => {
+                    active = false;
+                    listener?.subscription?.unsubscribe();
+                };
+            }, []);
+
+            useEffect(() => {
+                if (!session) {
+                    setBackendReady(false);
+                    setBackendError('');
+                    return;
+                }
+                let cancelled = false;
+                setBackendReady(false);
+                setBackendError('');
+                backendRequest('bootstrap')
+                    .then(() => { if (!cancelled) setBackendReady(true); })
+                    .catch((err) => { if (!cancelled) setBackendError(err.message || 'Không kết nối được backend.'); });
+                return () => { cancelled = true; };
+            }, [session?.access_token]);
+
+            const storageUsage = useMemo(() => {
+                const paths = new Set();
+                const walk = (value) => {
+                    if (Array.isArray(value)) return value.forEach(walk);
+                    if (!value || typeof value !== 'object') return;
+                    if (value.path) paths.add(value.path);
+                    Object.values(value).forEach(walk);
+                };
+                walk(settings);
+                return paths.size;
+            }, [settings]);
+
+            const saveQuestionsToBank = async (questions) => {
+                const subjectName = (settings.subject || 'Chưa phân loại').trim() || 'Chưa phân loại';
+                const lessonName = (settings.title || 'Chưa phân loại').trim() || 'Chưa phân loại';
+                const visibility = ['private', 'public', 'group'].includes(settings.bankVisibility)
+                    ? settings.bankVisibility
+                    : 'private';
+                const groupId = visibility === 'group' ? (settings.bankGroupId || null) : null;
+
+                if (!questions?.length) return alert('Không có câu hỏi để lưu.');
+                if (visibility === 'group' && !groupId) return alert('Hãy chọn nhóm muốn chia sẻ.');
+
+                try {
+                    const result = await backendRequest('bank.save', {
+                        subject_name: subjectName,
+                        lesson_name: lessonName,
+                        visibility,
+                        group_id: groupId,
+                        questions,
+                        pose_assets: settings.poseAssets || {}
+                    });
+                    alert(`Đã lưu ${result.count || questions.length} câu vào kho qua backend.`);
+                } catch (err) {
+                    alert('Không lưu được vào kho câu hỏi: ' + err.message);
+                }
+            };
+
+            const saveToCloud = async () => {
+                try {
+                    const result = await backendRequest('lessons.save', {
+                        id: cloudId,
+                        subject_name: (settings.subject || 'Chưa phân loại').trim(),
+                        title: (settings.title || 'Bài dạy AI Pose Quiz').trim(),
+                        data: settings
+                    });
+                    setCloudId(result.item.id);
+                    setSettings(result.item.data);
+                    alert(cloudId ? 'Đã cập nhật bài dạy trên backend.' : 'Đã lưu bài dạy và toàn bộ media lên backend.');
+                } catch (err) {
+                    alert('Không lưu được bài dạy: ' + err.message);
+                }
+            };
+
+            const newLesson = () => {
+                setCloudId(null);
+                setSettings({
+                    subject: 'Tin học',
+                    title: 'Bài dạy mới',
+                    bankVisibility: 'private',
+                    bankGroupId: '',
+                    timeLimit: 20,
+                    checkInterval: 20,
+                    numAnswers: 4,
+                    poseAssets: { NONE: null, RAISE_LEFT: null, RAISE_RIGHT: null, BOTH_UP: null, CROSS_ARMS: null },
+                    questions: [{
+                        id: Date.now(),
+                        text: 'Nhập nội dung câu hỏi...',
+                        image: null,
+                        audio: { data: null, name: '' },
+                        answers: Array(4).fill(0).map((_, idx) => ({ text: `Đáp án ${idx + 1}`, pose: 'NONE', isCorrect: idx === 0, image: null }))
+                    }],
+                    audio: {
+                        correct: { data: null, name: '' },
+                        wrong: { data: null, name: '' },
+                        bgm: { data: null, name: '' },
+                        bgmVolume: 0.3,
+                        feedbackVolume: 0.9,
+                        questionVolume: 1,
+                        defaultFeedback: true
+                    },
+                    theme: {
+                        background: null,
+                        overlay: 0.68,
+                        fit: 'cover'
+                    }
+                });
+                setScreen('EDITOR');
+            };
+
+            if (!authReady) {
+                return <div className="w-screen h-screen grid place-items-center bg-slate-950 text-white font-black text-xl">Đang kết nối Supabase...</div>;
+            }
+
+            if (!session) return <AuthScreen />;
+
+            if (!backendReady) {
+                return (
+                    <div className="w-screen h-screen bg-slate-950 text-white grid place-items-center p-6 text-center">
+                        <div>
+                            <div className="text-6xl mb-4">⚙️</div>
+                            <div className="text-xl font-black">{backendError ? 'Không kết nối được backend' : 'Đang khởi tạo backend...'}</div>
+                            {backendError && <div className="mt-3 text-red-300 font-bold max-w-xl">{backendError}</div>}
+                            {backendError && <button onClick={() => window.location.reload()} className="mt-5 bg-indigo-600 px-5 py-2 rounded-xl font-black">THỬ LẠI</button>}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="w-screen h-screen bg-white overflow-hidden select-none">
+                    {screen === 'MENU' && <MainMenu setScreen={setScreen} user={session.user} onSignOut={() => supabaseClient.auth.signOut()} />}
+                    {screen === 'GAME' && <Game settings={settings} setScreen={setScreen} setScore={setScore} />}
+                    {screen === 'EDITOR' && <Editor settings={settings} setSettings={setSettings} setScreen={setScreen} usage={storageUsage} onSaveCloud={saveToCloud} onOpenCloud={() => setScreen('CLOUD')} onOpenBank={() => setScreen('BANK')} onSaveQuestionsToBank={saveQuestionsToBank} onImported={() => setCloudId(null)} cloudId={cloudId} />}
+                    {screen === 'CLOUD' && <CloudLibrary setScreen={setScreen} setSettings={setSettings} setCloudId={setCloudId} onNewLesson={newLesson} />}
+                    {screen === 'BANK' && <QuestionBank setScreen={setScreen} settings={settings} setSettings={setSettings} user={session.user} />}
+                    {screen === 'GROUPS' && <GroupManager setScreen={setScreen} user={session.user} />}
+                    {screen === 'RESULT' && <Result score={score} total={settings.questions.length} setScreen={setScreen} />}
+                </div>
+            );
+        };
+
+        const MainMenu = ({ setScreen, user, onSignOut }) => (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-4 text-center relative">
+                <div className="absolute top-5 right-6 flex items-center gap-3 bg-white/10 border border-white/20 rounded-2xl px-4 py-2 backdrop-blur">
+                    <span className="text-xs font-bold max-w-56 truncate">{user?.email}</span>
+                    <button onClick={onSignOut} className="text-xs font-black bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg">ĐĂNG XUẤT</button>
+                </div>
+                <div className="mb-4 text-8xl animate-bounce drop-shadow-2xl">🙋‍♂️</div>
+                <h1 className="text-6xl font-black mb-2 tracking-tighter uppercase">AI POSE QUIZ</h1>
+                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V10 Multi-Person</p>
+                <div className="flex flex-col gap-3 w-[34rem] max-w-full">
+                    <button onClick={() => { unlockAudio(); setScreen('GAME'); }} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button onClick={() => setScreen('EDITOR')} className="bg-white/10 hover:bg-white/20 py-3.5 rounded-2xl text-base font-black backdrop-blur-md border border-white/30 transition-all uppercase">✏️ Soạn bài</button>
+                        <button onClick={() => setScreen('BANK')} className="bg-violet-500/90 hover:bg-violet-400 py-3.5 rounded-2xl text-base font-black shadow-lg transition-all uppercase">📚 Kho câu hỏi</button>
+                        <button onClick={() => setScreen('GROUPS')} className="bg-fuchsia-500/90 hover:bg-fuchsia-400 py-3.5 rounded-2xl text-base font-black shadow-lg transition-all uppercase">👥 Nhóm chia sẻ</button>
+                        <button onClick={() => setScreen('CLOUD')} className="bg-sky-500/90 hover:bg-sky-400 py-3.5 rounded-2xl text-base font-black shadow-lg transition-all uppercase">☁️ Bài dạy cloud</button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const Game = ({ settings, setScreen, setScore }) => {
+            const [qIndex, setQIndex] = useState(0);
+            const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
+            const [checkTimer, setCheckTimer] = useState(settings.checkInterval || 20);
+            const [detectedPose, setDetectedPose] = useState('NONE');
+            const [feedback, setFeedback] = useState(null);
+            const [correctCount, setCorrectCount] = useState(0);
+            const [masterVolume, setMasterVolume] = useState(1);
+            const [showVolumeControl, setShowVolumeControl] = useState(false);
+            const isMuted = masterVolume <= 0.001;
+            const [isPaused, setIsPaused] = useState(false);
+            const [gameToken, setGameToken] = useState(null);
+            const [gameReady, setGameReady] = useState(false);
+            const [gameError, setGameError] = useState('');
+            const [poseError, setPoseError] = useState('');
+            const [peopleCount, setPeopleCount] = useState(0);
+            const [selectionMode, setSelectionMode] = useState(true);
+            const [targetStatus, setTargetStatus] = useState('SELECTING');
+            const [targetQuality, setTargetQuality] = useState({ ok: false, level: 'waiting', label: 'Chọn học sinh cần nhận diện' });
+            const checkInFlightRef = useRef(false);
+            const isPausedRef = useRef(false);
+            const pendingResultRef = useRef(null);
+            const feedbackTimeoutRef = useRef(null);
+            
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+            const poseRef = useRef(null);
+            const poseLandmarkerRef = useRef(null);
+            const cameraRef = useRef(null);
+            const bgmRef = useRef(null);
+            const questionAudioRef = useRef(null);
+            const isMounted = useRef(true);
+            const detectionsRef = useRef([]);
+            const targetTrackRef = useRef(null);
+            const selectionModeRef = useRef(true);
+            const lastPeopleUiUpdateRef = useRef(0);
+            const lastQualityUiUpdateRef = useRef(0);
+            const lastVideoTimestampRef = useRef(0);
+
+            const currentQuestion = settings.questions[qIndex];
+            const recognitionBlocked = selectionMode || targetStatus !== 'LOCKED' || !targetQuality.ok || !!poseError;
+            const lessonBackground = mediaSrc(settings.theme?.background);
+            const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
+            const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
+
+            const getPoseVisual = (poseId) => {
+                const src = resolvedPoseAssetSrc(settings, poseId);
+                if (src) {
+                    return <img src={src} className="w-full h-full object-contain" />;
+                }
+                return <span className="text-4xl">{DEFAULT_POSE_CONFIG[poseId]?.icon || '❓'}</span>;
+            };
+
+            useEffect(() => {
+                let cancelled = false;
+                setGameReady(false);
+                setGameError('');
+                backendRequest('game.start', { data: settings })
+                    .then((result) => {
+                        if (cancelled) return;
+                        setGameToken(result.game_token);
+                        setQIndex(result.index || 0);
+                        setCorrectCount(result.score || 0);
+                        setGameReady(true);
+                    })
+                    .catch((err) => {
+                        if (!cancelled) setGameError(err.message || 'Không tạo được phiên chơi.');
+                    });
+                return () => { cancelled = true; };
+            }, []);
+
+            const applyCheckedResult = useCallback((result) => {
+                if (!isMounted.current) return;
+                pendingResultRef.current = null;
+                if (feedbackTimeoutRef.current) {
+                    clearTimeout(feedbackTimeoutRef.current);
+                    feedbackTimeoutRef.current = null;
+                }
+                if (result.finished) {
+                    setScore(result.score || 0);
+                    setScreen('RESULT');
+                } else {
+                    setGameToken(result.game_token);
+                    setQIndex(result.next_index);
+                    setTimeLeft(settings.timeLimit);
+                    setCheckTimer(settings.checkInterval || 20);
+                    setFeedback(null);
+                    checkInFlightRef.current = false;
+                }
+            }, [settings.timeLimit, settings.checkInterval, setScore, setScreen]);
+
+            const scheduleCheckedResult = useCallback((result, delay = 1500) => {
+                pendingResultRef.current = result;
+                if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+                feedbackTimeoutRef.current = setTimeout(() => {
+                    feedbackTimeoutRef.current = null;
+                    if (!isMounted.current || isPausedRef.current) return;
+                    applyCheckedResult(result);
+                }, delay);
+            }, [applyCheckedResult]);
+
+            const checkAnswer = useCallback(async () => {
+                if (feedback || !gameReady || !gameToken || checkInFlightRef.current || recognitionBlocked) return;
+                checkInFlightRef.current = true;
+                try {
+                    const result = await backendRequest('game.check', {
+                        game_token: gameToken,
+                        detected_pose: detectedPose
+                    });
+
+                    const isCorrect = result.feedback === 'correct';
+                    setFeedback(result.feedback);
+                    setCorrectCount(result.score || 0);
+
+                    if (questionAudioRef.current) {
+                        questionAudioRef.current.pause();
+                        questionAudioRef.current.currentTime = 0;
+                    }
+                    const audioSrc = resolvedLessonAudioSrc(settings, isCorrect ? 'correct' : 'wrong');
+                    if (!isMuted && audioSrc) {
+                        const feedbackAudio = new Audio(audioSrc);
+                        feedbackAudio.volume = Math.min(1, Math.max(0, Number(settings.audio.feedbackVolume ?? 0.9) * masterVolume));
+                        feedbackAudio.play().catch(() => {
+                            if (settings.audio.defaultFeedback !== false) playDefaultFeedbackTone(isCorrect, (settings.audio.feedbackVolume ?? 0.9) * masterVolume);
+                        });
+                    } else if (!isMuted && settings.audio.defaultFeedback !== false) {
+                        playDefaultFeedbackTone(isCorrect, (settings.audio.feedbackVolume ?? 0.9) * masterVolume);
+                    }
+
+                    scheduleCheckedResult(result, 1500);
+                } catch (err) {
+                    checkInFlightRef.current = false;
+                    alert('Backend không chấm được câu hỏi: ' + err.message);
+                }
+            }, [feedback, gameReady, gameToken, detectedPose, isMuted, masterVolume, settings, scheduleCheckedResult, recognitionBlocked]);
+
+            // Hàm xử lý khi nhấn nút Kiểm tra
+            const handleManualCheck = () => {
+                if (isPaused || feedback || !gameReady || checkInFlightRef.current || recognitionBlocked) return;
+                setTimeLeft(0);
+            };
+
+            const togglePause = () => setIsPaused(prev => !prev);
+
+            useEffect(() => {
+                isPausedRef.current = isPaused;
+                if (isPaused) {
+                    if (feedbackTimeoutRef.current) {
+                        clearTimeout(feedbackTimeoutRef.current);
+                        feedbackTimeoutRef.current = null;
+                    }
+                } else if (pendingResultRef.current) {
+                    scheduleCheckedResult(pendingResultRef.current, 350);
+                }
+            }, [isPaused, scheduleCheckedResult]);
+
+            useEffect(() => () => {
+                if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+            }, []);
+
+            useEffect(() => {
+                if (bgmRef.current) {
+                    bgmRef.current.pause();
+                    bgmRef.current = null;
+                }
+                const bgmSrc = resolvedLessonAudioSrc(settings, 'bgm');
+                if (bgmSrc && !isMuted && !isPaused) {
+                    bgmRef.current = new Audio(bgmSrc);
+                    bgmRef.current.loop = true;
+                    bgmRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.bgmVolume ?? 0.3) * masterVolume));
+                    bgmRef.current.play().catch(() => {});
+                }
+                return () => {
+                    if (bgmRef.current) {
+                        bgmRef.current.pause();
+                        bgmRef.current = null;
+                    }
+                };
+            }, [isMuted, isPaused, masterVolume, settings.audio.bgm?.data, settings.audio.bgmVolume]);
+
+            useEffect(() => {
+                if (questionAudioRef.current) {
+                    questionAudioRef.current.pause();
+                    questionAudioRef.current = null;
+                }
+                const questionAudio = mediaSrc(currentQuestion?.audio?.data);
+                if (questionAudio && !isMuted && !feedback && !isPaused) {
+                    questionAudioRef.current = new Audio(questionAudio);
+                    questionAudioRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.questionVolume ?? 1) * masterVolume));
+                    questionAudioRef.current.play().catch(() => {});
+                }
+                return () => {
+                    if (questionAudioRef.current) {
+                        questionAudioRef.current.pause();
+                        questionAudioRef.current = null;
+                    }
+                };
+            }, [qIndex, currentQuestion?.audio?.data, isMuted, isPaused, masterVolume, settings.audio.questionVolume]);
+
+            useEffect(() => {
+                selectionModeRef.current = selectionMode;
+            }, [selectionMode]);
+
+            const resetTargetSelection = useCallback(() => {
+                selectionModeRef.current = true;
+                setSelectionMode(true);
+                setTargetStatus('SELECTING');
+                setTargetQuality({ ok: false, level: 'waiting', label: 'Chọn học sinh cần nhận diện' });
+                targetTrackRef.current = null;
+                setDetectedPose('NONE');
+            }, []);
+
+            const handleCanvasClick = useCallback((event) => {
+                if (!selectionModeRef.current || !canvasRef.current) return;
+                const detections = detectionsRef.current || [];
+                if (!detections.length) return;
+
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const sourceWidth = canvas.width || 640;
+                const sourceHeight = canvas.height || 480;
+                const scale = Math.min(rect.width / sourceWidth, rect.height / sourceHeight);
+                const renderedWidth = sourceWidth * scale;
+                const renderedHeight = sourceHeight * scale;
+                const offsetX = (rect.width - renderedWidth) / 2;
+                const offsetY = (rect.height - renderedHeight) / 2;
+
+                const mirroredX = rect.right - event.clientX;
+                const sourceX = (mirroredX - offsetX) / renderedWidth;
+                const sourceY = (event.clientY - rect.top - offsetY) / renderedHeight;
+                if (sourceX < 0 || sourceX > 1 || sourceY < 0 || sourceY > 1) return;
+
+                let candidates = detections.filter(detection => (
+                    sourceX >= detection.box.minX &&
+                    sourceX <= detection.box.maxX &&
+                    sourceY >= detection.box.minY &&
+                    sourceY <= detection.box.maxY
+                ));
+
+                if (!candidates.length) {
+                    candidates = detections
+                        .map(detection => ({
+                            detection,
+                            distance: Math.hypot(sourceX - detection.box.cx, sourceY - detection.box.cy)
+                        }))
+                        .filter(item => item.distance <= 0.18)
+                        .sort((a, b) => a.distance - b.distance)
+                        .map(item => item.detection);
+                } else {
+                    candidates.sort((a, b) => (a.box.width * a.box.height) - (b.box.width * b.box.height));
+                }
+
+                const selected = candidates[0];
+                if (!selected) return;
+
+                const now = performance.now();
+                targetTrackRef.current = { ...selected.box, index: selected.index, vx: 0, vy: 0, lastSeen: now };
+                selectionModeRef.current = false;
+                setSelectionMode(false);
+                setTargetStatus('LOCKED');
+                const quality = getPoseQuality(selected);
+                setTargetQuality(quality);
+                setDetectedPose(quality.ok ? analyzePose(selected.landmarks) : 'NONE');
+            }, []);
+
+            useEffect(() => {
+                if (!gameReady) return;
+                const videoElement = videoRef.current;
+                if (!videoElement) return;
+
+                let cancelled = false;
+                isMounted.current = true;
+                setPoseError('');
+
+                const processPoseFrame = async () => {
+                    if (
+                        cancelled ||
+                        !isMounted.current ||
+                        !poseLandmarkerRef.current ||
+                        !videoRef.current ||
+                        videoRef.current.readyState < 2
+                    ) return;
+
+                    let timestamp = performance.now();
+                    if (timestamp <= lastVideoTimestampRef.current) timestamp = lastVideoTimestampRef.current + 1;
+                    lastVideoTimestampRef.current = timestamp;
+
+                    let result;
+                    try {
+                        result = poseLandmarkerRef.current.detectForVideo(videoRef.current, timestamp);
+                    } catch (detectError) {
+                        console.warn('Pose frame skipped:', detectError);
+                        return;
+                    }
+
+                    const detections = (result?.landmarks || [])
+                        .slice(0, 5)
+                        .map((landmarks, index) => buildPoseDetection(landmarks, index))
+                        .filter(Boolean);
+                    detectionsRef.current = detections;
+
+                    const canvas = canvasRef.current;
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    const now = performance.now();
+                    if (now - lastPeopleUiUpdateRef.current > 140) {
+                        setPeopleCount(detections.length);
+                        lastPeopleUiUpdateRef.current = now;
+                    }
+
+                    if (selectionModeRef.current) {
+                        detections.forEach((detection, index) => {
+                            drawDetection(ctx, detection, '#6366f1', 'HS ' + (index + 1), false);
+                        });
+                        return;
+                    }
+
+                    const previous = targetTrackRef.current;
+                    const matched = pickTrackedPose(previous, detections);
+
+                    if (matched) {
+                        const previousVx = previous?.vx || 0;
+                        const previousVy = previous?.vy || 0;
+                        const deltaX = previous ? matched.box.cx - previous.cx : 0;
+                        const deltaY = previous ? matched.box.cy - previous.cy : 0;
+                        targetTrackRef.current = {
+                            ...matched.box,
+                            index: matched.index,
+                            vx: previousVx * 0.55 + deltaX * 0.45,
+                            vy: previousVy * 0.55 + deltaY * 0.45,
+                            lastSeen: now
+                        };
+                        setTargetStatus('LOCKED');
+                        const quality = getPoseQuality(matched);
+                        if (now - lastQualityUiUpdateRef.current > 140) {
+                            setTargetQuality(quality);
+                            lastQualityUiUpdateRef.current = now;
+                        }
+                        drawDetection(ctx, matched, quality.ok ? '#22c55e' : '#f59e0b', quality.ok ? 'ĐÃ KHÓA' : 'GIỮ VỊ TRÍ', true);
+                        setDetectedPose(quality.ok ? analyzePose(matched.landmarks) : 'NONE');
+                    } else {
+                        const lastSeen = previous?.lastSeen || now;
+                        const missingFor = now - lastSeen;
+                        setDetectedPose('NONE');
+                        if (missingFor < 2500) {
+                            setTargetStatus('SEARCHING');
+                            if (now - lastQualityUiUpdateRef.current > 140) {
+                                setTargetQuality({ ok: false, level: 'searching', label: 'Đang tìm lại học sinh đã chọn...' });
+                                lastQualityUiUpdateRef.current = now;
+                            }
+                            detections.forEach(detection => drawDetection(ctx, detection, '#f59e0b', '', false));
+                        } else {
+                            setTargetStatus('LOST');
+                            if (now - lastQualityUiUpdateRef.current > 140) {
+                                setTargetQuality({ ok: false, level: 'lost', label: 'Đã mất mục tiêu — bấm Chọn lại học sinh' });
+                                lastQualityUiUpdateRef.current = now;
+                            }
+                            detections.forEach((detection, index) => drawDetection(ctx, detection, '#ef4444', 'HS ' + (index + 1), false));
+                        }
+                    }
+                };
+
+                const initPose = async () => {
+                    // Camera phải được mở độc lập với AI. Nếu MediaPipe lỗi tải,
+                    // giáo viên vẫn nhìn thấy hình camera và nhận được lỗi AI chính xác.
+                    try {
+                        cameraRef.current = new Camera(videoElement, {
+                            onFrame: processPoseFrame,
+                            width: 640,
+                            height: 480
+                        });
+                        await cameraRef.current.start();
+                    } catch (cameraError) {
+                        console.error('Camera init failed:', cameraError);
+                        if (!cancelled && isMounted.current) {
+                            const reason = cameraError?.message ? String(cameraError.message).slice(0, 180) : 'Trình duyệt không mở được camera';
+                            setPoseError('Không mở được camera: ' + reason);
+                        }
+                        return;
+                    }
+
+                    try {
+                        // Đoạn này nằm trong script type="text/babel". Dùng Function để
+                        // dynamic import được chính trình duyệt xử lý, tránh Babel đổi import() thành require().
+                        const nativeImport = window.__poseNativeImport || (
+                            window.__poseNativeImport = new Function('url', 'return import(url)')
+                        );
+                        const visionSources = [
+                            {
+                                module: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs',
+                                wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm'
+                            },
+                            {
+                                module: 'https://unpkg.com/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs',
+                                wasm: 'https://unpkg.com/@mediapipe/tasks-vision@0.10.21/wasm'
+                            }
+                        ];
+
+                        let visionModule = null;
+                        let vision = null;
+                        let lastVisionError = null;
+
+                        for (const source of visionSources) {
+                            try {
+                                const imported = await nativeImport(source.module);
+                                const api = imported?.default && imported.default.FilesetResolver
+                                    ? imported.default
+                                    : imported;
+                                if (!api?.FilesetResolver || !api?.PoseLandmarker) {
+                                    throw new Error('MediaPipe module không có FilesetResolver/PoseLandmarker');
+                                }
+                                const fileset = await api.FilesetResolver.forVisionTasks(source.wasm);
+                                visionModule = api;
+                                vision = fileset;
+                                console.info('MediaPipe Tasks Vision loaded from:', source.module);
+                                break;
+                            } catch (sourceError) {
+                                lastVisionError = sourceError;
+                                console.warn('MediaPipe source failed:', source.module, sourceError);
+                            }
+                        }
+
+                        if (!visionModule || !vision) {
+                            throw new Error('Không tải được MediaPipe Tasks Vision: ' + (lastVisionError?.message || 'unknown error'));
+                        }
+
+                        const createLandmarker = async (delegate, modelAssetPath) => visionModule.PoseLandmarker.createFromOptions(vision, {
+                            baseOptions: { modelAssetPath, delegate },
+                            runningMode: 'VIDEO',
+                            numPoses: 5,
+                            minPoseDetectionConfidence: 0.45,
+                            minPosePresenceConfidence: 0.45,
+                            minTrackingConfidence: 0.5,
+                            outputSegmentationMasks: false
+                        });
+
+                        let landmarker;
+                        try {
+                            landmarker = await createLandmarker(
+                                'GPU',
+                                'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task'
+                            );
+                        } catch (gpuError) {
+                            console.warn('Pose GPU unavailable, switching to CPU/Lite:', gpuError);
+                            landmarker = await createLandmarker(
+                                'CPU',
+                                'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+                            );
+                        }
+
+                        if (cancelled || !isMounted.current) {
+                            try { landmarker.close(); } catch (_) {}
+                            return;
+                        }
+
+                        poseLandmarkerRef.current = landmarker;
+                        resetTargetSelection();
+                        setPoseError('');
+                    } catch (err) {
+                        console.error('Multi-pose init failed:', err);
+                        if (!cancelled && isMounted.current) {
+                            const reason = err?.message ? String(err.message).slice(0, 180) : 'Lỗi không xác định';
+                            setPoseError('Camera đã mở nhưng AI đa học sinh chưa khởi tạo: ' + reason);
+                        }
+                    }
+                };
+
+                initPose();
+                return () => {
+                    cancelled = true;
+                    isMounted.current = false;
+                    detectionsRef.current = [];
+                    targetTrackRef.current = null;
+                    if (cameraRef.current) {
+                        try { cameraRef.current.stop(); } catch (_) {}
+                        cameraRef.current = null;
+                    }
+                    if (poseLandmarkerRef.current) {
+                        try { poseLandmarkerRef.current.close(); } catch (_) {}
+                        poseLandmarkerRef.current = null;
+                    }
+                    if (poseRef.current) {
+                        try { poseRef.current.close(); } catch (_) {}
+                        poseRef.current = null;
+                    }
+                };
+            }, [gameReady, resetTargetSelection]);
+
+            useEffect(() => {
+                if (!gameReady || gameError || feedback || isPaused || recognitionBlocked) return;
+                if (timeLeft <= 0) { checkAnswer(); return; }
+                const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+                const intervalTimer = setInterval(() => {
+                    setCheckTimer(prev => {
+                        if (prev <= 1) { checkAnswer(); return settings.checkInterval || 20; }
+                        return prev - 1;
+                    });
+                }, 1000);
+                return () => { clearInterval(timer); clearInterval(intervalTimer); };
+            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused, recognitionBlocked]);
+
+            if (!gameReady) {
+                return (
+                    <div className="w-full h-full bg-slate-950 text-white grid place-items-center p-6 text-center">
+                        <div>
+                            <div className="text-6xl mb-4">{gameError ? '⚠️' : '🎮'}</div>
+                            <div className="text-2xl font-black">{gameError ? 'Không thể bắt đầu bài chơi' : 'Đang tạo phiên chơi trên backend...'}</div>
+                            {gameError && <div className="mt-3 text-red-300 font-bold max-w-xl">{gameError}</div>}
+                            <button onClick={() => setScreen('MENU')} className="mt-6 bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-black">← TRANG CHỦ</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="w-full h-full flex flex-col bg-slate-100 overflow-hidden">
+                    <div className="pose-game-header bg-indigo-700 px-6 py-1.5 text-white flex justify-between items-center shadow-lg z-20">
+                        <div className="pose-game-header-left flex items-center gap-4">
+                            <span className="pose-game-question-no text-xl font-black bg-white/20 px-5 py-1 rounded-xl">CÂU {qIndex + 1}</span>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowVolumeControl(prev => !prev)}
+                                    className="pose-game-mute text-xl w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-all"
+                                    title="Điều chỉnh âm lượng"
+                                    aria-label="Điều chỉnh âm lượng"
+                                >
+                                    {isMuted ? '🔇' : masterVolume < 0.5 ? '🔉' : '🔊'}
+                                </button>
+                                {showVolumeControl && (
+                                    <div className="pose-volume-popover absolute left-0 top-12 z-[100] w-56 bg-slate-950/95 text-white rounded-2xl p-3 shadow-2xl border border-white/15 backdrop-blur-md">
+                                        <div className="flex items-center justify-between gap-3 mb-2">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Âm lượng</span>
+                                            <span className="text-sm font-black text-yellow-300">{Math.round(masterVolume * 100)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="1"
+                                            value={Math.round(masterVolume * 100)}
+                                            onChange={(e) => setMasterVolume(Number(e.target.value) / 100)}
+                                            className="w-full accent-yellow-400 cursor-pointer"
+                                            aria-label="Mức âm lượng"
+                                        />
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-[10px] font-bold text-slate-400">0%</span>
+                                            <button
+                                                onClick={() => setMasterVolume(prev => prev > 0 ? 0 : 1)}
+                                                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-black"
+                                            >
+                                                {isMuted ? '🔊 BẬT ÂM' : '🔇 TẮT ÂM'}
+                                            </button>
+                                            <span className="text-[10px] font-bold text-slate-400">100%</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="pose-game-header-right flex items-center gap-6">
+                            <div className="pose-game-timer flex flex-col items-center border-r border-white/20 pr-6">
+                                <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Quét sau</span>
+                                <span className="pose-game-timer-value text-3xl font-black text-yellow-400 leading-none">{checkTimer}s</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Thời gian còn</span>
+                                <span className={`pose-game-timer-value text-4xl font-black leading-none ${timeLeft < 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</span>
+                            </div>
+                            <button
+                                onClick={togglePause}
+                                className={`pose-game-pause px-5 py-2 rounded-2xl font-black text-base shadow-xl transform active:scale-95 transition-all ${isPaused ? 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300' : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'}`}
+                                title={isPaused ? 'Tiếp tục bài chơi' : 'Tạm dừng để giáo viên sửa và giải thích đáp án'}
+                            >
+                                {isPaused ? '▶ TIẾP TỤC' : '⏸ TẠM DỪNG'}
+                            </button>
+                            <button onClick={handleManualCheck} disabled={isPaused || recognitionBlocked} className="pose-game-check bg-yellow-400 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
+                        </div>
+                    </div>
+
+                    {isPaused && (
+                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[80] bg-amber-400 text-amber-950 px-5 py-2 rounded-full font-black shadow-xl border-2 border-white">
+                            ⏸ ĐANG TẠM DỪNG — giáo viên có thể sửa, giải thích đáp án
+                        </div>
+                    )}
+                    <div className="pose-game-main flex-1 flex overflow-hidden">
+                        <div
+                            className="pose-game-content w-[62%] flex flex-col bg-white border-r-2 border-slate-200 p-2 gap-2 relative overflow-hidden"
+                            style={lessonBackground ? {
+                                backgroundImage: `url("${lessonBackground}")`,
+                                backgroundSize: lessonBackgroundFit,
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'no-repeat'
+                            } : undefined}
+                        >
+                            {lessonBackground && <div className="absolute inset-0 pointer-events-none" style={{backgroundColor: `rgba(248,250,252,${lessonOverlay})`}}></div>}
+                            <div className="pose-question-panel flex-[5] bg-indigo-50/60 rounded-[2rem] border-2 border-indigo-100 flex flex-col items-center justify-center p-4 relative overflow-hidden z-10">
+                                <h2 className="pose-question-text text-3xl font-black text-slate-800 mb-4 text-center leading-tight">{currentQuestion.text}</h2>
+                                {currentQuestion.image && (
+                                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
+                                        <img src={mediaSrc(currentQuestion.image)} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-4 border-white" alt="Câu hỏi" />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="pose-answers-grid flex-[3] grid grid-cols-2 gap-2 relative z-10">
+                                {currentQuestion.answers.slice(0, settings.numAnswers).map((ans, idx) => (
+                                    <div key={idx} className={`pose-answer-card answer-card p-2.5 rounded-[1.5rem] border-4 flex items-center shadow-sm relative h-full transition-all ${!recognitionBlocked && detectedPose === ans.pose ? 'border-indigo-500 bg-indigo-50 ring-4 ring-indigo-200' : 'bg-white border-slate-100'}`}>
+                                        <div className="pose-answer-letter flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 rounded-2xl mr-3 text-white text-2xl font-black shadow-md">{String.fromCharCode(65 + idx)}</div>
+                                        <div className="flex-1 min-w-0 pr-2">
+                                            <span className="pose-answer-text text-lg font-bold text-slate-700 leading-tight block line-clamp-2">{ans.text}</span>
+                                        </div>
+                                        <div className="pose-answer-visual flex-shrink-0 w-20 h-20 flex items-center justify-center bg-white rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">
+                                            {ans.image ? <img src={mediaSrc(ans.image)} className="w-full h-full object-contain" /> : getPoseVisual(ans.pose)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="pose-camera-panel w-[38%] relative bg-slate-900 overflow-hidden flex flex-col">
+                            <div className="relative flex-1 bg-black">
+                                <video ref={videoRef} playsInline className="camera-flip w-full h-full object-contain opacity-90" />
+                                <canvas
+                                    ref={canvasRef}
+                                    width="640"
+                                    height="480"
+                                    onClick={handleCanvasClick}
+                                    className={`camera-flip absolute inset-0 w-full h-full object-contain ${selectionMode ? 'cursor-crosshair' : 'cursor-default'}`}
+                                    title={selectionMode ? 'Chạm vào khung học sinh muốn AI nhận diện' : 'AI đang khóa học sinh đã chọn'}
+                                />
+                                {selectionMode && (
+                                    <div className="absolute top-3 left-3 right-3 z-20 bg-indigo-600/95 text-white px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-center pointer-events-none">
+                                        <div className="font-black text-sm">🎯 CHỌN HỌC SINH CẦN NHẬN DIỆN</div>
+                                        <div className="text-xs font-bold text-indigo-100 mt-0.5">
+                                            {peopleCount > 0 ? `AI thấy ${peopleCount} học sinh — chạm trực tiếp vào khung của em cần chơi` : 'Chưa thấy học sinh — mời các em đứng trọn trong khung camera'}
+                                        </div>
+                                    </div>
+                                )}
+                                {targetStatus === 'SEARCHING' && (
+                                    <div className="absolute top-3 left-3 right-3 z-20 bg-amber-400/95 text-amber-950 px-4 py-2 rounded-2xl shadow-xl font-black text-sm text-center pointer-events-none">
+                                        🔎 ĐANG TÌM LẠI HỌC SINH ĐÃ CHỌN — chưa tính đáp án
+                                    </div>
+                                )}
+                                {targetStatus === 'LOST' && (
+                                    <div className="absolute top-3 left-3 right-3 z-30 bg-red-600/95 text-white px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-center">
+                                        <div className="font-black text-sm">⚠ ĐÃ MẤT HỌC SINH MỤC TIÊU</div>
+                                        <button onClick={resetTargetSelection} className="mt-2 bg-white text-red-700 px-4 py-1.5 rounded-xl text-xs font-black">🎯 CHỌN LẠI HỌC SINH</button>
+                                    </div>
+                                )}
+                                {poseError && (
+                                    <div className="absolute top-3 left-3 right-3 z-40 bg-red-700 text-white px-4 py-3 rounded-2xl shadow-xl text-center font-bold text-sm">
+                                        ⚠ {poseError}
+                                    </div>
+                                )}
+                                <div className="pose-camera-status absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between shadow-2xl border border-white/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="pose-camera-status-icon w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-inner overflow-hidden border border-slate-200">
+                                            {getPoseVisual(detectedPose)}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                                {selectionMode ? 'Trạng thái AI:' : targetStatus === 'LOCKED' ? 'Học sinh đang:' : 'Theo dõi:'}
+                                            </span>
+                                            <span className={`pose-camera-status-name text-lg font-black uppercase italic leading-none ${targetQuality.ok ? 'text-indigo-700' : 'text-amber-600'}`}>
+                                                {selectionMode ? 'CHỜ CHỌN HỌC SINH' : targetStatus === 'LOCKED' ? DEFAULT_POSE_CONFIG[detectedPose].label : targetStatus === 'SEARCHING' ? 'ĐANG TÌM LẠI' : 'MẤT MỤC TIÊU'}
+                                            </span>
+                                            <span className={`text-[10px] mt-1 font-bold leading-tight ${targetQuality.ok ? 'text-emerald-600' : 'text-slate-500'}`}>{targetQuality.label}</span>
+                                        </div>
+                                    </div>
+                                    <div className="pose-camera-scan flex items-center gap-2">
+                                         <div className="text-right mr-1">
+                                            <div className="text-[8px] font-bold text-slate-400 uppercase leading-none">{targetStatus === 'LOCKED' ? 'Target lock' : 'Multi-pose'}</div>
+                                            <div className={`text-[10px] font-black ${targetQuality.ok ? 'text-emerald-600' : 'text-indigo-500'}`}>{selectionMode ? peopleCount + ' người' : targetQuality.ok ? 'SẴN SÀNG' : 'TẠM DỪNG'}</div>
+                                         </div>
+                                         {!selectionMode && (
+                                            <button
+                                                onClick={resetTargetSelection}
+                                                className="px-3 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black shadow"
+                                                title="Chọn một học sinh khác"
+                                            >
+                                                🎯 CHỌN LẠI
+                                            </button>
+                                         )}
+                                    </div>
+                                </div>
+                            </div>
+                            {feedback && (
+                                <div className={`absolute inset-0 flex flex-col items-center justify-center z-50 text-white animate-in zoom-in duration-300 ${feedback === 'correct' ? 'correct-bg' : 'wrong-bg'}`}>
+                                    <div className="text-[10rem] mb-4 drop-shadow-2xl">{feedback === 'correct' ? '🌟' : '💡'}</div>
+                                    <div className="text-6xl font-black uppercase text-center p-4 drop-shadow-lg tracking-tighter">{feedback === 'correct' ? 'QUÁ GIỎI!' : 'CỐ GẮNG NHÉ!'}</div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const FastImportModal = ({
+            open, onClose, importText, setImportText, busy, preview,
+            onAnalyzePaste, onExcel, importMode, setImportMode,
+            poseMapping, onPoseChange, onApply
+        }) => {
+            if (!open) return null;
+            const poseOptions = ['RAISE_LEFT', 'RAISE_RIGHT', 'BOTH_UP', 'CROSS_ARMS'];
+            return (
+                <div className="fixed inset-0 z-[100000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-[min(1100px,96vw)] max-h-[94vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+                        <div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase">⚡ Nhập nhanh câu hỏi</h3>
+                                <p className="text-white/85 text-sm font-semibold">Dán từ Word / Excel / Google Sheets hoặc chọn file Excel .xlsx.</p>
+                            </div>
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 font-black text-xl">✕</button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 grid lg:grid-cols-[1fr_1.15fr] gap-6">
+                            <div className="space-y-5">
+                                <section className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                    <div className="font-black text-slate-700 mb-2">1. Mapping đáp án → tư thế</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['A','B','C','D'].map(letter => (
+                                            <label key={letter} className="bg-white border border-slate-200 rounded-xl p-2 text-xs font-black text-slate-500">
+                                                <span className="block mb-1 text-indigo-600">Đáp án {letter}</span>
+                                                <select value={poseMapping[letter]} onChange={(e) => onPoseChange(letter, e.target.value)} className="w-full p-2 rounded-lg bg-slate-50 border border-slate-100 font-bold text-slate-700">
+                                                    {poseOptions.map(poseId => <option key={poseId} value={poseId}>{DEFAULT_POSE_CONFIG[poseId].label}</option>)}
+                                                </select>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mt-2">Mỗi A–D nên dùng một tư thế khác nhau. Mapping áp dụng cho toàn bộ câu vừa nhập.</p>
+                                </section>
+
+                                <section className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4">
+                                    <div className="font-black text-indigo-800 mb-2">2A. Dán nhanh</div>
+                                    <textarea
+                                        value={importText}
+                                        onChange={(e) => setImportText(e.target.value)}
+                                        placeholder={"Câu 1. Thiết bị nào dùng để nhập văn bản?\nA. Chuột\nB. Bàn phím\nC. Loa\nD. Máy in\nĐáp án: B"}
+                                        className="w-full min-h-[210px] p-3 bg-white rounded-xl border-2 border-indigo-100 outline-none focus:border-indigo-300 text-sm"
+                                    />
+                                    <button disabled={busy || !importText.trim()} onClick={onAnalyzePaste} className="mt-3 w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white py-3 rounded-xl font-black">
+                                        {busy ? 'ĐANG PHÂN TÍCH...' : '🔎 PHÂN TÍCH NỘI DUNG DÁN'}
+                                    </button>
+                                </section>
+
+                                <section className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4">
+                                    <div className="font-black text-emerald-800 mb-2">2B. Hoặc chọn Excel</div>
+                                    <p className="text-xs text-emerald-700 mb-3">6 cột: <b>Câu hỏi | A | B | C | D | Đáp án</b>. Có thể thêm cột STT ở đầu.</p>
+                                    <label className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black text-center cursor-pointer">
+                                        📊 CHỌN EXCEL .XLSX
+                                        <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={onExcel} />
+                                    </label>
+                                </section>
+                            </div>
+
+                            <div className="space-y-4">
+                                <section className="bg-white border-2 border-slate-100 rounded-2xl p-4 min-h-[240px]">
+                                    <div className="flex items-center justify-between gap-3 mb-3">
+                                        <div className="font-black text-slate-700">3. Kiểm tra trước khi nhập</div>
+                                        {preview && (
+                                            <div className="flex gap-2 text-xs font-black">
+                                                <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600">{preview.total || 0} câu</span>
+                                                <span className="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700">✓ {preview.valid_count || 0}</span>
+                                                <span className="px-2 py-1 rounded-lg bg-red-100 text-red-700">⚠ {preview.invalid_count || 0}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {!preview && <div className="grid place-items-center h-[190px] text-slate-400 font-bold text-center">Dán nội dung hoặc chọn Excel rồi bấm phân tích.<br/>Dữ liệu chưa được thêm vào bài cho đến khi thầy/cô xác nhận.</div>}
+
+                                    {preview && (
+                                        <>
+                                            {(preview.mapping_errors || []).map((msg, i) => <div key={'m'+i} className="mb-2 p-2 rounded-lg bg-red-50 text-red-700 text-xs font-bold">⚠ {msg}</div>)}
+                                            {(preview.errors || []).map((msg, i) => <div key={'e'+i} className="mb-2 p-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold">ℹ {msg}</div>)}
+                                            <div className="max-h-[390px] overflow-auto border border-slate-100 rounded-xl">
+                                                <table className="w-full text-xs">
+                                                    <thead className="sticky top-0 bg-slate-100 text-slate-600">
+                                                        <tr><th className="p-2 text-left">Dòng</th><th className="p-2 text-left">Câu hỏi</th><th className="p-2 text-left">Đáp án</th><th className="p-2 text-left">Trạng thái</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(preview.items || []).slice(0, 100).map((item, idx) => (
+                                                            <tr key={idx} className={item.valid ? 'border-t border-slate-100' : 'border-t border-red-100 bg-red-50'}>
+                                                                <td className="p-2 font-black">{item.row}</td>
+                                                                <td className="p-2 font-bold text-slate-700">{item.question?.text}</td>
+                                                                <td className="p-2 text-slate-500">{(item.question?.answers || []).map(a => a.text).join(' • ')}</td>
+                                                                <td className="p-2">
+                                                                    {item.valid ? <span className="text-emerald-600 font-black">Hợp lệ</span> : <span className="text-red-600 font-bold">{(item.errors || []).join(' ')}</span>}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {(preview.items || []).length > 100 && <div className="text-[11px] text-slate-400 mt-2 text-center">Đang hiển thị 100 dòng đầu; toàn bộ câu hợp lệ vẫn sẽ được nhập.</div>}
+                                        </>
+                                    )}
+                                </section>
+
+                                <section className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                    <div className="font-black text-slate-700 mb-2">4. Cách đưa vào bài hiện tại</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => setImportMode('replace')} className={'p-3 rounded-xl font-black border-2 ' + (importMode === 'replace' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500')}>Thay toàn bộ câu</button>
+                                        <button onClick={() => setImportMode('append')} className={'p-3 rounded-xl font-black border-2 ' + (importMode === 'append' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500')}>Thêm vào cuối bài</button>
+                                    </div>
+                                    <button
+                                        disabled={busy || !preview || !preview.valid_count || (preview.mapping_errors || []).length > 0}
+                                        onClick={onApply}
+                                        className="mt-3 w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-40 text-white py-3.5 rounded-xl font-black text-lg shadow-lg"
+                                    >
+                                        ✓ NHẬP {preview?.valid_count || 0} CÂU HỢP LỆ
+                                    </button>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Editor = ({ settings, setSettings, setScreen, usage, onSaveCloud, onOpenCloud, onOpenBank, onSaveQuestionsToBank, onImported, cloudId }) => {
+            const [qIdx, setQIdx] = useState(0);
+            const [shareGroups, setShareGroups] = useState([]);
+            const [importOpen, setImportOpen] = useState(false);
+            const [importText, setImportText] = useState('');
+            const [importBusy, setImportBusy] = useState(false);
+            const [importPreview, setImportPreview] = useState(null);
+            const [importMode, setImportMode] = useState('append');
+            const [poseMapping, setPoseMapping] = useState({
+                A: 'RAISE_LEFT',
+                B: 'RAISE_RIGHT',
+                C: 'BOTH_UP',
+                D: 'CROSS_ARMS'
+            });
+            const q = settings.questions[qIdx] || settings.questions[0];
+
+            useEffect(() => {
+                backendRequest('groups.list')
+                    .then((result) => setShareGroups(result.groups || []))
+                    .catch(() => setShareGroups([]));
+            }, []);
+
+            const handleFile = async (e, callback) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const result = await backendRequest('media.upload', {}, file);
+                    callback(result.asset, file.name);
+                } catch (err) {
+                    alert('Không tải được media: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                }
+            };
+
+            const openFastImport = () => {
+                const onlyOne = (settings.questions || []).length === 1;
+                const text = String(settings.questions?.[0]?.text || '');
+                const looksLikeStarter = onlyOne && (/Nhập nội dung câu hỏi|Em hãy tạo dáng/i.test(text));
+                setImportMode(looksLikeStarter ? 'replace' : 'append');
+                setImportPreview(null);
+                setImportOpen(true);
+            };
+
+            const closeFastImport = () => {
+                if (importBusy) return;
+                setImportOpen(false);
+            };
+
+            const analyzeImportPaste = async () => {
+                setImportBusy(true);
+                try {
+                    const result = await backendRequest('questions.import.preview', {
+                        text: importText,
+                        pose_mapping: poseMapping
+                    });
+                    setImportPreview(result);
+                } catch (err) {
+                    alert('Không phân tích được nội dung: ' + err.message);
+                } finally {
+                    setImportBusy(false);
+                }
+            };
+
+            const analyzeImportExcel = async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImportBusy(true);
+                try {
+                    const result = await backendRequest('questions.import.preview', {
+                        pose_mapping: poseMapping
+                    }, file);
+                    setImportPreview(result);
+                } catch (err) {
+                    alert('Không đọc được Excel: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                    setImportBusy(false);
+                }
+            };
+
+            const changeImportPose = (letter, pose) => {
+                setPoseMapping(prev => ({...prev, [letter]: pose}));
+                setImportPreview(null);
+            };
+
+            const applyImportedQuestions = () => {
+                const imported = (importPreview?.items || []).filter(item => item.valid).map(item => item.question);
+                if (!imported.length) return alert('Không có câu hợp lệ để nhập.');
+                if ((importPreview?.mapping_errors || []).length) return alert(importPreview.mapping_errors.join('\n'));
+                const previousCount = (settings.questions || []).length;
+                const nextQuestions = importMode === 'replace'
+                    ? imported
+                    : [...(settings.questions || []), ...imported];
+                setSettings({...settings, questions: nextQuestions});
+                setQIdx(importMode === 'replace' ? 0 : previousCount);
+                setImportOpen(false);
+                setImportPreview(null);
+                setImportText('');
+                alert('Đã nhập ' + imported.length + ' câu hỏi hợp lệ vào bài.');
+            };
+
+            const previewConfiguredAudio = (type) => {
+                const src = mediaSrc(settings.audio?.[type]?.data) || DEFAULT_AUDIO_ASSETS[type]?.url;
+                if (!src) return;
+                const audio = new Audio(src);
+                audio.volume = type === 'bgm'
+                    ? Math.min(1, Math.max(0, Number(settings.audio?.bgmVolume ?? 0.3)))
+                    : Math.min(1, Math.max(0, Number(settings.audio?.feedbackVolume ?? 0.9)));
+                audio.play().catch(() => {});
+            };
+
+            const updateQuestion = (data) => {
+                const nq = [...settings.questions];
+                nq[qIdx] = { ...nq[qIdx], ...data };
+                setSettings({ ...settings, questions: nq });
+            };
+
+            const updateAnswer = (idx, data) => {
+                const nq = [...settings.questions];
+                nq[qIdx].answers[idx] = { ...nq[qIdx].answers[idx], ...data };
+                setSettings({ ...settings, questions: nq });
+            };
+
+            const exportData = async () => {
+                try {
+                    const result = await backendRequest('document.export', { data: settings });
+                    const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ai_pose_quiz_${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('Không xuất được dữ liệu: ' + err.message);
+                }
+            };
+
+            const importData = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const result = await backendRequest('document.import', {}, file);
+                    setSettings(result.data);
+                    onImported?.();
+                    alert('Đã nhập dữ liệu qua backend thành công.');
+                } catch (err) {
+                    alert('Không nhập được file: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                }
+            };
+
+            return (
+                <div className="pose-editor w-full h-full flex flex-col bg-slate-50 text-slate-800">
+                    <FastImportModal
+                        open={importOpen}
+                        onClose={closeFastImport}
+                        importText={importText}
+                        setImportText={setImportText}
+                        busy={importBusy}
+                        preview={importPreview}
+                        onAnalyzePaste={analyzeImportPaste}
+                        onExcel={analyzeImportExcel}
+                        importMode={importMode}
+                        setImportMode={setImportMode}
+                        poseMapping={poseMapping}
+                        onPoseChange={changeImportPose}
+                        onApply={applyImportedQuestions}
+                    />
+                    <div className="pose-editor-header bg-white border-b-2 border-slate-200 p-4 flex justify-between items-center px-8 shadow-sm">
+                        <div className="flex flex-col">
+                            <h2 className="pose-editor-title text-2xl font-black text-indigo-600 uppercase tracking-tighter">THIẾT LẬP BÀI DẠY V9.9 CLOUD</h2>
+                            <div className="pose-editor-title-fields flex gap-2 mt-1">
+                                <input value={settings.subject || ''} onChange={(e) => setSettings({...settings, subject: e.target.value})} placeholder="Môn học (VD: Tin học)" className="w-48 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold outline-none focus:border-indigo-300" />
+                                <input value={settings.title || ''} onChange={(e) => setSettings({...settings, title: e.target.value})} placeholder="Tên bài dạy" className="w-80 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold outline-none focus:border-indigo-300" />
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-bold text-emerald-600">☁️ {usage} media đang tham chiếu • Storage riêng tư</span>
+                            </div>
+                        </div>
+                        <div className="pose-editor-actions flex gap-2 flex-wrap justify-end">
+                            <button onClick={openFastImport} className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase hover:bg-orange-400 shadow-md">⚡ Nhập nhanh</button>
+                            <button onClick={onOpenBank} className="bg-violet-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-violet-700 shadow-md">📚 Kho câu hỏi</button>
+                            <button onClick={() => setScreen('GROUPS')} className="bg-fuchsia-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-fuchsia-700 shadow-md">👥 Nhóm</button>
+                            <button onClick={onOpenCloud} className="bg-sky-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-sky-600 shadow-md">☁️ Thư viện</button>
+                            <button onClick={onSaveCloud} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-emerald-700 shadow-md">{cloudId ? 'Cập nhật cloud' : 'Lưu cloud'}</button>
+                            <button onClick={exportData} className="bg-blue-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-blue-600 shadow-md">Lưu file (.json)</button>
+                            <label className="bg-orange-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase cursor-pointer flex items-center hover:bg-orange-600 shadow-md">
+                                Mở file
+                                <input type="file" accept=".json" className="hidden" onChange={importData} />
+                            </label>
+                            <button onClick={() => setScreen('MENU')} className="bg-indigo-600 text-white px-8 py-2 rounded-xl font-black uppercase hover:bg-indigo-700 shadow-md">Xong</button>
+                        </div>
+                    </div>
+
+                    <div className="pose-editor-body flex-1 flex overflow-hidden">
+                        <div className="pose-editor-sidebar w-80 bg-white border-r border-slate-200 p-5 overflow-y-auto flex flex-col gap-6 shadow-inner">
+                            <section>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">⚙️ Thiết lập chung</h3>
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">TG mỗi câu (giây)</label>
+                                        <input type="number" value={settings.timeLimit} onChange={(e) => setSettings({...settings, timeLimit: parseInt(e.target.value) || 20})} className="w-full p-2 bg-slate-50 rounded-xl border border-slate-200 font-bold" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">TG quét tự động (giây)</label>
+                                        <input type="number" value={settings.checkInterval} onChange={(e) => setSettings({...settings, checkInterval: parseInt(e.target.value) || 20})} className="w-full p-2 bg-slate-50 rounded-xl border border-slate-200 font-bold" />
+                                    </div>
+                                </div>
+
+                                <h4 className="text-[10px] font-black text-indigo-400 uppercase mb-3">📸 Ảnh đại diện tư thế AI</h4>
+                                <div className="space-y-3">
+                                    {Object.keys(DEFAULT_POSE_CONFIG).map(poseId => (
+                                        <div key={poseId} className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                                            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 flex-shrink-0">
+                                                {resolvedPoseAssetSrc(settings, poseId) ? (
+                                                    <img src={resolvedPoseAssetSrc(settings, poseId)} className="w-full h-full object-contain" />
+                                                ) : (
+                                                    <span className="text-xl">{DEFAULT_POSE_CONFIG[poseId].icon}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-[9px] font-bold text-slate-500 truncate">{DEFAULT_POSE_CONFIG[poseId].label}</div>
+                                                <div className="flex gap-2">
+                                                    <label className="text-[8px] font-black text-indigo-500 cursor-pointer hover:underline uppercase">
+                                                        Tải ảnh
+                                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e, (data) => setSettings({...settings, poseAssets: {...settings.poseAssets, [poseId]: data}}))} />
+                                                    </label>
+                                                    {settings.poseAssets[poseId] && (
+                                                        <button onClick={() => setSettings({...settings, poseAssets: {...settings.poseAssets, [poseId]: null}})} className="text-[8px] font-black text-red-500 uppercase">Xóa</button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                            
+                            <section>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎨 Nền bài dạy</h3>
+                                <div className="space-y-3">
+                                    <div className="relative aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                                        {settings.theme?.background ? (
+                                            <>
+                                                <img src={mediaSrc(settings.theme.background)} className="absolute inset-0 w-full h-full object-cover" />
+                                                <div className="absolute inset-0" style={{backgroundColor: 'rgba(248,250,252,' + (settings.theme?.overlay ?? 0.68) + ')'}}></div>
+                                                <span className="relative z-10 text-[10px] font-black text-slate-600 bg-white/80 px-2 py-1 rounded-lg">XEM TRƯỚC NỀN</span>
+                                            </>
+                                        ) : <span className="text-xs font-bold text-slate-400">Chưa chọn ảnh nền</span>}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                                            onChange={(e) => handleFile(e, (data) => setSettings({...settings, theme: {...(settings.theme || {}), background: data, overlay: settings.theme?.overlay ?? 0.68, fit: settings.theme?.fit || 'cover'}}))}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <select value={settings.theme?.fit || 'cover'} onChange={(e) => setSettings({...settings, theme: {...(settings.theme || {}), fit: e.target.value}})} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black">
+                                            <option value="cover">Phủ kín nền</option>
+                                            <option value="contain">Hiện đủ ảnh</option>
+                                        </select>
+                                        {settings.theme?.background && <button onClick={() => setSettings({...settings, theme: {...(settings.theme || {}), background: null}})} className="px-3 rounded-xl bg-red-50 text-red-600 text-[9px] font-black">XÓA NỀN</button>}
+                                    </div>
+                                    <label className="block text-[9px] font-black text-slate-500 uppercase">
+                                        Độ phủ trắng: {Math.round((settings.theme?.overlay ?? 0.68) * 100)}%
+                                        <input type="range" min="20" max="95" value={Math.round((settings.theme?.overlay ?? 0.68) * 100)} onChange={(e) => setSettings({...settings, theme: {...(settings.theme || {}), overlay: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">🎵 Âm thanh toàn bài</h3>
+                                <div className="space-y-2">
+                                    {['bgm', 'correct', 'wrong'].map(type => (
+                                        <div key={type} className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-[10px]">
+                                            <label className="font-bold text-slate-500 block mb-1 uppercase">{type === 'bgm' ? 'Nhạc nền' : type === 'correct' ? 'Âm Đúng' : 'Âm Sai'}</label>
+                                            <div className="relative h-8 border border-dashed border-slate-300 rounded-lg flex items-center justify-center font-bold text-slate-400 cursor-pointer overflow-hidden px-1 text-center">
+                                                {settings.audio?.[type]?.name
+                                                    ? settings.audio[type].name
+                                                    : type === 'bgm'
+                                                        ? 'Mặc định: Nhạc nền Pose Quiz'
+                                                        : type === 'correct'
+                                                            ? 'Mặc định: Âm trả lời đúng'
+                                                            : 'Mặc định: Âm trả lời sai'}
+                                                <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFile(e, (data, name) => setSettings({...settings, audio: {...settings.audio, [type]: {data, name}}}))} />
+                                            </div>
+                                            <div className="flex gap-2 mt-1">
+                                                <button type="button" onClick={() => previewConfiguredAudio(type)} className="text-[8px] font-black text-indigo-500 uppercase">▶ Nghe thử</button>
+                                                {settings.audio?.[type]?.data && (
+                                                    <button type="button" onClick={() => setSettings({...settings, audio: {...settings.audio, [type]: {data: null, name: ""}}})} className="text-[8px] font-black text-red-500 uppercase">↩ Dùng mặc định</button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Nhạc nền: {Math.round((settings.audio?.bgmVolume ?? 0.3) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.bgmVolume ?? 0.3) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, bgmVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Đúng / sai: {Math.round((settings.audio?.feedbackVolume ?? 0.9) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.feedbackVolume ?? 0.9) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, feedbackVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="block bg-slate-50 p-2 rounded-xl text-[9px] font-black text-slate-500 uppercase">
+                                        Âm câu hỏi: {Math.round((settings.audio?.questionVolume ?? 1) * 100)}%
+                                        <input type="range" min="0" max="100" value={Math.round((settings.audio?.questionVolume ?? 1) * 100)} onChange={(e) => setSettings({...settings, audio: {...settings.audio, questionVolume: Number(e.target.value) / 100}})} className="w-full mt-1" />
+                                    </label>
+                                    <label className="flex items-center gap-2 bg-amber-50 border border-amber-100 p-2 rounded-xl text-[9px] font-black text-amber-700 uppercase cursor-pointer">
+                                        <input type="checkbox" checked={settings.audio?.defaultFeedback !== false} onChange={(e) => setSettings({...settings, audio: {...settings.audio, defaultFeedback: e.target.checked}})} />
+                                        Dùng âm đúng/sai mặc định khi chưa tải file
+                                    </label>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">📚 Câu hỏi</h3>
+                                <div className="flex flex-col gap-2">
+                                    {settings.questions.map((_, i) => (
+                                        <button key={i} onClick={() => setQIdx(i)} className={`w-full p-3 rounded-xl font-black text-xs transition-all ${qIdx === i ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-500'}`}>CÂU HỎI {i + 1}</button>
+                                    ))}
+                                    <button onClick={() => setSettings({...settings, questions: [...settings.questions, { id: Date.now(), text: "Em hãy tạo dáng mới nào!", image: null, audio: { data: null, name: "" }, answers: Array(4).fill(0).map((_, idx) => ({ text: `Đáp án ${idx + 1}`, pose: "NONE", isCorrect: idx === 0, image: null })) }]})} className="p-3 border-2 border-dashed border-indigo-200 text-indigo-600 rounded-xl font-black text-xs hover:bg-indigo-50">+ Thêm câu</button>
+                                    <div className="grid grid-cols-1 gap-2 pt-2 border-t border-slate-100">
+                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Chế độ lưu vào kho</div>
+                                        <select value={settings.bankVisibility || 'private'} onChange={(e) => setSettings({...settings, bankVisibility: e.target.value, bankGroupId: e.target.value === 'group' ? (settings.bankGroupId || '') : ''})} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black outline-none">
+                                            <option value="private">🔒 Riêng tư — chỉ tôi</option>
+                                            <option value="public">🌐 Công khai — mọi tài khoản</option>
+                                            <option value="group">👥 Theo nhóm riêng</option>
+                                        </select>
+                                        {(settings.bankVisibility || 'private') === 'group' && (
+                                            <select value={settings.bankGroupId || ''} onChange={(e) => setSettings({...settings, bankGroupId: e.target.value})} className="w-full p-2 bg-fuchsia-50 border border-fuchsia-100 text-fuchsia-700 rounded-xl text-[10px] font-black outline-none">
+                                                <option value="">-- Chọn nhóm chia sẻ --</option>
+                                                {shareGroups.map(group => <option key={group.id} value={group.id}>{group.name} ({group.join_code})</option>)}
+                                            </select>
+                                        )}
+                                        <button disabled={!q} onClick={() => q && onSaveQuestionsToBank([q])} className="p-2.5 bg-violet-50 text-violet-700 border border-violet-100 rounded-xl font-black text-[10px] uppercase disabled:opacity-40">Lưu câu này vào kho</button>
+                                        <button onClick={() => onSaveQuestionsToBank(settings.questions)} className="p-2.5 bg-violet-600 text-white rounded-xl font-black text-[10px] uppercase shadow-sm">Lưu tất cả vào kho</button>
+                                        <button onClick={onOpenBank} className="p-2.5 bg-white text-violet-700 border-2 border-violet-200 rounded-xl font-black text-[10px] uppercase">Mở kho để lấy nhiều câu</button>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <div className="pose-editor-content flex-1 p-6 overflow-y-auto bg-slate-50">
+                            {q && (
+                                <div className="pose-editor-question-card bg-white p-6 rounded-[2.5rem] shadow-sm space-y-6 max-w-5xl mx-auto border border-slate-200">
+                                    <div className="pose-editor-question-head flex gap-6">
+                                        <div className="flex-1">
+                                            <label className="text-xs font-black text-slate-400 uppercase block mb-1 tracking-widest">Câu hỏi</label>
+                                            <textarea value={q.text} onChange={(e) => updateQuestion({text: e.target.value})} className="w-full border-2 border-slate-50 p-4 rounded-[1.5rem] text-xl font-black bg-slate-50 outline-none focus:border-indigo-300 min-h-[100px]" />
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <label className="relative flex-1 bg-amber-50 border-2 border-dashed border-amber-200 text-amber-700 rounded-xl px-4 py-2.5 font-black text-xs cursor-pointer text-center overflow-hidden">
+                                                    {q.audio?.name ? `🔊 ${q.audio.name}` : '🔊 Thêm âm thanh cho câu hỏi'}
+                                                    <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFile(e, (data, name) => updateQuestion({audio: {data, name}}))} />
+                                                </label>
+                                                {q.audio?.data && (
+                                                    <>
+                                                        <button type="button" onClick={() => new Audio(mediaSrc(q.audio.data)).play().catch(() => {})} className="px-3 py-2.5 rounded-xl bg-amber-500 text-white font-black text-xs">▶ NGHE</button>
+                                                        <button type="button" onClick={() => updateQuestion({audio: {data: null, name: ""}})} className="px-3 py-2.5 rounded-xl bg-red-50 border border-red-100 text-red-600 font-black text-xs">XÓA</button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="pose-editor-question-image w-40 flex flex-col gap-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase block tracking-widest text-center">Ảnh minh họa</label>
+                                            <div className="relative aspect-square bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 overflow-hidden flex flex-col items-center justify-center">
+                                                {q.image ? <><img src={mediaSrc(q.image)} className="w-full h-full object-contain" /><button type="button" onClick={() => updateQuestion({image: null})} className="absolute top-1 right-1 z-20 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-lg">✕</button></> : <span className="text-2xl opacity-30 font-black">🖼️</span>}
+                                                <input type="file" accept="image/*" className="absolute inset-0 z-10 opacity-0 cursor-pointer" onChange={(e) => handleFile(e, (data) => updateQuestion({image: data}))} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pose-editor-answers grid grid-cols-2 gap-4">
+                                        {q.answers.slice(0, settings.numAnswers).map((ans, idx) => (
+                                            <div key={idx} className={`p-4 rounded-3xl border-2 transition-all ${ans.isCorrect ? 'border-green-500 bg-green-50/20 shadow-md ring-4 ring-green-50' : 'border-slate-100 bg-white'}`}>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-black text-indigo-600 text-[10px]">ĐÁP ÁN {String.fromCharCode(65+idx)}</span>
+                                                    <button onClick={() => { const nq = [...settings.questions]; nq[qIdx].answers.forEach((a, i) => a.isCorrect = i === idx); setSettings({...settings, questions: nq}); }} className={`px-3 py-0.5 rounded-full text-[9px] font-black ${ans.isCorrect ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400'}`}>{ans.isCorrect ? '✓ ĐÚNG' : 'CHỌN LÀM ĐÚNG'}</button>
+                                                </div>
+                                                <input value={ans.text} onChange={(e) => updateAnswer(idx, {text: e.target.value})} className="w-full bg-transparent border-b border-slate-100 font-bold p-1 mb-2 outline-none text-sm focus:border-indigo-300" placeholder="Nhập mô tả..." />
+                                                
+                                                <div className="flex gap-3">
+                                                    <div className="flex-1 space-y-2">
+                                                        <select value={ans.pose} onChange={(e) => updateAnswer(idx, {pose: e.target.value})} className="w-full p-2 bg-slate-50 rounded-xl text-[10px] font-black border-none outline-none appearance-none">
+                                                            {Object.keys(DEFAULT_POSE_CONFIG).map(pId => <option key={pId} value={pId}>{DEFAULT_POSE_CONFIG[pId].label}</option>)}
+                                                        </select>
+                                                        <div className="relative h-8 bg-indigo-50 rounded-xl flex items-center justify-center text-[9px] font-black text-indigo-600 border border-indigo-100 cursor-pointer">
+                                                            {ans.image ? '📎 Đổi ảnh' : '📸 Thêm ảnh riêng'}
+                                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFile(e, (data) => updateAnswer(idx, {image: data}))} />
+                                                        </div>
+                                                        {ans.image && (
+                                                            <button type="button" onClick={() => updateAnswer(idx, {image: null})} className="w-full text-[8px] font-black text-red-500 uppercase">Xóa ảnh đáp án</button>
+                                                        )}
+                                                    </div>
+                                                    <div className="w-16 h-16 bg-white rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden relative shadow-inner">
+                                                        {ans.image ? <img src={mediaSrc(ans.image)} className="w-full h-full object-contain" /> : (
+                                                            resolvedPoseAssetSrc(settings, ans.pose) ? <img src={resolvedPoseAssetSrc(settings, ans.pose)} className="w-full h-full object-contain" /> : <span className="text-2xl">{DEFAULT_POSE_CONFIG[ans.pose]?.icon}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button onClick={() => { if(settings.questions.length > 1) { const nq = settings.questions.filter((_, i) => i !== qIdx); setSettings({...settings, questions: nq}); setQIdx(0); } }} className="w-full py-3 text-red-500 font-black uppercase text-xs border border-red-100 rounded-xl hover:bg-red-50">Xóa câu hỏi này</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Result = ({ score, total, setScreen }) => (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6 bg-gradient-to-b from-indigo-50 to-white">
+                <div className="text-[10rem] mb-4 animate-bounce drop-shadow-2xl">🏆</div>
+                <h2 className="text-6xl font-black text-slate-800 mb-2 uppercase tracking-tighter">XUẤT SẮC!</h2>
+                <div className="text-8xl font-black text-indigo-600 mb-10 bg-white px-12 py-4 rounded-[3rem] shadow-xl border-b-8 border-indigo-100">{score}/{total}</div>
+                <button onClick={() => setScreen('MENU')} className="bg-indigo-600 text-white px-16 py-5 rounded-[2.5rem] text-3xl font-black shadow-2xl hover:scale-105 transition-all uppercase">Chơi lại thôi!</button>
+            </div>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

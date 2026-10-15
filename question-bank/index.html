@@ -1,0 +1,299 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ngân hàng câu hỏi & giọng đọc | Cổng giáo viên số</title>
+<style>
+:root{--blue:#2563eb;--dark:#17294b;--grey:#5c6e88;--line:#dae4f2;--bg:#f3f7fe;--danger:#bb3030}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top left,#dceafe,transparent 50%),var(--bg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--dark)}
+header{padding:24px 4%;background:linear-gradient(120deg,#13264e,#254f9c);color:white}header>a{color:#dcf0ff;text-decoration:none;font-weight:700}header h1{margin:10px 0 0;font-size:clamp(23px,3vw,35px)}header p{color:#d8e8ff;margin:7px 0 0}
+main{max-width:1400px;margin:auto;padding:22px 16px 70px}.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 10px 26px #162b4f0a}
+h2{font-size:19px;margin:0 0 10px}h3{font-size:16px;margin:0 0 9px}p{margin:6px 0 13px}
+label{font-size:13px;font-weight:750;display:block;margin:9px 0 4px}input,select,textarea{background:#fff;color:var(--dark);border:1px solid #b7c9e4;border-radius:10px;padding:10px;width:100%;font:inherit;min-width:0}textarea{min-height:84px;resize:vertical}
+button,.buttonlink{border:0;border-radius:10px;background:#e9f0fe;color:#174a9a;padding:10px 13px;cursor:pointer;font:inherit;font-weight:730;text-decoration:none;display:inline-block;text-align:center}button:hover,.buttonlink:hover{filter:brightness(.96)}button:disabled{opacity:.5;cursor:wait}
+.primary{background:var(--blue);color:white}.danger{background:#ffe3e2;color:#9e2727}.ok{background:#dff7ed;color:#087a5a}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{flex:0 1 auto}.row .grow{flex:1 1 160px}.split{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px}.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.filter-grid{display:grid;grid-template-columns:1fr 1fr 1.6fr;gap:9px}.list{max-height:590px;overflow:auto;border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.item{display:flex;gap:10px;align-items:start;padding:10px 8px;border-bottom:1px solid #e9edf4}.item.active{background:#e9f1ff}.item:last-child{border:0}.item input[type=checkbox]{width:17px;height:17px;flex:none;margin-top:5px}
+.itembutton{flex:1;text-align:left;background:transparent;padding:3px;min-width:0;font-weight:400}.itembutton strong{display:block;overflow-wrap:anywhere}.itembutton small{display:block;color:var(--grey);margin-top:2px}
+.muted{color:var(--grey);font-size:13px}.notice{border-radius:10px;padding:10px;background:#eaf3ff;color:#1a4c88;margin-top:9px;white-space:pre-line;font-size:13px}.notice.error{background:#fff1f1;color:#ae2727}
+.pill{font-size:11px;color:#2864ac;background:#e8f2ff;border-radius:30px;padding:4px 8px;display:inline-block}
+[hidden]{display:none!important}details{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}summary{font-weight:800;cursor:pointer}
+.control-label{display:flex;align-items:center;gap:8px;font-weight:650;margin:8px 0}.control-label input{width:auto}.helper{background:#f0f6ff;border-radius:10px;padding:9px 11px;color:#4d6080;font-size:13px;margin:7px 0}
+.audio-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+.audio-cell{background:#f5f8fe;border:1px solid #e2ebf6;border-radius:10px;padding:10px}.audio-cell span{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+.audio-panel{border:2px solid #b9d1f3;background:linear-gradient(180deg,#f8fbff,#fff 52%)}
+.audio-overview{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#edf5ff;padding:11px;border-radius:12px;margin:12px 0}
+.audio-overview strong{color:#1a55a5}.audio-chip{border-radius:20px;padding:3px 8px;font-size:12px;display:inline-block;font-weight:750}
+.voice-pill-wrap{position:relative;display:inline-flex;align-items:center;margin:4px 7px 4px 0;vertical-align:middle}
+.voice-pill-wrap .audio-chip{padding:6px 10px;line-height:1.35}
+.voice-pill-wrap.has-delete .audio-chip{padding-right:21px}
+.voice-pill-wrap .voice-delete{position:absolute;right:-6px;top:-8px;z-index:1;
+ display:flex;align-items:center;justify-content:center;width:21px;height:21px;min-width:21px;
+ border-radius:50%;border:1px solid #ffc3c7;background:#fff;color:#b51d35;
+ font-size:16px;font-weight:800;line-height:1;padding:0;box-shadow:0 2px 5px #193b6a23;cursor:pointer}
+.voice-pill-wrap .voice-delete:hover,.voice-pill-wrap .voice-delete:focus-visible{background:#c7223b;border-color:#c7223b;color:white;outline-offset:2px}
+.voice-pill-wrap .voice-delete:disabled{opacity:.5;cursor:wait}
+.audio-chip.ready{background:#dcf8ea;color:#16704d}.audio-chip.stale{background:#fff1d4;color:#93600d}.audio-chip.empty{background:#ecf0f6;color:#536781}
+.audio-cell.ready{background:#effbf4;border-color:#b7e4ce}.audio-cell.stale{background:#fffaf0;border-color:#ecd59b}
+.voice-chips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.voice-chips button{border-radius:30px;padding:8px 10px;background:#e9f0ff;color:#24559c;font-size:12px}
+.voice-chips button.selected{background:#2368d2;color:white}
+.audio-file-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.audio-file-row>*{flex:0 0 auto}
+.bank-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0}
+@media(max-width:580px){.bank-toolbar{grid-template-columns:1fr}}
+footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
+@media(max-width:960px){.split{grid-template-columns:1fr}.list{max-height:370px}}
+@media(max-width:580px){.filter-grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}header{padding:18px}main{padding:13px 9px 50px}.panel{padding:13px}.row>*{flex:1 1 130px}}
+
+/* Shared question-bank resource library: desktop table and focused sub-screens. */
+header{padding:19px max(18px,calc((100vw - 1440px)/2));background:linear-gradient(115deg,#172c56,#254e95)}
+main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;margin-bottom:17px}
+.library-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin:12px 2px 20px}
+.library-heading h2{font-size:29px;margin:4px 0 5px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:1.3px;color:#567da9}
+.library-heading p{margin:0}.library-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.metric{background:#fff;border:1px solid #dce5f3;box-shadow:0 7px 22px #183e6a0a;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.metric span{font-size:13px;color:#536783}.metric strong{font-size:28px;line-height:1;color:#2356a3}
+.library-panel{padding:0;overflow:hidden;border-radius:15px}
+.library-tabs{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:0 17px;border-bottom:1px solid #dae4f2}
+.library-tabs button{border-radius:0;background:none;color:#57708f;padding:16px 15px;white-space:nowrap}
+.library-tabs .active{border-bottom:3px solid #3773ed;color:#245cd9}
+.library-tabs span{font-size:12px;margin-left:4px;background:#eef3fa;padding:3px 6px;border-radius:20px}
+.filters-top{display:grid;grid-template-columns:minmax(220px,2fr) repeat(5,minmax(130px,1fr));gap:10px;padding:16px;align-items:end}
+.filters-top label{margin:0 0 5px}.filters-top select,.filters-top input{min-height:41px}
+.list-toolbar{padding:4px 18px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.list-toolbar .control-label{margin:0}.list-toolbar #listInfo{margin-left:auto}
+.table-scroll{overflow-x:auto;width:100%;border-top:1px solid #dde6f1}
+.resource-table{border-collapse:collapse;width:100%;min-width:980px;text-align:left;font-size:13px}
+.resource-table th{font-weight:760;background:#edf2f8;padding:13px 12px;color:#36506c;white-space:nowrap}
+.resource-table td{padding:14px 12px;border-top:1px solid #e5ebf4;vertical-align:middle}
+.resource-table tr.resource-row:hover{background:#f5f8fe}
+.resource-table tr.resource-row.active{background:#eef5ff}
+.resource-table .check-col{width:38px}.resource-table .number-col{width:45px}.resource-table .action-col{width:220px}
+.resource-table input[type=checkbox]{width:17px;height:17px;margin:0}
+.title-cell{min-width:260px;max-width:520px}.title-cell strong{font-size:14px;color:#162b4f;line-height:1.45}.resource-title-wrap{display:flex;align-items:center;gap:11px}.resource-thumb{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#60caad,#3189c7);color:white;font-size:23px;box-shadow:0 3px 10px #224b8933}.resource-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
+.title-cell small{display:block;color:#7890a7;font-size:11px;margin-top:4px}
+.scope-label{border-radius:5px;padding:4px 7px;background:#edf2fc;color:#3860a3;font-size:11px;white-space:nowrap}
+.scope-label.private{background:#ffefe4;color:#ab5b16}.scope-label.public{background:#e2f6e9;color:#227446}
+.scope-label.group{background:#eee9ff;color:#6450a9}
+.group-row td{background:#eef5ff;color:#23518c;padding:10px 14px;font-weight:800}
+.actions-inline{display:flex;gap:5px;flex-wrap:nowrap}.actions-inline button{font-size:12px;border:1px solid #dce5f1;padding:8px;border-radius:9px;background:#fff;white-space:nowrap}
+.actions-inline .more{font-weight:900;min-width:34px}
+.bottom-actions{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid #dde6f1}
+.library-screen>.panel{border-radius:15px}.subpage-top{display:flex;align-items:center;gap:18px;margin:4px 0 18px}
+.subpage-top button{background:#e6effe}.subpage-links{margin:9px 0 14px;display:flex;gap:8px;flex-wrap:wrap}
+.preview-question{padding:24px 20px;font-size:21px;font-weight:750;margin:15px 0;background:#eff5ff;border-radius:14px}
+.preview-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.preview-option{padding:16px;border:1px solid #dce6f4;border-radius:12px;background:#fafdff;font-weight:640}
+.preview-option.correct{border-color:#68c69d;background:#e7f8ed;color:#13724c}
+.preview-option b{margin-right:10px}
+#previewView{max-width:1050px;margin:0 auto;padding:25px}
+#editView,#audioView,#importView{max-width:1100px;margin:0 auto}
+#editView .panel,#audioView .panel,#importView .panel{padding:24px}
+@media(max-width:1200px){.filters-top{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:740px){main{padding:13px 9px 50px}.library-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.filters-top{grid-template-columns:1fr 1fr;padding:12px}.library-heading h2{font-size:23px}.library-heading .row{width:100%}.preview-options{grid-template-columns:1fr}.metric strong{font-size:23px}.library-tabs{padding:0 8px}.library-tabs button{padding:13px 10px}#editView .panel,#audioView .panel,#importView .panel,#previewView{padding:15px}}
+@media(max-width:480px){.filters-top{grid-template-columns:1fr}.library-metrics{gap:8px}.metric{padding:12px}.library-heading .row>*{flex:1 1 auto}.bottom-actions .row button{flex:1 1 95px}}
+
+.batch-panel{max-width:1140px;margin:auto}
+.batch-picker{border:1px solid #cbdaf0;background:#f8fbff;border-radius:14px;padding:15px;margin:15px 0 20px}
+.batch-picker-heading{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.batch-picker-heading h3{margin:0 0 5px;font-size:17px;color:#193f76}
+.batch-picker-heading p{margin:0 0 10px}
+#batchSelectionCount{color:#1559ae;background:#e1eeff;border-radius:22px;padding:7px 12px;white-space:nowrap}
+.batch-picker-filters{display:grid;grid-template-columns:minmax(185px,2fr) repeat(3,minmax(110px,1fr));gap:9px;margin:10px 0}
+.batch-picker-filters input,.batch-picker-filters select{width:100%;min-height:39px}
+.batch-picker-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:10px 0}
+.batch-picker-toolbar span{margin-right:auto}
+.batch-question-list{background:#fff;max-height:355px;overflow-y:auto;border:1px solid #d8e4f2;border-radius:11px}
+.batch-pick-row{display:flex;gap:12px;align-items:flex-start;padding:11px 12px;border-bottom:1px solid #e7edf7;cursor:pointer}
+.batch-pick-row:last-child{border-bottom:0}
+.batch-pick-row:hover{background:#f4f8fe}
+.batch-pick-row.checked{background:#eef6ff}
+.batch-pick-row input[type=checkbox]{margin:3px 0 0;flex:0 0 18px;width:18px;height:18px}
+.batch-pick-content{flex:1;min-width:0;display:grid;gap:5px}
+.batch-pick-title{font-size:14px;font-weight:750;color:#203f6a;overflow-wrap:anywhere}
+.batch-pick-meta{font-size:12px;color:#586d87}
+.batch-question-empty{padding:22px;text-align:center;color:#5f7491}
+@media(max-width:800px){.batch-picker-filters{grid-template-columns:1fr 1fr}}
+@media(max-width:460px){.batch-picker-filters{grid-template-columns:1fr}.batch-picker{padding:12px}}
+.batch-plan{display:grid;gap:10px;margin:12px 0}
+.batch-job{border:1px solid #dce6f3;background:#f8fbff;border-radius:12px;padding:12px}
+.batch-job b{color:#2550a0}.batch-reviews{display:grid;gap:15px;margin:15px 0}
+.batch-review{background:white;border:1px solid #ccdaec;border-radius:14px;padding:15px}
+.batch-review h3{font-size:15px;margin:0 0 8px}.batch-review .muted{font-size:12px}
+.batch-review .batch-text{padding:9px;background:#f4f7fc;border-radius:8px;max-height:100px;overflow:auto}
+.batch-review canvas{width:100%;height:65px;background:#173251;border-radius:8px;display:block;margin:10px 0}
+.batch-review input[type=number]{width:120px;max-width:100%}.batch-review .row{justify-content:flex-start}
+.batch-quality{font-size:12px;font-weight:700;margin-top:7px}
+.batch-quality.warning{color:#a35f00}.batch-quality.ready{color:#126842}
+.batch-review label.control-label{margin:6px 0}.batch-panel button:disabled{cursor:not-allowed;opacity:.5}
+</style></head><body>
+<header><a href="/">← Cổng giáo viên</a><h1>📚 Ngân hàng câu hỏi & giọng đọc</h1><p>Học liệu dùng chung cho AI Pose Quiz, Đua bi và các trò chơi tiếp theo · Supabase MotionClass</p></header>
+<main>
+<section class="panel" id="loginPanel"><h2>🔐 Đăng nhập MotionClass</h2><p class="muted">Dùng tài khoản giáo viên đang sử dụng trong AI Pose Quiz và Quản lý lớp học.</p>
+<form id="loginForm"><div class="two"><div><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" required></div><div><label for="loginPass">Mật khẩu</label><input id="loginPass" type="password" autocomplete="current-password" required></div></div><div class="row" style="margin-top:10px"><button class="primary" type="submit">Đăng nhập</button><a href="/register/" class="buttonlink">＋ Đăng ký tài khoản</a><a href="/forgot-password/" class="buttonlink">🔑 Quên mật khẩu?</a></div></form><p class="muted" style="margin-top:12px">Chưa có tài khoản? Chọn Đăng ký tài khoản để tạo mới và xác nhận email.</p></section>
+<div id="appPanel" hidden>
+<div class="panel library-userbar">
+ <div class="row"><strong id="userLabel" class="grow"></strong><span class="pill" id="bankTotals">0 câu hỏi</span>
+ <button id="reloadBank" type="button">↻ Làm mới</button><button id="logout" type="button">Đăng xuất</button></div>
+</div>
+<section id="listView" class="library-screen">
+ <div class="library-heading">
+  <div><span class="eyebrow">MOTIONCLASS / HỌC LIỆU SỐ</span><h2>Thư viện câu hỏi</h2><p class="muted">Gom nhóm theo khối lớp, môn học và bài/chủ đề. Chọn một câu để xem chi tiết hoặc quản lý giọng đọc.</p></div>
+  <div class="row"><button id="newQuestion" class="primary" type="button">＋ Tạo câu hỏi</button><button id="openImport" type="button">↑ Nhập hàng loạt</button><button id="openBatchAudio" type="button">🎧 Tạo giọng hàng loạt</button><a class="buttonlink" href="/marble-race/">🏁 Đua bi</a></div>
+ </div>
+ <div class="library-metrics" aria-label="Thống kê câu hỏi">
+  <div class="metric"><span>Câu hỏi trong thư viện</span><strong id="statTotal">0</strong></div>
+  <div class="metric"><span>Câu hỏi riêng của tôi</span><strong id="statMine">0</strong></div>
+  <div class="metric"><span>Đã có giọng đọc</span><strong id="statVoice">0</strong></div>
+  <div class="metric"><span>Âm thanh cần cập nhật</span><strong id="statOld">0</strong></div>
+ </div>
+ <div class="panel library-panel">
+ <div class="library-tabs" role="tablist" aria-label="Phạm vi chia sẻ">
+ <button type="button" class="scope-tab active" data-scope="all" role="tab" aria-selected="true">Tất cả <span id="scopeCountAll"></span></button>
+ <button type="button" class="scope-tab" data-scope="private" role="tab" aria-selected="false">Riêng tư <span id="scopeCountPrivate"></span></button>
+ <button type="button" class="scope-tab" data-scope="public" role="tab" aria-selected="false">Công khai <span id="scopeCountPublic"></span></button>
+ <button type="button" class="scope-tab" data-scope="group" role="tab" aria-selected="false">Theo nhóm <span id="scopeCountGroup"></span></button>
+ </div>
+ <div class="filters-top">
+  <div><label for="filterSearch">Tìm theo nội dung câu hỏi</label><input id="filterSearch" type="search" placeholder="Nhập từ khóa hoặc phương án..."></div>
+  <div><label for="filterSubject">Môn học</label><select id="filterSubject"><option value="ALL">Tất cả môn học</option></select></div>
+  <div><label for="filterGrade">Khối lớp</label><select id="filterGrade"><option value="ALL">Tất cả khối lớp</option></select></div>
+  <div><label for="filterLesson">Bài/chủ đề</label><select id="filterLesson"><option value="ALL">Tất cả bài học</option></select></div>
+  <div><label for="filterAudio">Giọng đọc</label><select id="filterAudio"><option value="all">Tất cả trạng thái</option><option value="ready">Có giọng sử dụng được</option><option value="none">Chưa có giọng</option><option value="stale">Có tệp cũ cần tạo lại</option></select></div>
+  <div><label for="groupBy">Gom nhóm theo</label><select id="groupBy"><option value="lesson">Bài/chủ đề</option><option value="grade">Khối lớp</option><option value="subject">Môn học</option><option value="none">Không gom nhóm</option></select></div>
+ </div>
+ <div class="list-toolbar">
+  <label class="control-label"><input id="onlyMine" type="checkbox" checked> Chỉ nội dung của tôi</label>
+  <span id="audioStats" class="muted">Đang kiểm tra giọng đọc...</span>
+  <span id="listInfo" class="muted">0 kết quả</span>
+ </div>
+ <div class="table-scroll"><table class="resource-table">
+  <thead><tr><th class="check-col"><input type="checkbox" id="checkVisible" aria-label="Chọn tất cả câu hỏi đang hiển thị"></th><th class="number-col">STT</th><th>Tên câu hỏi</th><th>Khối</th><th>Môn học</th><th>Bài/chủ đề</th><th>Chia sẻ</th><th>Giọng đọc</th><th class="action-col">Hành động</th></tr></thead>
+  <tbody id="questionList"><tr><td colspan="9" class="muted">Đăng nhập để xem câu hỏi.</td></tr></tbody>
+ </table></div>
+ <div class="bottom-actions"><span class="muted" id="selectedCount">Chưa chọn câu hỏi</span>
+  <div class="row"><button id="selectAll" type="button">✓ Chọn tất cả đang lọc</button><button id="unselectAll" type="button">Bỏ chọn</button><button id="exportJson" type="button">↓ JSON</button><button id="exportCsv" type="button">↓ CSV</button><button id="bulkDelete" class="danger" type="button">🗑 Xóa đã chọn</button></div>
+ </div>
+ </div>
+</section>
+<section id="previewView" class="library-screen panel" hidden>
+ <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">XEM CÂU HỎI</span></div>
+ <h2 id="previewTitle">Chi tiết câu hỏi</h2><div id="previewMeta" class="row"></div>
+ <div class="preview-question" id="previewQuestion"></div><div id="previewOptions" class="preview-options"></div>
+ <div id="previewAudioStatus" class="helper"></div>
+ <div class="row"><button type="button" id="previewEdit" class="primary">✏️ Chỉnh sửa câu hỏi</button><button type="button" id="previewAudio">🎙️ Xem các tệp WAV</button><button type="button" id="previewCopy">⧉ Nhân bản câu hỏi</button></div>
+</section>
+<section id="audioView" class="library-screen" hidden>
+ <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">THƯ VIỆN ÂM THANH</span></div>
+ <h2 id="audioPageTitle">Giọng đọc của câu hỏi</h2>
+ <div class="subpage-links"><button id="audioToPreview" type="button">👁 Xem câu hỏi</button><button id="audioToEdit" type="button">✏️ Chỉnh sửa nội dung</button></div>
+ <div class="panel audio-panel" id="audioPanel"><h2>🎙️ Giọng đọc & tệp âm thanh của câu hỏi</h2>
+<p class="muted">Lựa chọn NGHI-TTS (tạo tại thiết bị, miễn quota AI Studio) hoặc Google AI Studio (giọng Gemini, sử dụng quota Google). Âm thanh của cả hai nguồn đều lưu chung vào Supabase MotionClass.</p>
+<div id="audioOverview" class="audio-overview" aria-live="polite">Chọn câu hỏi để xem giọng đọc đã lưu.</div>
+<div id="audioVoiceList" class="voice-chips" aria-label="Các giọng đọc đã có"></div>
+<div class="two"><div><label for="audioProvider">Nguồn tạo giọng đọc</label>
+<select id="audioProvider"><option value="nghi">🎙️ NGHI-TTS · trên thiết bị</option><option value="studio">✨ Google AI Studio · Gemini TTS</option></select></div>
+<div id="studioVoiceControls" hidden><label for="studioTeacherPin">Mã truy cập AI Studio dành cho giáo viên</label>
+<input id="studioTeacherPin" type="password" autocomplete="off" spellcheck="false" maxlength="256" placeholder="Nhập mã bảo vệ đã thiết lập trên Vercel">
+</div></div>
+<div id="nghiVoiceControls"><label for="voiceModel">Chọn giọng NGHI-TTS</label><select id="voiceModel"><option value="deepman3909">Nam trầm · deepman3909</option><option value="chieuthanh">Nam · chieuthanh</option><option value="duyoryx3175">Nam · duyoryx3175</option><option value="vietthao3886">Nam · vietthao3886</option><option value="calmwoman3688">Nữ · calmwoman3688</option><option value="banmai">Nữ · banmai</option><option value="ngocngan3701">Nữ · ngocngan3701</option></select></div>
+<div id="studioDetails" hidden>
+<div class="row"><button id="studioCheck" type="button">⟳ Kiểm tra AI Studio</button><button id="studioPreview" type="button">▶ Nghe thử giọng Gemini</button></div>
+<div id="studioStatus" class="helper" aria-live="polite">Kiểm tra kết nối AI Studio trước khi tạo giọng.</div>
+<p class="muted">Dùng đúng mã giáo viên đang dùng tại Đua bi. Không nhập API key Google trực tiếp; khóa API được lưu trên Vercel. Mỗi lượt tạo giọng có thể tính vào hạn mức Google.</p>
+</div>
+<div id="audioVoiceHint" class="helper">Giọng đã lưu sẽ hiển thị tự động. Một câu hỏi có thể chứa nhiều giọng và 7 loại đoạn âm thanh.</div>
+<div class="helper">NGHI-TTS: lần đầu tải mô hình về thiết bị. AI Studio: cần Internet, mã giáo viên và hạn mức Gemini còn đủ. Mở lại tệp WAV đã lưu không cần tạo giọng mới.</div>
+<div class="row"><button id="goBatchAudio" type="button">🎧 Gom lô tiết kiệm API</button><button id="audioRefresh">⟳ Đồng bộ tệp đã lưu</button><button id="audioGenerate" class="primary">🎙️ Tạo / bổ sung đoạn còn thiếu</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
+<div id="audioGrid" class="audio-list"></div>
+<div id="audioStatus" class="notice" role="status">Chọn câu hỏi đã lưu để xem và tạo giọng đọc.</div></div>
+
+
+</section>
+<section id="editView" class="library-screen" hidden>
+ <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">BIÊN TẬP NỘI DUNG</span></div>
+ <div class="panel"><h2>✏️ Soạn / chỉnh sửa câu hỏi</h2>
+<input id="editId" type="hidden">
+<div class="two">
+<div><label for="editGrade">Lớp <span style="color:#c13535">*</span></label><select id="editGrade" required><option value="">-- Chọn lớp (1–12) --</option><option value="1">Lớp 1</option><option value="2">Lớp 2</option><option value="3">Lớp 3</option><option value="4">Lớp 4</option><option value="5">Lớp 5</option><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option></select></div>
+<div><label for="subject">Môn học</label><input id="subject" maxlength="120" placeholder="Ví dụ: Tin học"></div></div>
+<div><label for="lesson">Bài học / chủ đề</label><input id="lesson" maxlength="200" placeholder="Bài 3" required></div>
+<p class="muted" style="margin:5px 0 11px">Chọn lớp để phân loại chính xác khi tìm kiếm, gom nhóm và sử dụng câu hỏi trong trò chơi.</p>
+<label for="question">Câu hỏi</label><textarea id="question" rows="3" maxlength="1600" placeholder="Nhập nội dung câu hỏi..."></textarea>
+<div class="two"><div><label for="optionA">A</label><input id="optionA" maxlength="800"></div><div><label for="optionB">B</label><input id="optionB" maxlength="800"></div><div><label for="optionC">C</label><input id="optionC" maxlength="800"></div><div><label for="optionD">D</label><input id="optionD" maxlength="800"></div></div>
+<div class="two"><div><label for="correct">Đáp án đúng</label><select id="correct"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div><div><label for="visibility">Phạm vi chia sẻ</label><select id="visibility"><option value="private">Riêng tư</option><option value="public">Công khai</option><option value="group">Nhóm (giữ nguyên nếu đã có)</option></select></div></div>
+<div id="editorImage" class="helper" hidden></div><div><label for="questionImageFile">Ảnh minh họa (JPEG, PNG, WebP)</label>
+<input id="questionImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/*">
+<div class="row" style="margin-top:8px"><button id="uploadQuestionImage">↑ Tải ảnh vào câu hỏi</button><button id="removeQuestionImage" class="danger">Xóa ảnh minh họa</button></div>
+<p class="muted">Lưu câu hỏi trước khi tải ảnh. Hình được nén và lưu riêng tư, có thể dùng chung với AI Pose Quiz và Đua bi.</p></div>
+<div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
+<div id="editStatus" class="notice" role="status">Tạo câu hỏi mới hoặc chọn một câu ở danh sách bên trái.</div></div>
+</section>
+<section id="batchView" class="library-screen" hidden>
+ <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">TẠO GIỌNG HÀNG LOẠT · GOOGLE AI STUDIO</span></div>
+ <div class="panel batch-panel">
+  <h2>🎧 Gom lô, tự cắt WAV và duyệt trước khi lưu</h2>
+  <p class="muted">Chọn nhiều câu hỏi của mình trong Thư viện. Hệ thống tự bỏ qua WAV hiện hành, gom nội dung trong giới hạn API rồi cắt thành từng đoạn. <strong>Không tệp nào được lưu lên Supabase cho đến khi giáo viên nghe và duyệt.</strong></p>
+  <div class="batch-picker">
+   <div class="batch-picker-heading">
+    <div><h3>1 · Tự chọn câu hỏi cần tạo giọng</h3><p class="muted">Chỉ những câu được tích trong danh sách này mới được gửi tới AI Studio. Danh sách là câu hỏi thầy/cô sở hữu trong ngân hàng.</p></div>
+    <strong id="batchSelectionCount" aria-live="polite">Đã chọn 0/60 câu</strong>
+   </div>
+   <div class="batch-picker-filters">
+    <div><label for="batchQuestionSearch">Tìm nội dung câu hỏi</label><input id="batchQuestionSearch" type="search" placeholder="Nhập từ khóa để tìm câu hỏi..." /></div>
+    <div><label for="batchGradeFilter">Lớp</label><select id="batchGradeFilter"><option value="ALL">Tất cả lớp</option></select></div>
+    <div><label for="batchSubjectFilter">Môn học</label><select id="batchSubjectFilter"><option value="ALL">Tất cả môn</option></select></div>
+    <div><label for="batchLessonFilter">Bài / chủ đề</label><select id="batchLessonFilter"><option value="ALL">Tất cả bài</option></select></div>
+   </div>
+   <div class="batch-picker-toolbar"><span id="batchVisibleCount" class="muted">Đang tải danh sách...</span>
+    <button id="batchSelectVisible" type="button">✓ Chọn tất cả đang lọc</button>
+    <button id="batchClearSelection" type="button">Bỏ chọn tất cả</button>
+   </div>
+   <div id="batchQuestionList" class="batch-question-list" role="group" aria-label="Danh sách câu hỏi để chọn tạo giọng đọc"></div>
+   <div id="batchSelectionWarning" class="helper" aria-live="polite">Chọn ít nhất một câu để lập lô.</div>
+  </div>
+  <div class="two">
+   <div><label for="batchTeacherPin">Mã truy cập Google AI Studio</label><input id="batchTeacherPin" type="password" autocomplete="off" maxlength="256" placeholder="Mã giáo viên đang dùng trên Đua bi" /></div>
+   <div><label for="batchMaxLength">Mức gom tự động</label><select id="batchMaxLength"><option value="900">Thận trọng (900 ký tự/lô)</option><option value="1200" selected>Cân bằng (1.200 ký tự/lô)</option><option value="1450">Ưu tiên tiết kiệm (1.450 ký tự/lô)</option></select></div>
+  </div>
+  <div class="row"><label class="control-label"><input id="batchSkipExisting" type="checkbox" checked disabled> Không tạo lại WAV đã có</label><label class="control-label"><input id="batchRequireReview" type="checkbox" checked disabled> Nghe & duyệt từng đoạn trước khi lưu</label></div>
+  <div class="row"><button id="batchAnalyze" type="button" class="primary">2 · Phân tích và lập lô đã chọn</button><button id="batchGenerate" type="button" disabled>3 · Gọi AI Studio và cắt WAV</button><button id="batchCancel" type="button" disabled>■ Dừng sau lô hiện tại</button></div>
+  <div id="batchStatus" class="notice" role="status" aria-live="polite">Chưa phân tích. Tích chọn các câu hỏi ngay phía trên, rồi nhấn Phân tích.</div>
+  <div id="batchPlan" class="batch-plan"></div>
+  <div id="batchReviews" class="batch-reviews"></div>
+
+  <div class="panel" style="margin:18px 0;padding:18px;border:2px solid #d4e8fa;border-radius:16px">
+   <h3>⚡ Chuẩn bị giọng đọc cho tối đa 20 câu – một lần bấm</h3>
+   <p class="muted">Tích chọn câu hỏi phía trên rồi bấm một lần để gom lô và tạo WAV Google. Hệ thống tận dụng WAV đã có và ghép đoạn đọc toàn câu/đáp án. <strong>Phải nghe và duyệt từng WAV Google trước khi lưu.</strong></p>
+   <div class="row"><button id="classroom20Start" type="button" class="primary">⚡ Tạo giọng cho các câu đã chọn (tối đa 20)</button><button id="classroom20Stop" type="button" disabled>Dừng sau lượt hiện tại</button></div>
+   <p id="classroom20Status" class="notice" role="status" aria-live="polite">Chưa bắt đầu. Chỉ xử lý các câu được tích chọn.</p>
+   <div id="classroom20Plan" class="batch-plan"></div>
+   <div id="classroom20Reviews" class="batch-reviews"></div>
+   <div class="row" style="margin-top:12px"><button id="classroom20Save" type="button" class="primary" disabled>✓ Lưu WAV Google đã nghe và duyệt</button><button id="classroom20Fallback" type="button" disabled>🎙️ Dùng NGHI cho câu chưa đủ WAV (cần xác nhận)</button></div>
+   <p class="muted">Google và NGHI lưu riêng, không ghi đè nhau. Số lượt Google ghi nhận chỉ là dữ liệu cục bộ trình duyệt; hạn mức thực tế do Google quyết định.</p>
+  </div>
+
+  <div class="row" style="margin-top:18px"><button id="batchApproveSave" type="button" class="primary" disabled>4 · Lưu WAV đã duyệt lên Supabase</button><button id="batchDiscard" type="button" disabled>🗑 Bỏ các đoạn chưa lưu</button></div>
+  <p class="muted">Bộ máy cắt dò khoảng lặng rồi ước tính ranh giới theo nội dung. <strong>Ứng dụng không thể bảo đảm toàn bộ chữ được đọc đúng chỉ bằng sóng âm.</strong> Thầy/cô cần nghe kiểm tra và chỉnh điểm cắt nếu cần. Tệp mơ hồ không được tự động duyệt. Tạo lại lô sẽ tốn lượt API Google.</p>
+ </div>
+</section>
+<section id="importView" class="library-screen" hidden>
+ <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">NHẬP NGÂN HÀNG HỌC LIỆU</span></div>
+ <div class="panel"><h2>📥 Nhập câu hỏi hàng loạt</h2><details open><summary>📥 Nhập nhanh câu hỏi hàng loạt</summary>
+<p class="muted">Dán nội dung từ Đua bi hoặc tải tệp TXT/JSON. Mỗi câu gồm Câu 1:, A., B., C., D. và Đáp án đúng: A–D.</p>
+<label for="bulkGrade">Lớp áp dụng cho bộ câu hỏi <span style="color:#c13535">*</span></label><select id="bulkGrade" required><option value="">-- Chọn lớp (1–12) --</option><option value="1">Lớp 1</option><option value="2">Lớp 2</option><option value="3">Lớp 3</option><option value="4">Lớp 4</option><option value="5">Lớp 5</option><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option></select>
+<label for="bulkSubject">Môn học khi nhập</label><input id="bulkSubject" placeholder="Ví dụ: Tin học 5">
+<label for="bulkLesson">Bài học khi nhập</label><input id="bulkLesson" placeholder="Ví dụ: Chủ đề Máy tính và em">
+<textarea id="bulkText" rows="9" placeholder="Câu 1: Thiết bị nào giúp gõ chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Loa&#10;D. Chuột&#10;Đáp án đúng: B"></textarea>
+<label for="bulkFile">Hoặc chọn TXT/JSON</label><input type="file" id="bulkFile" accept=".txt,.json,text/plain,application/json">
+<label class="control-label"><input id="bulkPublic" type="checkbox"> Chia sẻ công khai những câu mới</label>
+<div class="row"><button id="bulkPreview">✓ Kiểm tra danh sách</button><button id="bulkSave" class="primary">☁ Lưu tất cả lên Supabase</button></div>
+<div id="bulkStatus" class="notice" role="status">Chưa nhập câu hỏi.</div></details></div>
+</section>
+</div>
+<footer>Ngân hàng học liệu dùng chung · Câu hỏi và giọng đọc được phân quyền theo tài khoản MotionClass.</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/pose-quiz/supabase-config.js"></script>
+<script src="/question-bank/batch-audio.js"></script>
+<script src="/question-bank/classroom20.js"></script>
+<script src="/question-bank/manager.js"></script>
+</body></html>

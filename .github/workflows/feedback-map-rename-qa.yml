@@ -1,0 +1,57 @@
+name: Feedback Map Rename QA
+
+on:
+  push:
+    branches:
+      - ban-do-phan-hoi
+      - giaovien-portal
+    paths:
+      - 'index.html'
+      - 'mang-luoi-an-toan/**'
+      - 'qa/feedback-map-rename.mjs'
+      - '.github/workflows/feedback-map-rename-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify no legacy user-facing labels
+        run: |
+          grep -q '<title>Bản đồ phản hồi</title>' mang-luoi-an-toan/index.html
+          grep -q 'BẢN ĐỒ <b>PHẢN HỒI</b>' mang-luoi-an-toan/index.html
+          grep -q 'Tên người tham gia' mang-luoi-an-toan/index.html
+          grep -q 'Nhập tên người tham gia' mang-luoi-an-toan/index.html
+          grep -q 'Bản đồ phản hồi' index.html
+          if grep -Eqi 'Mạng lưới an toàn|TẬP HUẤN BẢO VỆ TRẺ EM|Tên của thầy/cô|Mời thầy cô' mang-luoi-an-toan/index.html index.html; then
+            echo "Legacy wording remains"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Start local portal
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/feedback-map-http.log 2>&1 &
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/feedback-map-http.log
+          exit 1
+
+      - name: Test host and participant wording
+        run: node qa/feedback-map-rename.mjs

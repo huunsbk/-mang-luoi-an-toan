@@ -1,0 +1,42 @@
+name: Claim exact giaovien alias
+
+on:
+  push:
+    branches:
+      - giaovien-portal
+    paths:
+      - '.github/workflows/claim-giaovien-alias.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_SCOPE: huunsbks-projects
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Link giaovien project
+        run: npx --yes vercel@59.19.1 link --yes --project giaovien --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+      - name: Get production deployment URL
+        id: prod
+        run: |
+          URL=$(npx --yes vercel@59.19.1 inspect giaovien-psi.vercel.app --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" --wait 2>/dev/null | sed -n 's/^.*url:[[:space:]]*//p' | head -n1 || true)
+          if [ -z "$URL" ]; then
+            URL="giaovien-psi.vercel.app"
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Claim giaovien.vercel.app
+        run: |
+          npx --yes vercel@59.19.1 alias set "${{ steps.prod.outputs.url }}" giaovien.vercel.app --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
