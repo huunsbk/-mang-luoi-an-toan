@@ -91,20 +91,121 @@ function plan(entries,maxChars){
  return {batches,missing};
 }
 function create(ctx){
- let selectedRows=[],groups=[],pending=[],running=false,cancel=false,voice='',generation=0;
+ let selectedRows=[],selectedIds=new Set(),groups=[],pending=[],running=false,cancel=false,voice='',generation=0;
  let objects=new Set();
  function status(text,fail=false){const el=$('batchStatus');el.textContent=text;el.classList.toggle('error',fail)}
  function revokeAll(){for(const url of objects)URL.revokeObjectURL(url);objects.clear()}
  function reset(){generation++;cancel=true;revokeAll();groups=[];pending=[];$('batchPlan').replaceChildren();$('batchReviews').replaceChildren();$('batchGenerate').disabled=true;$('batchApproveSave').disabled=true;$('batchDiscard').disabled=true}
- function activeIds(){return selectedRows.map(r=>r.id)}
+ function ownedRows(){return ctx.rows().filter(row=>row.owned)}
+ function batchGrade(row){return ctx.gradeOf(row)}
+ function selectedOwnedRows(){return ownedRows().filter(row=>selectedIds.has(row.id))}
+ function pickerFilteredRows(){
+  const needle=$('batchQuestionSearch').value.trim().toLocaleLowerCase('vi');
+  const grade=$('batchGradeFilter').value,subject=$('batchSubjectFilter').value,lesson=$('batchLessonFilter').value;
+  return ownedRows().filter(row=>
+   (grade==='ALL'||batchGrade(row)===grade)&&
+   (subject==='ALL'||row.subject===subject)&&
+   (lesson==='ALL'||row.lesson===lesson)&&
+   (!needle||[row.text,...row.options,row.subject,row.lesson].join(' ').toLocaleLowerCase('vi').includes(needle))
+  ).sort((a,b)=>batchGrade(a).localeCompare(batchGrade(b),'vi',{numeric:true})||
+   String(a.subject).localeCompare(String(b.subject),'vi')||
+   String(a.lesson).localeCompare(String(b.lesson),'vi')||
+   String(a.text).localeCompare(String(b.text),'vi'));
+ }
+ function optionsFor(id,values,title){
+  const select=$(id),old=select.value;
+  select.replaceChildren(new Option(title,'ALL'));
+  for(const value of values)select.add(new Option(value,value));
+  select.value=values.includes(old)?old:'ALL';
+ }
+ function refreshPickerOptions(){
+  const mine=ownedRows();
+  const grades=Array.from({length:12},(_,i)=>'Lớp '+(i+1));
+  if(mine.some(row=>batchGrade(row)==='Chưa phân lớp'))grades.push('Chưa phân lớp');
+  optionsFor('batchGradeFilter',grades,'Tất cả lớp');
+  const grade=$('batchGradeFilter').value;
+  const subjects=[...new Set(mine.filter(row=>grade==='ALL'||batchGrade(row)===grade).map(row=>row.subject||'Chưa có môn'))].sort((a,b)=>a.localeCompare(b,'vi'));
+  optionsFor('batchSubjectFilter',subjects,'Tất cả môn');
+  const subject=$('batchSubjectFilter').value;
+  const lessons=[...new Set(mine.filter(row=>(grade==='ALL'||batchGrade(row)===grade)&&(subject==='ALL'||row.subject===subject)).map(row=>row.lesson||'Chưa có bài'))].sort((a,b)=>a.localeCompare(b,'vi'));
+  optionsFor('batchLessonFilter',lessons,'Tất cả bài');
+ }
+ function renderPicker(){
+  const surface=$('batchQuestionList');surface.replaceChildren();
+  selectedRows=selectedOwnedRows();
+  const list=pickerFilteredRows();
+  $('batchSelectionCount').textContent='Đã chọn '+selectedRows.length+'/'+CAP+' câu';
+  $('batchVisibleCount').textContent='Đang hiển thị '+list.length+'/'+ownedRows().length+' câu hỏi của tôi';
+  $('batchSelectVisible').disabled=running||!list.length;
+  $('batchClearSelection').disabled=running||!selectedIds.size;
+  if(!list.length){
+   const empty=document.createElement('div');empty.className='batch-question-empty';
+   empty.textContent=ownedRows().length?'Không có câu hỏi phù hợp với bộ lọc.':'Chưa có câu hỏi thuộc quyền sở hữu để tạo giọng.';
+   surface.append(empty);
+  }
+  for(const item of list){
+   const label=document.createElement('label');label.className='batch-pick-row'+(selectedIds.has(item.id)?' checked':'');
+   const input=document.createElement('input');input.type='checkbox';input.checked=selectedIds.has(item.id);input.disabled=running;
+   input.setAttribute('aria-label','Chọn câu hỏi: '+item.text);
+   input.onchange=()=>{
+    const result=changeSelected([item.id],input.checked);
+    if(!result)input.checked=selectedIds.has(item.id);
+   };
+   const content=document.createElement('span');content.className='batch-pick-content';
+   const title=document.createElement('span');title.className='batch-pick-title';title.textContent=item.text;
+   const meta=document.createElement('span');meta.className='batch-pick-meta';
+   const existing=ctx.audioInfo(item);
+   meta.textContent=batchGrade(item)+' · '+(item.subject||'Chưa có môn')+' · '+(item.lesson||'Chưa có bài')+
+    ' · '+(existing.ready?existing.ready+' WAV đã lưu':'Chưa có WAV hợp lệ');
+   content.append(title,meta);label.append(input,content);surface.append(label);
+  }
+  const help=$('batchSelectionWarning');
+  help.textContent=selectedIds.size>CAP?'⚠ Đã chọn vượt giới hạn '+CAP+' câu. Hãy bỏ chọn bớt.':
+   selectedRows.length?'Chỉ '+selectedRows.length+' câu được tích mới được phân tích và gửi tới AI Studio. Bỏ tích để loại câu khỏi lô.':
+   'Chưa chọn câu hỏi nào. Hãy tích chọn trực tiếp ở danh sách phía trên.';
+  help.style.color=selectedIds.size>CAP||!selectedRows.length?'#9c5b15':'#256347';
+ }
+ function changeSelected(ids,checked){
+  if(running){status('Đang xử lý. Hãy chờ kết thúc lô trước khi đổi danh sách.');return false}
+  const next=new Set(selectedIds);
+  for(const id of ids){if(checked)next.add(id);else next.delete(id)}
+  if(next.size>CAP){
+   status('⚠ Chỉ chọn tối đa '+CAP+' câu mỗi đợt; hiện đã chọn '+selectedIds.size+' câu.',true);
+   return false;
+  }
+  if([...next].length===selectedIds.size&&[...next].every(id=>selectedIds.has(id)))return true;
+  if((groups.length||pending.length)&&!confirm('Thay đổi danh sách sẽ bỏ kế hoạch và những đoạn WAV chưa lưu của đợt hiện tại. Tiếp tục?'))return false;
+  if(groups.length||pending.length)reset();
+  selectedIds=next;
+  const external=ctx.selected(),owned=new Set(ownedRows().map(r=>r.id));
+  for(const id of owned)external.delete(id);
+  for(const id of selectedIds)external.add(id);
+  renderPicker();setButtons();
+  status('Đã chọn '+selectedIds.size+' câu theo ý thầy/cô. Nhấn Phân tích để lập lô mới.');
+  return true;
+ }
  function open(){
-  if(running){status('Đang tạo WAV. Hãy dừng sau lô hiện tại nếu muốn thay đổi.');return}
-  const owned=ctx.rows().filter(r=>ctx.selected().has(r.id)&&r.owned);
-  selectedRows=owned.length?owned:(ctx.current()?.owned?[ctx.current()]:[]);
+  if(running){status('Đang xử lý WAV. Hãy dừng sau lô hiện tại nếu muốn thay đổi.');return}
+  if(!groups.length&&!pending.length){
+   const owned=new Set(ownedRows().map(r=>r.id));
+   selectedIds=new Set([...ctx.selected()].filter(id=>owned.has(id)));
+  }
   if(!$('batchTeacherPin').value&&$('studioTeacherPin')?.value)
    $('batchTeacherPin').value=$('studioTeacherPin').value;
-  status('Đã chọn '+selectedRows.length+' câu hỏi thuộc quyền sở hữu. Nhấn Phân tích và lập lô.');
+  refreshPickerOptions();renderPicker();setButtons();
+  if(!groups.length&&!pending.length)
+   status(selectedRows.length?'Đã chọn rõ ràng '+selectedRows.length+' câu hỏi. Kiểm tra danh sách rồi nhấn Phân tích.':
+    'Chưa chọn câu hỏi nào. Hãy tích chọn chính xác những câu cần tạo giọng ở danh sách phía trên.');
  }
+ function selectionFiltersChanged(){
+  refreshPickerOptions();renderPicker();
+ }
+ $('batchQuestionSearch').oninput=renderPicker;
+ $('batchGradeFilter').onchange=selectionFiltersChanged;
+ $('batchSubjectFilter').onchange=selectionFiltersChanged;
+ $('batchLessonFilter').onchange=renderPicker;
+ $('batchSelectVisible').onclick=()=>changeSelected(pickerFilteredRows().map(row=>row.id),true);
+ $('batchClearSelection').onclick=()=>changeSelected([...selectedIds],false);
  function setButtons(){
   $('batchGenerate').disabled=running||!groups.some(g=>!g.done);
   $('batchCancel').disabled=!running;
@@ -116,8 +217,10 @@ function create(ctx){
   if(running)return;
   if(pending.length&&!confirm('Bỏ các đoạn đã cắt nhưng chưa lưu để lập lô mới?'))return;
   reset();
+  running=true;setButtons();
   try{
-   if(!selectedRows.length||selectedRows.length>CAP)throw Error('Chọn từ 1 đến '+CAP+' câu hỏi của mình trước khi tạo.');
+   selectedRows=selectedOwnedRows();
+   if(!selectedRows.length||selectedRows.length>CAP)throw Error('Hãy tích chọn từ 1 đến '+CAP+' câu hỏi trong danh sách phía trên trước khi tạo giọng.');
    const info=await ctx.studioCheck();
    if(!info.configured||!/^[a-f0-9]{16}$/.test(info.voiceVersion))throw Error('Google AI Studio chưa kết nối. Kiểm tra API key/PIN và cấu hình Vercel.');
    voice='studio:'+info.voiceVersion;
@@ -153,6 +256,7 @@ function create(ctx){
    status(entries.length?'Đã lập lô. Nhấn Tạo và cắt WAV. Không dữ liệu nào được tải lên Supabase.':'Tất cả đoạn âm thanh đã có (hoặc không có nội dung đọc). Không cần gọi Google.');
    setButtons();
   }catch(e){status('⚠ '+err(e),true)}
+  finally{running=false;setButtons();renderPicker()}
  }
  async function requestBatch(group){
   const pin=$('batchTeacherPin').value;
