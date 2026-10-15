@@ -6,7 +6,7 @@ const ENDPOINT=cfg?.url+'/functions/v1/shared-question-api';
 const PARTS={full:'Đọc cả câu + A–D',question:'Nội dung câu hỏi',option_a:'Phương án A',option_b:'Phương án B',option_c:'Phương án C',option_d:'Phương án D',answer:'Công bố đáp án'};
 const K=['A','B','C','D'];
 let supabase=null,rows=[],selected=new Set(),editing=null,editingStamp=null,busy=false,files=[],audioURLs=new Map(),queue=0;
-let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0;
+let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0,audioInventorySerial=0;
 function report(where,message,error=false){const el=$(where);el.textContent=message;el.classList.toggle('error',error)}
 function issue(e){return String(e?.message||e||'Lỗi không xác định').slice(0,400)}
 async function run(task){
@@ -58,6 +58,7 @@ function showInventoryStats(){
  $('audioStats').textContent=withVoice+' có giọng · '+(rows.length-withVoice)+' chưa có'+(stale?' · '+stale+' cần cập nhật':'');
 }
 async function loadAudioInventory(){
+ const serial=++audioInventorySerial;
  const ids=rows.map(x=>x.id).filter(Boolean);
  const collected=new Map();
  for(let i=0;i<ids.length;i+=100){
@@ -67,6 +68,7 @@ async function loadAudioInventory(){
    collected.get(file.id).push(file);
   }
  }
+ if(serial!==audioInventorySerial)return;
  audioInventory=collected;audioLastCheck=Date.now();
  showInventoryStats();renderList();
 }
