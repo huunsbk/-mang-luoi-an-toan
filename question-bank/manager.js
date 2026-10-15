@@ -375,7 +375,18 @@ async function showAudio(){
    const actions=document.createElement('div');actions.className='audio-file-row';
    const play=document.createElement('button');play.type='button';play.textContent='▶ Nghe';
    play.onclick=async()=>{try{await new Audio(file.url).play()}catch(e){report('audioStatus','Không phát được âm thanh: '+issue(e),true)}};
-   const link=document.createElement('a');link.href=file.url;link.target='_blank';link.rel='noopener';link.download=part+'.wav';link.textContent='↓ WAV';link.className='buttonlink';
+   const link=document.createElement('button');link.type='button';link.textContent='↓ Tải WAV';link.className='buttonlink';
+   link.onclick=async()=>{
+    link.disabled=true;
+    try{
+     const response=await fetch(file.url);
+     if(!response.ok)throw Error('Liên kết âm thanh đã hết hạn. Hãy nhấn Đồng bộ.');
+     const blob=await response.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+     a.href=url;a.download='cau-hoi-'+item.id.slice(0,8)+'-'+model+'-'+part+'.wav';
+     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),12000);
+    }catch(error){report('audioStatus','⚠ Không tải được WAV: '+issue(error),true)}
+    finally{link.disabled=false}
+   };
    actions.append(play,link);
    if(item.owned){
     const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Xóa WAV';
