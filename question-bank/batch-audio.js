@@ -101,6 +101,8 @@ function create(ctx){
   if(running){status('Đang tạo WAV. Hãy dừng sau lô hiện tại nếu muốn thay đổi.');return}
   const owned=ctx.rows().filter(r=>ctx.selected().has(r.id)&&r.owned);
   selectedRows=owned.length?owned:(ctx.current()?.owned?[ctx.current()]:[]);
+  if(!$('batchTeacherPin').value&&$('studioTeacherPin')?.value)
+   $('batchTeacherPin').value=$('studioTeacherPin').value;
   status('Đã chọn '+selectedRows.length+' câu hỏi thuộc quyền sở hữu. Nhấn Phân tích và lập lô.');
  }
  function setButtons(){
@@ -313,6 +315,9 @@ function create(ctx){
  $('batchCancel').onclick=()=>{cancel=true;status('Sẽ dừng sau khi xử lý xong lô đang gọi API.')};
  $('batchApproveSave').onclick=()=>void save();
  $('batchDiscard').onclick=()=>{if(confirm('Bỏ toàn bộ WAV chưa lưu?')){reset();status('Đã bỏ các đoạn chưa lưu; không thay đổi Supabase.')}};
+ window.addEventListener('beforeunload',event=>{
+  if(pending.length){event.preventDefault();event.returnValue='';}
+ });
  return {open,reset,getState:()=>({groups:groups.length,pending:pending.length,done:groups.filter(g=>g.done).length,voice})};
 }
 window.QuestionBatchAudio={create,plan,locate,wavPCM};
