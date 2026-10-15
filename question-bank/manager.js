@@ -134,6 +134,8 @@ function showEditor(item=null){
  editing=item;editingStamp=item?.updatedAt||null;
  autoChooseVoice(item);
  $('editId').value=item?.id||'';$('subject').value=item?.subject||$('filterSubject').value.replace('ALL','')||'Tin học';
+ const grade=item?.grade??(item?.id?Number((gradeOf(item).match(/\d+/)||[])[0]||0):Number(($('filterGrade').value.match(/\d+/)||[])[0]||0));
+ $('editGrade').value=grade>=1&&grade<=12?String(grade):'';
  $('lesson').value=item?.lesson||'';$('question').value=item?.text||'';
  K.forEach((k,i)=>{$('option'+k).value=item?.options?.[i]||''});
  $('correct').value=item?.correct||'A';$('visibility').value=item?.visibility||'private';
@@ -148,11 +150,15 @@ function showEditor(item=null){
  showAudio().catch(error=>report('audioStatus','⚠ '+issue(error),true));
 }
 function formItem(){
- return{id:$('editId').value||undefined,subject:$('subject').value.trim(),lesson:$('lesson').value.trim(),text:$('question').value.trim(),options:K.map(k=>$('option'+k).value.trim()),correct:$('correct').value,
+ const grade=Number($('editGrade').value);
+ if(!Number.isInteger(grade)||grade<1||grade>12)throw Error('Vui lòng chọn lớp từ 1 đến 12 trước khi lưu câu hỏi.');
+ return{id:$('editId').value||undefined,grade,subject:$('subject').value.trim(),lesson:$('lesson').value.trim(),text:$('question').value.trim(),options:K.map(k=>$('option'+k).value.trim()),correct:$('correct').value,
   visibility:$('visibility').value,expected_updated_at:editingStamp||undefined};
 }
 
 function gradeOf(row){
+ const explicit=Number(row.grade);
+ if(Number.isInteger(explicit)&&explicit>=1&&explicit<=12)return 'Lớp '+explicit;
  const candidates=[String(row.subject||''),String(row.lesson||'')];
  for(const str of candidates){
   let m=str.match(/(?:lớp|khối)\s*(1[0-2]|[1-9])(?:\D|$)/i)
@@ -249,7 +255,7 @@ function renderList(){
 function setListMessage(message,error=false){
  const text=$('listInfo');text.textContent=message;text.style.color=error?'#b82d46':'#246097';
 }
-function snapshot(){return JSON.stringify(['subject','lesson','question','optionA','optionB','optionC','optionD','correct','visibility'].map(id=>$(id).value))}
+function snapshot(){return JSON.stringify(['editGrade','subject','lesson','question','optionA','optionB','optionC','optionD','correct','visibility'].map(id=>$(id).value))}
 function canLeaveEditor(){
  return activeScreen!=='edit'||!editSnapshot||snapshot()===editSnapshot||confirm('Câu hỏi chưa được lưu. Thầy/cô muốn rời màn hình biên tập?');
 }
@@ -325,7 +331,12 @@ async function reload(preserveEditor=true){
  rows=collected;
  selected=new Set([...selected].filter(id=>rows.some(x=>x.id===id)));
  fill($('filterSubject'),data.facets?.subjects||[],'Tất cả môn học',sub);
- fill($('filterGrade'),[...new Set(rows.map(gradeOf))],'Tất cả khối lớp',grade);
+ const grades=Array.from({length:12},(_,i)=>'Lớp '+(i+1));
+ if(rows.some(r=>gradeOf(r)==='Chưa phân lớp'))grades.push('Chưa phân lớp');
+ const gradeSelect=$('filterGrade');
+ gradeSelect.replaceChildren(new Option('Tất cả khối lớp','ALL'));
+ for(const option of grades)gradeSelect.add(new Option(option,option));
+ gradeSelect.value=grades.includes(grade)?grade:'ALL';
  const lessons=[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))];
  fill($('filterLesson'),lessons,'Tất cả bài học',lesson);
  const active=rows.find(x=>x.id===old);
@@ -424,6 +435,8 @@ function parseText(text){
  commit();return{items:records,errors};
 }
 function bulkItems(){
+ const selectedGrade=Number($('bulkGrade').value);
+ if(!Number.isInteger(selectedGrade)||selectedGrade<1||selectedGrade>12)throw Error('Chọn lớp áp dụng từ 1 đến 12 trước khi nhập câu hỏi.');
  const raw=$('bulkText').value.trim();
  if(!raw)throw Error('Chưa có nội dung câu hỏi để nhập.');
  let parsed;
@@ -438,14 +451,14 @@ function bulkItems(){
  if(parsed.errors.length)throw Error(parsed.errors.slice(0,5).join('\n'));
  if(!parsed.items.length)throw Error('Không tìm thấy câu hỏi hợp lệ.');
  if(parsed.items.length>100)throw Error('Tối đa 100 câu/lần. Hãy chia thành nhiều đợt.');
- return parsed.items.map(i=>({...i,subject:$('bulkSubject').value.trim(),lesson:$('bulkLesson').value.trim(),visibility:$('bulkPublic').checked?'public':'private'}));
+ return parsed.items.map(i=>({...i,grade:selectedGrade,subject:$('bulkSubject').value.trim(),lesson:$('bulkLesson').value.trim(),visibility:$('bulkPublic').checked?'public':'private'}));
 }
 async function bulkSave(){
  await run(async()=>{
   const items=bulkItems();
   if(!items[0].subject||!items[0].lesson)throw Error('Hãy nhập môn học và bài học.');
-  const existing=new Set(rows.filter(r=>r.owned).map(r=>JSON.stringify([r.text.trim(),r.options,r.correct,r.subject,r.lesson])));
-  const filtered=items.filter(r=>{const key=JSON.stringify([r.text.trim(),r.options.map(s=>String(s).trim()),r.correct,r.subject,r.lesson]);if(existing.has(key))return false;existing.add(key);return true});
+  const existing=new Set(rows.filter(r=>r.owned).map(r=>JSON.stringify([r.text.trim(),r.options,r.correct,r.subject,r.lesson,gradeOf(r)])));
+  const filtered=items.filter(r=>{const key=JSON.stringify([r.text.trim(),r.options.map(s=>String(s).trim()),r.correct,r.subject,r.lesson,'Lớp '+r.grade]);if(existing.has(key))return false;existing.add(key);return true});
   if(!filtered.length){report('bulkStatus','Các câu hỏi này đã tồn tại; không tạo bản trùng.');return}
   const result=await api('bank.save_many',{items:filtered});
   $('bulkText').value='';report('bulkStatus','✅ Đã lưu '+result.created+' câu. Bỏ qua '+(items.length-filtered.length)+' câu trùng.');
@@ -463,8 +476,8 @@ function exportQuestions(csv=false){
   download('ngan-hang-cau-hoi.json',JSON.stringify({schema:'shared-bank-v1',exportedAt:new Date().toISOString(),questions:list},null,2),'application/json;charset=utf-8');
  }else{
   const esc=x=>'"'+String(x??'').replaceAll('"','""')+'"';
-  const lines=[['ID','Môn','Bài','Câu hỏi','A','B','C','D','Đáp án','Phạm vi'].map(esc).join(',')];
-  for(const item of list)lines.push([item.id,item.subject,item.lesson,item.text,...item.options,item.correct,item.visibility].map(esc).join(','));
+  const lines=[['ID','Lớp','Môn','Bài','Câu hỏi','A','B','C','D','Đáp án','Phạm vi'].map(esc).join(',')];
+  for(const item of list)lines.push([item.id,item.grade??gradeOf(item),item.subject,item.lesson,item.text,...item.options,item.correct,item.visibility].map(esc).join(','));
   download('ngan-hang-cau-hoi.csv','\ufeff'+lines.join('\r\n'),'text/csv;charset=utf-8');
  }
  report('editStatus','✅ Đã xuất '+list.length+' câu hỏi.');
