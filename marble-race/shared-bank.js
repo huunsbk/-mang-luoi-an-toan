@@ -7,7 +7,7 @@
 const $=id=>document.getElementById(id);
 const hooks=window.MarbleSharedBankHooks;
 const settings=window.POSE_QUIZ_SUPABASE;
-let client=null,rows=[],selected=new Set(),session=null,loadCount=0;
+let client=null,rows=[],selected=new Set(),session=null,loadCount=0,voiceInventory=new Map(),lastAudioInventoryCheck=0;
 const sharedEndpoint=settings?.url+'/functions/v1/shared-question-api';
 const idpattern=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 function status(message,error=false){
@@ -47,6 +47,18 @@ async function uploadAudio(row,part,blob){
  if(!res.ok||!value.ok)throw Error(value.error||'Không lưu được tệp âm thanh.');
  return value;
 }
+function announceSync(change='audio.put'){
+ try{localStorage.setItem('motionclass:shared-bank-sync',JSON.stringify({at:Date.now(),change,source:'marble-race'}))}catch(_){}
+}
+async function refreshVoiceInventory(){
+ if(!rows.length){voiceInventory.clear();return}
+ const map=new Map();
+ for(let i=0;i<rows.length;i+=100){
+  const result=await api('audio.overview',{ids:rows.slice(i,i+100).map(x=>x.id)});
+  for(const item of result.items||[]){if(!map.has(item.id))map.set(item.id,[]);map.get(item.id).push(item)}
+ }
+ voiceInventory=map;lastAudioInventoryCheck=Date.now();render();
+}
 function render(rowsToShow=rows){
  const box=$('bankList');
  box.replaceChildren();
@@ -62,7 +74,12 @@ function render(rowsToShow=rows){
   const title=document.createElement('strong');title.textContent=item.text;
   const meta=document.createElement('span');meta.style.cssText='display:block;color:#b2cef0;font-size:11px';
   meta.textContent=(item.subject||'Môn học')+' / '+(item.lesson||'Bài học')+' · '+(item.owned?'Của tôi':item.visibility==='public'?'Công khai':'Được chia sẻ')+(item.imageUrl?' · Có hình ảnh':'');
-  info.append(title,meta);label.append(checkbox,info);fragment.appendChild(label);
+  const parts=voiceInventory.get(item.id)||[],valid=parts.filter(x=>x.current),stale=parts.filter(x=>!x.current);
+  const badge=document.createElement('span');
+  badge.style.cssText='display:inline-block;border-radius:22px;padding:3px 8px;margin-top:4px;font-size:11px;font-weight:700;background:'+(valid.length?'#dff8e8;color:#075a41':stale.length?'#ffeacc;color:#82500d':'#284a70;color:#d4e5fa');
+  const voices=[...new Set(valid.map(x=>x.voiceId))];
+  badge.textContent=valid.length?'🎙 '+voices.length+' giọng · '+valid.length+' WAV':stale.length?'⚠ Âm thanh cũ':'Chưa có giọng';
+  info.append(title,meta,badge);label.append(checkbox,info);fragment.appendChild(label);
  }
  box.appendChild(fragment);renderCount();
 }
@@ -83,7 +100,8 @@ async function fetchBank(){
  fillOptions($('bankSubject'),result.facets?.subjects||[],'Tất cả môn học',$('bankSubject').value);
  fillOptions($('bankLesson'),result.facets?.lessons||[],'Tất cả bài học',$('bankLesson').value);
  render();
- status('Đã tải '+rows.length+' câu hỏi. Tổng quyền truy cập: '+result.totalAccessible+' câu; chọn câu để thêm vào trò chơi.');
+ try{await refreshVoiceInventory()}catch(e){status('Đã tải câu hỏi, nhưng chưa kiểm tra được trạng thái giọng: '+errorMessage(e),true);return}
+ status('Đã tải '+rows.length+' câu. Huy hiệu xanh là giọng đã lưu trên Supabase và có thể dùng lại.');
 }
 async function fetchAllFacets(){
  $('bankSubject').value='ALL';$('bankLesson').value='ALL';$('bankSearch').value='';
@@ -171,7 +189,8 @@ async function saveVoices(){
    created++;
   }
  }
- status('✅ Hoàn thành: '+created+' đoạn mới đã lưu, '+skipped+' đoạn đã có được giữ nguyên.');
+ await refreshVoiceInventory();announceSync('audio.put');
+ status('✅ Đã đồng bộ: '+created+' WAV mới, '+skipped+' WAV đã lưu được giữ nguyên. Mở Ngân hàng câu hỏi để nghe/tải.');
 }
 async function downloadPack(){
  const items=validateChoice(selectedRows());
@@ -256,7 +275,8 @@ async function quickSave(includeVoice=false){
    }
   }
  }
- $('quickBankStatus').textContent='✅ Đã lưu '+result.items.length+' câu hỏi ('+result.created+' mới, '+result.updated+' cập nhật).'+(includeVoice?' Âm thanh: '+voicesSaved+' đoạn mới, '+already+' đoạn đã có.':'');
+ await refreshVoiceInventory();announceSync(includeVoice?'audio.put':'questions.saved');
+ $('quickBankStatus').textContent='✅ Đã lưu '+result.items.length+' câu hỏi ('+result.created+' mới, '+result.updated+' cập nhật).'+(includeVoice?' Đã đồng bộ âm thanh: '+voicesSaved+' WAV mới, '+already+' WAV đã có.':'')+' Kiểm tra và nghe tại Ngân hàng câu hỏi.';
  status('☁ Đã cập nhật ngân hàng câu hỏi chung, có thể lấy lại trên các trò chơi khác.');
 }
 async function authCheck(){
@@ -293,6 +313,8 @@ function bind(){
  $('bankSaveVoice').onclick=()=>withButton('bankSaveVoice',saveVoices);
  $('bankExport').onclick=()=>withButton('bankExport',downloadPack);
  client.auth.onAuthStateChange((evt,s)=>{if(evt==='SIGNED_OUT'){updateSessionUI(null)}});
+ window.addEventListener('storage',e=>{if(e.key==='motionclass:shared-bank-sync'&&session)refreshVoiceInventory().catch(()=>{})});
+ window.addEventListener('focus',()=>{if(session&&Date.now()-lastAudioInventoryCheck>2000)refreshVoiceInventory().catch(()=>{})});
 }
 if(!hooks||!settings?.url||!settings?.publishableKey||!window.supabase){
  status('Không tải được cấu hình MotionClass hoặc bộ thư viện Supabase.',true);return;

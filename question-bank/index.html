@@ -19,6 +19,17 @@ button,.buttonlink{border:0;border-radius:10px;background:#e9f0fe;color:#174a9a;
 .control-label{display:flex;align-items:center;gap:8px;font-weight:650;margin:8px 0}.control-label input{width:auto}.helper{background:#f0f6ff;border-radius:10px;padding:9px 11px;color:#4d6080;font-size:13px;margin:7px 0}
 .audio-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
 .audio-cell{background:#f5f8fe;border:1px solid #e2ebf6;border-radius:10px;padding:10px}.audio-cell span{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+.audio-panel{border:2px solid #b9d1f3;background:linear-gradient(180deg,#f8fbff,#fff 52%)}
+.audio-overview{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#edf5ff;padding:11px;border-radius:12px;margin:12px 0}
+.audio-overview strong{color:#1a55a5}.audio-chip{border-radius:20px;padding:3px 8px;font-size:12px;display:inline-block;font-weight:750}
+.audio-chip.ready{background:#dcf8ea;color:#16704d}.audio-chip.stale{background:#fff1d4;color:#93600d}.audio-chip.empty{background:#ecf0f6;color:#536781}
+.audio-cell.ready{background:#effbf4;border-color:#b7e4ce}.audio-cell.stale{background:#fffaf0;border-color:#ecd59b}
+.voice-chips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.voice-chips button{border-radius:30px;padding:8px 10px;background:#e9f0ff;color:#24559c;font-size:12px}
+.voice-chips button.selected{background:#2368d2;color:white}
+.audio-file-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.audio-file-row>*{flex:0 0 auto}
+.bank-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0}
+@media(max-width:580px){.bank-toolbar{grid-template-columns:1fr}}
 footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
 @media(max-width:960px){.split{grid-template-columns:1fr}.list{max-height:370px}}
 @media(max-width:580px){.filter-grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}header{padding:18px}main{padding:13px 9px 50px}.panel{padding:13px}.row>*{flex:1 1 130px}}
@@ -35,6 +46,9 @@ footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
 <div><label for="filterLesson">Bài học</label><select id="filterLesson"><option value="ALL">Tất cả</option></select></div>
 <div><label for="filterSearch">Từ khóa</label><input id="filterSearch" placeholder="Tìm theo nội dung..."></div></div>
 <label class="control-label"><input id="onlyMine" type="checkbox" checked> Chỉ câu hỏi của tôi</label>
+<div class="bank-toolbar"><div><label for="filterAudio">Tình trạng giọng đọc</label>
+<select id="filterAudio"><option value="all">Tất cả câu hỏi</option><option value="ready">Đã có giọng sử dụng được</option><option value="none">Chưa có giọng đọc</option><option value="stale">Có âm thanh cũ</option></select></div>
+<div><label>Thống kê đồng bộ</label><div id="audioStats" class="helper">Đang kiểm tra...</div></div></div>
 <div class="row"><button id="newQuestion" class="primary">＋ Tạo câu mới</button><button id="selectAll">✓ Chọn tất cả</button><button id="unselectAll">Bỏ chọn</button></div>
 <div id="questionList" class="list"><p class="muted" style="padding:10px">Đăng nhập để xem câu hỏi.</p></div>
 <div class="row"><button id="bulkDelete" class="danger">🗑 Xóa câu đã chọn</button><button id="exportJson">↓ Xuất JSON</button><button id="exportCsv">↓ Xuất CSV</button></div>
@@ -49,6 +63,17 @@ footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
 <div id="bulkStatus" class="notice" role="status">Chưa nhập câu hỏi.</div></details>
 </section>
 <section>
+<div class="panel audio-panel" id="audioPanel"><h2>🎙️ Giọng đọc & tệp âm thanh của câu hỏi</h2>
+<p class="muted">Mỗi câu có thể lưu giọng riêng. NGHI-TTS tạo âm thanh ngay trên thiết bị, sau đó lưu vào kho riêng tư MotionClass và tái sử dụng cho mọi trò chơi.</p>
+<div id="audioOverview" class="audio-overview" aria-live="polite">Chọn câu hỏi để xem giọng đọc đã lưu.</div>
+<div id="audioVoiceList" class="voice-chips" aria-label="Các giọng đọc đã có"></div>
+<label for="voiceModel">Chọn giọng để nghe hoặc tạo âm thanh</label><select id="voiceModel"><option value="deepman3909">Nam trầm · deepman3909</option><option value="chieuthanh">Nam · chieuthanh</option><option value="duyoryx3175">Nam · duyoryx3175</option><option value="vietthao3886">Nam · vietthao3886</option><option value="calmwoman3688">Nữ · calmwoman3688</option><option value="banmai">Nữ · banmai</option><option value="ngocngan3701">Nữ · ngocngan3701</option></select>
+<div id="audioVoiceHint" class="helper">Giọng đã lưu sẽ hiển thị tự động. Một câu hỏi có thể chứa nhiều giọng và 7 loại đoạn âm thanh.</div>
+<div class="helper">Lần đầu tạo một giọng NGHI-TTS cần tải mô hình xuống thiết bị. Phát giọng đã lưu không cần tải mô hình.</div>
+<div class="row"><button id="audioRefresh">⟳ Đồng bộ tệp đã lưu</button><button id="audioGenerate" class="primary">🎙️ Tạo / bổ sung đoạn còn thiếu</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
+<div id="audioGrid" class="audio-list"></div>
+<div id="audioStatus" class="notice" role="status">Chọn câu hỏi đã lưu để xem và tạo giọng đọc.</div></div>
+
 <div class="panel"><h2>✏️ Soạn / chỉnh sửa câu hỏi</h2>
 <input id="editId" type="hidden">
 <div class="two"><div><label for="subject">Môn học</label><input id="subject" maxlength="120" placeholder="Tin học 5"></div><div><label for="lesson">Bài học / chủ đề</label><input id="lesson" maxlength="200" placeholder="Bài 3"></div></div>
@@ -61,13 +86,6 @@ footer{color:var(--grey);text-align:center;font-size:12px;margin-top:24px}
 <p class="muted">Lưu câu hỏi trước khi tải ảnh. Hình được nén và lưu riêng tư, có thể dùng chung với AI Pose Quiz và Đua bi.</p></div>
 <div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
 <div id="editStatus" class="notice" role="status">Tạo câu hỏi mới hoặc chọn một câu ở danh sách bên trái.</div></div>
-<div class="panel"><h2>🎙️ Quản lý giọng đọc AI</h2>
-<p class="muted">Mỗi câu có thể lưu giọng riêng. NGHI-TTS tạo âm thanh ngay trên thiết bị, sau đó lưu vào kho riêng tư MotionClass và tái sử dụng cho mọi trò chơi.</p>
-<label for="voiceModel">Giọng NGHI-TTS</label><select id="voiceModel"><option value="deepman3909">Nam trầm · deepman3909</option><option value="chieuthanh">Nam · chieuthanh</option><option value="duyoryx3175">Nam · duyoryx3175</option><option value="vietthao3886">Nam · vietthao3886</option><option value="calmwoman3688">Nữ · calmwoman3688</option><option value="banmai">Nữ · banmai</option><option value="ngocngan3701">Nữ · ngocngan3701</option></select>
-<div class="helper">Lần đầu mỗi giọng cần tải mô hình khoảng 64 MB. Giọng đã tạo có thể nghe lại ngay từ Supabase, không sử dụng quota Google AI Studio.</div>
-<div class="row"><button id="audioRefresh">⟳ Kiểm tra âm thanh đã lưu</button><button id="audioGenerate" class="primary">🔊 Tạo & lưu giọng cho câu này</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
-<div id="audioGrid" class="audio-list"></div>
-<div id="audioStatus" class="notice" role="status">Chọn câu hỏi đã lưu để xem và tạo giọng đọc.</div></div>
 </section></div></div>
 <footer>Ngân hàng học liệu dùng chung · Câu hỏi và giọng đọc được phân quyền theo tài khoản MotionClass.</footer>
 </main>
