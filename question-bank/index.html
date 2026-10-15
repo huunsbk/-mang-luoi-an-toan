@@ -259,6 +259,18 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
   <div id="batchStatus" class="notice" role="status" aria-live="polite">Chưa phân tích. Tích chọn các câu hỏi ngay phía trên, rồi nhấn Phân tích.</div>
   <div id="batchPlan" class="batch-plan"></div>
   <div id="batchReviews" class="batch-reviews"></div>
+
+  <div class="panel" style="margin:18px 0;padding:18px;border:2px solid #d4e8fa;border-radius:16px">
+   <h3>⚡ Chuẩn bị giọng đọc cho tối đa 20 câu – một lần bấm</h3>
+   <p class="muted">Tích chọn câu hỏi phía trên rồi bấm một lần để gom lô và tạo WAV Google. Hệ thống tận dụng WAV đã có và ghép đoạn đọc toàn câu/đáp án. <strong>Phải nghe và duyệt từng WAV Google trước khi lưu.</strong></p>
+   <div class="row"><button id="classroom20Start" type="button" class="primary">⚡ Tạo giọng cho các câu đã chọn (tối đa 20)</button><button id="classroom20Stop" type="button" disabled>Dừng sau lượt hiện tại</button></div>
+   <p id="classroom20Status" class="notice" role="status" aria-live="polite">Chưa bắt đầu. Chỉ xử lý các câu được tích chọn.</p>
+   <div id="classroom20Plan" class="batch-plan"></div>
+   <div id="classroom20Reviews" class="batch-reviews"></div>
+   <div class="row" style="margin-top:12px"><button id="classroom20Save" type="button" class="primary" disabled>✓ Lưu WAV Google đã nghe và duyệt</button><button id="classroom20Fallback" type="button" disabled>🎙️ Dùng NGHI cho câu chưa đủ WAV (cần xác nhận)</button></div>
+   <p class="muted">Google và NGHI lưu riêng, không ghi đè nhau. Số lượt Google ghi nhận chỉ là dữ liệu cục bộ trình duyệt; hạn mức thực tế do Google quyết định.</p>
+  </div>
+
   <div class="row" style="margin-top:18px"><button id="batchApproveSave" type="button" class="primary" disabled>4 · Lưu WAV đã duyệt lên Supabase</button><button id="batchDiscard" type="button" disabled>🗑 Bỏ các đoạn chưa lưu</button></div>
   <p class="muted">Bộ máy cắt dò khoảng lặng rồi ước tính ranh giới theo nội dung. <strong>Ứng dụng không thể bảo đảm toàn bộ chữ được đọc đúng chỉ bằng sóng âm.</strong> Thầy/cô cần nghe kiểm tra và chỉnh điểm cắt nếu cần. Tệp mơ hồ không được tự động duyệt. Tạo lại lô sẽ tốn lượt API Google.</p>
  </div>
@@ -282,5 +294,6 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/pose-quiz/supabase-config.js"></script>
 <script src="/question-bank/batch-audio.js"></script>
+<script src="/question-bank/classroom20.js"></script>
 <script src="/question-bank/manager.js"></script>
 </body></html>
