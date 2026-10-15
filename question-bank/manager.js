@@ -6,7 +6,7 @@ const ENDPOINT=cfg?.url+'/functions/v1/shared-question-api';
 const PARTS={full:'Đọc cả câu + A–D',question:'Nội dung câu hỏi',option_a:'Phương án A',option_b:'Phương án B',option_c:'Phương án C',option_d:'Phương án D',answer:'Công bố đáp án'};
 const K=['A','B','C','D'];
 let supabase=null,rows=[],selected=new Set(),editing=null,editingStamp=null,busy=false,files=[],audioURLs=new Map(),queue=0;
-let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0,audioInventorySerial=0;
+let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0,audioInventorySerial=0,removingVoiceFiles=new Set();
 let scope='all',activeScreen='list',visibleRows=[],editSnapshot='',isRestoringRoute=false,batchAudio=null;
 let studioInfo={configured:false,voiceVersion:''},studioStoredVoiceId='',studioPreviewAudio=null,studioPreviewURL='';
 function report(where,message,error=false){const el=$(where);el.textContent=message;el.classList.toggle('error',error)}
@@ -236,6 +236,38 @@ function groupValue(item,by){
  if(by==='lesson')return (item.subject||'Chưa có môn')+' · '+(item.lesson||'Chưa có bài học');
  return '';
 }
+/** Remove all provider versions and all parts of a single owned question.
+ * The backend checks the owner again; a client-side badge is never authority. */
+async function deleteAllQuestionVoices(item){
+ if(!item?.id||!item.owned||removingVoiceFiles.has(item.id))return;
+ const info=audioInfo(item);
+ if(!info.total)return;
+ const voices=new Set(inventoryFor(item.id).map(x=>x.voiceId));
+ if(!confirm('XÓA TOÀN BỘ GIỌNG ĐỌC?\\n\\nCâu hỏi: '+item.text+
+  '\\n\\nSẽ xóa vĩnh viễn '+info.total+' tệp WAV của '+voices.size+
+  ' giọng (bao gồm NGHI-TTS, Google AI Studio và tệp cũ).'+
+  '\\nNội dung câu hỏi và các phương án được giữ nguyên.\\n\\nThầy/cô có chắc chắn muốn xóa không?'))return;
+ removingVoiceFiles.add(item.id);renderList();
+ let notice='',failed=false;
+ try{
+  const result=await api('audio.delete_all',{id:item.id});
+  await loadAudioInventory();
+  markSync('audio.delete_all');
+  if(editing?.id===item.id){
+   if(activeScreen==='audio')await showAudio();
+   else if(activeScreen==='preview')showPreview(item);
+  }
+  notice='✅ Đã xóa '+Number(result.deleted||0)+' tệp WAV thuộc '+Number(result.voices||0)+' giọng của câu hỏi. Nội dung câu hỏi được giữ nguyên.';
+ }catch(error){
+  failed=true;notice='⚠ Không xóa hết giọng đọc: '+issue(error)+'. Hãy tải lại và kiểm tra trạng thái.';
+  await loadAudioInventory().catch(()=>{});
+ }finally{
+  removingVoiceFiles.delete(item.id);
+  renderList();
+  setListMessage(notice,failed);
+  if(editing?.id===item.id&&activeScreen==='audio')report('audioStatus',notice,failed);
+ }
+}
 function getFilteredRows(){
  const sub=$('filterSubject').value,lesson=$('filterLesson').value,grade=$('filterGrade').value;
  const audio=$('filterAudio').value,needle=$('filterSearch').value.trim().toLocaleLowerCase('vi');
@@ -304,8 +336,24 @@ function renderList(){
   const lessonTd=document.createElement('td');lessonTd.textContent=item.lesson||'—';tr.append(lessonTd);
   const visibility=document.createElement('td');const vis=document.createElement('span');vis.className='scope-label '+item.visibility;
   vis.textContent=item.visibility==='public'?'🌐 Công khai':item.visibility==='private'?'🔒 Riêng tư':'👥 Nhóm';visibility.append(vis);tr.append(visibility);
-  const voices=document.createElement('td');const info=audioInfo(item);
-  voices.append(pill(info.ready?'ready':info.stale?'stale':'empty',info.ready?'🎙 '+info.voices.length+' giọng · '+info.ready+' WAV':info.stale?'⚠ '+info.stale+' WAV cũ':'Chưa có giọng'));tr.append(voices);
+  const voices=document.createElement('td'),info=audioInfo(item);
+  const wrapper=document.createElement('div');
+  wrapper.className='voice-pill-wrap'+(item.owned&&info.total?' has-delete':'');
+  const voiceCount=new Set(inventoryFor(item.id).map(file=>file.voiceId)).size;
+  const badge=pill(info.ready?'ready':info.stale?'stale':'empty',
+    info.ready?'🎙 '+info.voices.length+' giọng · '+info.ready+' WAV':
+    info.stale?'⚠ '+voiceCount+' giọng · '+info.stale+' WAV cũ':'Chưa có giọng');
+  wrapper.append(badge);
+  if(item.owned&&info.total){
+   const delVoice=document.createElement('button');delVoice.type='button';delVoice.className='voice-delete';
+   delVoice.textContent='×';
+   delVoice.title='Xóa tất cả '+info.total+' tệp WAV của câu hỏi (không xóa câu hỏi)';
+   delVoice.setAttribute('aria-label','Xóa toàn bộ giọng đọc của câu: '+item.text);
+   delVoice.disabled=removingVoiceFiles.has(item.id);
+   delVoice.onclick=event=>{event.stopPropagation();void deleteAllQuestionVoices(item)};
+   wrapper.append(delVoice);
+  }
+  voices.append(wrapper);tr.append(voices);
   const tdAction=document.createElement('td'),actions=document.createElement('div');actions.className='actions-inline';
   actions.append(action('👁 Xem',()=>openScreen('preview',item)));
   const edit=action('✏️ Sửa',()=>openScreen('edit',item));edit.disabled=!item.owned;actions.append(edit);
