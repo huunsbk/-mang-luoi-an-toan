@@ -46,3 +46,11 @@ Tất cả đều có hai header `Authorization: Bearer <Supabase access token>`
 - Khối lớp **được suy ra có điều kiện từ trường môn học hoặc bài/chủ đề** (như “Tin học 5”, “Lớp 3”, “Khối 6”), chưa có cột khối lớp độc lập trong Supabase. Các câu không xác định hiển thị “Chưa phân lớp”; không tự sửa dữ liệu gốc.
 - Bản thiết kế này chỉ thay đổi `question-bank/index.html` và `question-bank/manager.js`, không thay đổi bảng, dữ liệu, RLS, giọng NGHI-TTS hoặc trò chơi Giaipic. Khi sửa câu hỏi làm thay đổi lời đọc, các tệp WAV được kiểm tra hash như trước và đánh dấu cần tạo lại.
 - Kiểm thử trên trình duyệt Chromium và WebKit giả lập iPhone với MotionClass API giả lập: bảng, các tab quyền chia sẻ, bộ lọc, gom nhóm, màn hình xem/sửa/WAV, lưu mới, nhập hàng loạt, responsive và lỗi JavaScript.
+
+## Mục Lớp 1–12 (15/10/2026)
+- Bảng `public.pose_quiz_question_bank` đã bổ sung cột nullable `grade smallint`, với constraint `grade IS NULL OR (grade BETWEEN 1 AND 12)`. Tất cả dữ liệu cũ mặc định NULL để **không ghi đè hoặc gán sai lớp**. Không thay đổi cấu trúc `question` JSON Pose Quiz, âm thanh hoặc RLS.
+- `shared-question-api` `bank.list` trả `grade: number|null`; `bank.save`/`bank.save_many` nhận `grade` số nguyên 1–12. Khách API cũ không gửi `grade` vẫn hoạt động: khi cập nhật, máy chủ bảo tồn giá trị grade trước đó; khi tạo mới từ khách cũ, grade=null.
+- Trong Ngân hàng câu hỏi, `editGrade` bắt buộc chọn lớp khi tạo hoặc sửa; `bulkGrade` là lớp chung cho bộ nhập nhanh, còn bộ lọc `filterGrade` có đủ 12 lớp và có `Chưa phân lớp` nếu cần. `gradeOf` ưu tiên cột `grade`, chỉ suy đoán từ tên môn/bài với dữ liệu cũ (grade null).
+- Trong Đua bi, `quickBankGrade` bắt buộc chọn lớp khi lưu vào ngân hàng; bộ câu hỏi giống nhau nhưng khác lớp được coi là hai bộ học liệu riêng.
+- CSV xuất có cột **Lớp**, JSON giữ `grade` cùng câu hỏi. Các tệp giọng đọc không bị thay đổi khi cập nhật riêng lớp.
+- Kiểm thử giả lập API trên Chromium và WebKit/iPhone: 13 lựa chọn gồm placeholder và lớp 1–12; bắt buộc chọn; lưu lớp 12, đổi sang lớp 1; câu legacy suy đoán từ môn; lọc đúng lớp riêng; nhập hàng loạt lớp 2; lưu từ Đua bi lớp 12; không lỗi JavaScript.
