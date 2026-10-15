@@ -1388,10 +1388,13 @@ window.MarbleSharedBankHooks={
  linkSaved:(items,results)=>{items.forEach((q,i)=>{const result=results[i];if(!result?.id)return;const normalized={text:q.text,options:{},correct:q.correct};answerKeys.forEach((k,j)=>normalized.options[k]=q.options[j]);const key=studyQuestionSignature(normalized);sharedQuestionRefs.set(key,{id:result.id,owned:true})});inspectQuestions(false);save()},
  importQuestions:importSharedQuestions,
  questions:()=>studyQuestions.filter(q=>q.bankId).map(q=>({id:q.bankId,question:q,spoken:{full:questionSpeech(q),answer:correctAnswerSpeech(q)}})),
- voice:()=>({kind:$('aiVoiceMode').value,id:'nghi:'+getSelectedNghiVoice()}),
- generateClip:async text=>getLocalPiperClip(text),
+ voice:()=>({kind:$('aiVoiceMode').value,id:$('aiVoiceMode').value==='studio'?'studio:'+geminiInfo.voiceVersion:'nghi:'+getSelectedNghiVoice()}),
+ generateClip:async text=>$('aiVoiceMode').value==='studio'?obtainGeminiClipRaw(text):getLocalPiperClip(text),
  storeClip:(text,blob)=>aiClips.set(speechKey(text),blob),
  isNghi:()=>$('aiVoiceMode').value==='nghi',
+ checkStudio:checkGeminiVoice,
+ isStudioConfigured:()=>geminiInfo.configured===true,
+ hasStudioPin:()=>Boolean($('aiVoicePin').value.trim()),
  prepare:()=>prepareSpeechClips(false)
 };
 // Test harness: inspect pure UI state and advance the game without waiting real time.
