@@ -235,6 +235,8 @@ async function quickSave(includeVoice=false){
  if(!current.length)throw Error('Hãy nhập ít nhất một câu hỏi hợp lệ trước khi lưu.');
  if(current.length>100)throw Error('Mỗi lượt lưu tối đa 100 câu, hãy chia ngân hàng thành nhiều đợt.');
  const subject=$('quickBankSubject').value.trim(),lesson=$('quickBankLesson').value.trim();
+ const grade=Number($('quickBankGrade').value);
+ if(!Number.isInteger(grade)||grade<1||grade>12)throw Error('Hãy chọn lớp từ 1 đến 12 trước khi lưu vào ngân hàng.');
  const visibility=$('quickBankPublic').checked?'public':'private';
  if(!subject||!lesson)throw Error('Hãy nhập môn học và bài học để phân loại câu hỏi.');
  if(includeVoice&&!hooks.isNghi())throw Error('Để lưu kèm giọng đọc, hãy chọn nguồn giọng NGHI-TTS trước.');
@@ -246,9 +248,9 @@ async function quickSave(includeVoice=false){
  const mine=(await listAllAccessible()).filter(q=>q.owned);
  const originals=current.map(q=>{
   const linked=mine.find(x=>x.id===q.id);
-  const match=mine.find(x=>x.text.trim()===q.text.trim()&&x.correct===q.correct&&x.subject===subject&&x.lesson===lesson&&x.options.every((v,i)=>v.trim()===q.options[i].trim()));
+  const match=mine.find(x=>x.text.trim()===q.text.trim()&&x.correct===q.correct&&x.subject===subject&&x.lesson===lesson&&x.grade===grade&&x.options.every((v,i)=>v.trim()===q.options[i].trim()));
   const found=linked||match;
-  return{...q,id:found?.id,subject,lesson,visibility,expected_updated_at:found?.updatedAt};
+  return{...q,id:found?.id,grade,subject,lesson,visibility,expected_updated_at:found?.updatedAt};
  });
  const send=originals.map(({id,num,...item})=>({id,...item}));
  $('quickBankStatus').textContent='☁ Đang lưu '+send.length+' câu hỏi lên ngân hàng MotionClass...';
