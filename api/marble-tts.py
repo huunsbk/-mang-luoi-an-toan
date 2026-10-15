@@ -93,7 +93,8 @@ class handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             text = payload.get("text", "")
             batch = payload.get("batch", False)
-            if not isinstance(batch, bool):
+            classroom20 = payload.get("classroom20", False)
+            if not isinstance(batch, bool) or not isinstance(classroom20, bool):
                 return _json(self, 422, {"error": "Chế độ gom lô không hợp lệ."})
             if not isinstance(text, str) or not 1 <= len(text.strip()) <= 1800:
                 return _json(self, 422, {"error": "Nội dung đọc phải có từ 1 đến 1800 ký tự."})
@@ -126,8 +127,8 @@ class handler(BaseHTTPRequestHandler):
                 },
                 method="POST"
             )
-            with urlopen(req, timeout=24) as res:
-                resp = json.loads(res.read(12000000).decode("utf-8"))
+            with urlopen(req, timeout=48 if classroom20 and batch else 24) as res:
+                resp = json.loads(res.read(30000000 if classroom20 and batch else 12000000).decode("utf-8"))
             audio_b64 = next(
                 (part["data"] for step in reversed(resp.get("steps", []))
                  if step.get("type") == "model_output"
@@ -138,7 +139,8 @@ class handler(BaseHTTPRequestHandler):
             if not audio_b64:
                 return _json(self, 502, {"error": "AI Studio chưa trả về âm thanh."})
             audio = base64.b64decode(audio_b64, validate=True)
-            if not audio.startswith(b"RIFF") or len(audio) > 4 * 1024 * 1024:
+            max_wav = (10 if classroom20 and batch else 4) * 1024 * 1024
+            if not audio.startswith(b"RIFF") or len(audio) > max_wav:
                 return _json(self, 502, {"error": "Định dạng hoặc kích thước âm thanh không được hỗ trợ."})
             self.send_response(200)
             self.send_header("Content-Type", "audio/wav")
