@@ -143,12 +143,22 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
  <h2 id="audioPageTitle">Giọng đọc của câu hỏi</h2>
  <div class="subpage-links"><button id="audioToPreview" type="button">👁 Xem câu hỏi</button><button id="audioToEdit" type="button">✏️ Chỉnh sửa nội dung</button></div>
  <div class="panel audio-panel" id="audioPanel"><h2>🎙️ Giọng đọc & tệp âm thanh của câu hỏi</h2>
-<p class="muted">Mỗi câu có thể lưu giọng riêng. NGHI-TTS tạo âm thanh ngay trên thiết bị, sau đó lưu vào kho riêng tư MotionClass và tái sử dụng cho mọi trò chơi.</p>
+<p class="muted">Lựa chọn NGHI-TTS (tạo tại thiết bị, miễn quota AI Studio) hoặc Google AI Studio (giọng Gemini, sử dụng quota Google). Âm thanh của cả hai nguồn đều lưu chung vào Supabase MotionClass.</p>
 <div id="audioOverview" class="audio-overview" aria-live="polite">Chọn câu hỏi để xem giọng đọc đã lưu.</div>
 <div id="audioVoiceList" class="voice-chips" aria-label="Các giọng đọc đã có"></div>
-<label for="voiceModel">Chọn giọng để nghe hoặc tạo âm thanh</label><select id="voiceModel"><option value="deepman3909">Nam trầm · deepman3909</option><option value="chieuthanh">Nam · chieuthanh</option><option value="duyoryx3175">Nam · duyoryx3175</option><option value="vietthao3886">Nam · vietthao3886</option><option value="calmwoman3688">Nữ · calmwoman3688</option><option value="banmai">Nữ · banmai</option><option value="ngocngan3701">Nữ · ngocngan3701</option></select>
+<div class="two"><div><label for="audioProvider">Nguồn tạo giọng đọc</label>
+<select id="audioProvider"><option value="nghi">🎙️ NGHI-TTS · trên thiết bị</option><option value="studio">✨ Google AI Studio · Gemini TTS</option></select></div>
+<div id="studioVoiceControls" hidden><label for="studioTeacherPin">Mã truy cập AI Studio dành cho giáo viên</label>
+<input id="studioTeacherPin" type="password" autocomplete="off" spellcheck="false" maxlength="256" placeholder="Nhập mã bảo vệ đã thiết lập trên Vercel">
+</div></div>
+<div id="nghiVoiceControls"><label for="voiceModel">Chọn giọng NGHI-TTS</label><select id="voiceModel"><option value="deepman3909">Nam trầm · deepman3909</option><option value="chieuthanh">Nam · chieuthanh</option><option value="duyoryx3175">Nam · duyoryx3175</option><option value="vietthao3886">Nam · vietthao3886</option><option value="calmwoman3688">Nữ · calmwoman3688</option><option value="banmai">Nữ · banmai</option><option value="ngocngan3701">Nữ · ngocngan3701</option></select></div>
+<div id="studioDetails" hidden>
+<div class="row"><button id="studioCheck" type="button">⟳ Kiểm tra AI Studio</button><button id="studioPreview" type="button">▶ Nghe thử giọng Gemini</button></div>
+<div id="studioStatus" class="helper" aria-live="polite">Kiểm tra kết nối AI Studio trước khi tạo giọng.</div>
+<p class="muted">Dùng đúng mã giáo viên đang dùng tại Đua bi. Không nhập API key Google trực tiếp; khóa API được lưu trên Vercel. Mỗi lượt tạo giọng có thể tính vào hạn mức Google.</p>
+</div>
 <div id="audioVoiceHint" class="helper">Giọng đã lưu sẽ hiển thị tự động. Một câu hỏi có thể chứa nhiều giọng và 7 loại đoạn âm thanh.</div>
-<div class="helper">Lần đầu tạo một giọng NGHI-TTS cần tải mô hình xuống thiết bị. Phát giọng đã lưu không cần tải mô hình.</div>
+<div class="helper">NGHI-TTS: lần đầu tải mô hình về thiết bị. AI Studio: cần Internet, mã giáo viên và hạn mức Gemini còn đủ. Mở lại tệp WAV đã lưu không cần tạo giọng mới.</div>
 <div class="row"><button id="audioRefresh">⟳ Đồng bộ tệp đã lưu</button><button id="audioGenerate" class="primary">🎙️ Tạo / bổ sung đoạn còn thiếu</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
 <div id="audioGrid" class="audio-list"></div>
 <div id="audioStatus" class="notice" role="status">Chọn câu hỏi đã lưu để xem và tạo giọng đọc.</div></div>

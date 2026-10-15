@@ -140,13 +140,27 @@ function sha256(value){
  return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))
   .then(bytes=>Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join(''));
 }
+async function readySharedVoice(creating=false){
+ let selected=hooks.voice();
+ if(selected.kind==='studio'){
+  await hooks.checkStudio();
+  selected=hooks.voice();
+  if(!/^studio:[a-f0-9]{16}$/.test(selected.id))
+   throw Error('Không xác định được phiên bản giọng AI Studio. Kiểm tra kết nối Internet.');
+  if(creating&&!hooks.isStudioConfigured())throw Error('Google AI Studio chưa có API key hoặc mã giáo viên trên Vercel.');
+  if(creating&&!hooks.hasStudioPin())throw Error('Hãy nhập mã truy cập AI Studio trong mục Giọng đọc.');
+ }else if(selected.kind!=='nghi'){
+  throw Error('Chọn NGHI-TTS hoặc Google AI Studio để lưu hoặc nạp giọng đọc.');
+ }
+ return selected;
+}
 async function fetchVoiceRows(items){
  const valid=items.filter(x=>idpattern.test(x.id));
  if(!valid.length)return [];
  return (await api('audio.list',{ids:valid.map(x=>x.id),voice_id:hooks.voice().id})).items||[];
 }
 async function loadSavedVoice(explicit=null){
- if(!hooks.isNghi()){status('Chọn nguồn giọng NGHI-TTS để nạp tệp âm thanh tương ứng.');return}
+ await readySharedVoice(false);
  const bankQuestions=hooks.questions();
  const requested=explicit||bankQuestions;
  if(!requested.length){status('Chưa có câu hỏi liên kết với Supabase trong Đua bi.');return}
@@ -170,10 +184,10 @@ async function loadSavedVoice(explicit=null){
  return loaded;
 }
 async function saveVoices(){
- if(!hooks.isNghi())throw Error('Hãy chọn nguồn giọng NGHI-TTS trước khi tạo âm thanh.');
+ const selectedVoice=await readySharedVoice(true);
  const items=validateChoice(selectedRows()).filter(x=>x.owned);
  if(!items.length)throw Error('Không có câu thuộc quyền sở hữu được chọn để lưu giọng.');
- const voice=hooks.voice().id,existing=await fetchVoiceRows(items);
+ const voice=selectedVoice.id,existing=await fetchVoiceRows(items);
  const hashes=new Map(existing.map(x=>[x.id+':'+x.part,x.textHash]));
  let created=0,skipped=0;
  for(const item of items){
@@ -196,11 +210,11 @@ async function downloadPack(){
  const items=validateChoice(selectedRows());
  if(!window.JSZip)throw Error('Không tải được thư viện tạo ZIP. Hãy kiểm tra Internet.');
  const zip=new JSZip();
- const voice=hooks.voice().id;
+ const voice=(await readySharedVoice(false)).id;
  const meta={schema_version:'shared-learning-bank-v1',exported_at:new Date().toISOString(),voice_id:voice,
   questions:items.map(i=>({id:i.id,subject:i.subject,lesson:i.lesson,text:i.text,options:i.options,correct:i.correct,spoken:i.spoken,hasImage:!!i.imageUrl}))};
  zip.file('questions.json',JSON.stringify(meta,null,2));
- const audios=hooks.isNghi()?await fetchVoiceRows(items):[];
+ const audios=await fetchVoiceRows(items);
  let n=0;
  for(const file of audios){
   if(!['full','answer'].includes(file.part))continue;
@@ -239,7 +253,7 @@ async function quickSave(includeVoice=false){
  if(!Number.isInteger(grade)||grade<1||grade>12)throw Error('Hãy chọn lớp từ 1 đến 12 trước khi lưu vào ngân hàng.');
  const visibility=$('quickBankPublic').checked?'public':'private';
  if(!subject||!lesson)throw Error('Hãy nhập môn học và bài học để phân loại câu hỏi.');
- if(includeVoice&&!hooks.isNghi())throw Error('Để lưu kèm giọng đọc, hãy chọn nguồn giọng NGHI-TTS trước.');
+ const sharedVoice=includeVoice?await readySharedVoice(true):null;
  try{await authCheck()}catch(err){
   $('sharedBankPanel').open=true;
   $('bankEmail').focus();
@@ -262,7 +276,7 @@ async function quickSave(includeVoice=false){
  const owned=(await listAllAccessible()).filter(item=>ids.includes(item.id)&&item.owned);
  let voicesSaved=0,already=0;
  if(includeVoice){
-  const voice=hooks.voice().id;
+  const voice=sharedVoice.id;
   const prior=await api('audio.list',{ids,voice_id:voice});
   for(const row of owned){
    for(const part of ['full','answer']){
