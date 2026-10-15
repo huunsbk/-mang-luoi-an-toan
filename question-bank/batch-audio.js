@@ -381,29 +381,27 @@ function create(ctx){
   try{
    const check=await ctx.studioCheck();
    if('studio:'+check.voiceVersion!==voice)throw Error('Phiên bản giọng Gemini đã đổi. Không thể lưu nhầm giọng.');
-   const latest=[];let offset=0;
-   for(let pass=0;pass<40;pass++){
-    const data=await ctx.api('bank.list',{subject:'ALL',lesson:'ALL',search:'',offset,limit:250});
-    latest.push(...(data.items||[]));if(data.nextOffset==null)break;offset=data.nextOffset;
-   }
-   const lookup=new Map(latest.map(r=>[r.id,r]));
-   const unique=[...new Set(approved.map(x=>x.entry.id))];
-   const existing=new Map();
-   for(const id of unique){
-    const found=lookup.get(id);
-    if(!found?.owned)throw Error('Câu hỏi đã bị xóa hoặc không còn quyền chỉnh sửa.');
-    existing.set(id,(await ctx.api('audio.list',{ids:[id],voice_id:voice})).items||[]);
-   }
+   // Server-side audio.put validates live text SHA-256, ownership and existing WAV.
+   // Do not fetch the entire bank or repeatedly generate signed URLs before each save.
    for(const x of approved){
-    const current=lookup.get(x.entry.id);
-    if(await ctx.hash(current?.spoken?.[x.entry.part]||'')!==x.entry.hash)
-     throw Error('Nội dung câu hỏi đã thay đổi. Dừng lưu để tránh gắn nhầm WAV.');
-    if(existing.get(x.entry.id).some(r=>r.part===x.entry.part&&r.textHash===x.entry.hash)){
-     skipped++;x.approved=false;continue;
+    let result;
+    for(let attempt=0;attempt<3;attempt++){
+     try{
+      result=await ctx.upload(x.entry.id,voice,x.entry.part,
+       wavPCM(x.channels,x.rate,x.start,x.end),x.entry.hash);
+      break;
+     }catch(e){
+      const retryable=e?.status===408||e?.status>=500||e instanceof TypeError;
+      if(!retryable||attempt===2)throw e;
+      status('Supabase tạm gián đoạn. Đang thử lưu WAV '+
+       (uploaded+skipped+1)+'/'+approved.length+' (lần '+(attempt+2)+'/3)...');
+      await new Promise(resolve=>setTimeout(resolve,600*(attempt+1)));
+     }
     }
-    await ctx.upload(x.entry.id,voice,x.entry.part,wavPCM(x.channels,x.rate,x.start,x.end));
-    uploaded++;x.approved=false;existing.get(x.entry.id).push({part:x.entry.part,textHash:x.entry.hash});
-    status('Đang lưu WAV đã duyệt '+uploaded+'/'+approved.length+' lên Supabase...');
+    if(result?.skipped)skipped++;else uploaded++;
+    x.approved=false;
+    status('Đã xử lý '+(uploaded+skipped)+'/'+approved.length+
+     ' WAV: '+uploaded+' lưu mới, '+skipped+' đã tồn tại.');
    }
    const saved=new Set(approved.filter(x=>!x.approved).map(x=>x.entry.id+'/'+x.entry.part));
    pending=pending.filter(x=>!saved.has(x.entry.id+'/'+x.entry.part));

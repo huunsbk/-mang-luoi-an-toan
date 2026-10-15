@@ -28,13 +28,17 @@ async function api(action,data={}){
  if(!result.ok||!body.ok)throw Object.assign(new Error(body.error||'API lỗi HTTP '+result.status),{partial:body.partial,completed:body.items||[],failedIndex:body.failedIndex});
  return body;
 }
-async function uploadVoice(id,voice,part,blob){
+async function uploadVoice(id,voice,part,blob,expectedHash){
  const session=await auth();
  const form=new FormData();form.set('action','audio.put');form.set('id',id);form.set('voice_id',voice);form.set('part',part);
+ // Optional hash only for human-reviewed AI Studio batches; NGHI stays unchanged.
+ if(expectedHash)form.set('expected_text_hash',expectedHash);
  form.set('audio',new File([blob],part+'.wav',{type:'audio/wav'}));
- const r=await fetch(ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+session.access_token,apikey:cfg.publishableKey},body:form});
+ let r;
+ try{r=await fetch(ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+session.access_token,apikey:cfg.publishableKey},body:form})}
+ catch(error){throw Object.assign(new TypeError('Không kết nối được với Supabase.'),{cause:error})}
  const data=await r.json().catch(()=>({}));
- if(!r.ok||!data.ok)throw Error(data.error||'Không lưu được âm thanh');
+ if(!r.ok||!data.ok)throw Object.assign(new Error(data.error||'Không lưu được âm thanh (HTTP '+r.status+').'),{status:r.status});
  return data;
 }
 function fill(el,values,all,previous){
