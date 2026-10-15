@@ -81,6 +81,18 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 @media(max-width:1200px){.filters-top{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:740px){main{padding:13px 9px 50px}.library-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.filters-top{grid-template-columns:1fr 1fr;padding:12px}.library-heading h2{font-size:23px}.library-heading .row{width:100%}.preview-options{grid-template-columns:1fr}.metric strong{font-size:23px}.library-tabs{padding:0 8px}.library-tabs button{padding:13px 10px}#editView .panel,#audioView .panel,#importView .panel,#previewView{padding:15px}}
 @media(max-width:480px){.filters-top{grid-template-columns:1fr}.library-metrics{gap:8px}.metric{padding:12px}.library-heading .row>*{flex:1 1 auto}.bottom-actions .row button{flex:1 1 95px}}
+
+.batch-panel{max-width:1140px;margin:auto}.batch-plan{display:grid;gap:10px;margin:12px 0}
+.batch-job{border:1px solid #dce6f3;background:#f8fbff;border-radius:12px;padding:12px}
+.batch-job b{color:#2550a0}.batch-reviews{display:grid;gap:15px;margin:15px 0}
+.batch-review{background:white;border:1px solid #ccdaec;border-radius:14px;padding:15px}
+.batch-review h3{font-size:15px;margin:0 0 8px}.batch-review .muted{font-size:12px}
+.batch-review .batch-text{padding:9px;background:#f4f7fc;border-radius:8px;max-height:100px;overflow:auto}
+.batch-review canvas{width:100%;height:65px;background:#173251;border-radius:8px;display:block;margin:10px 0}
+.batch-review input[type=number]{width:120px;max-width:100%}.batch-review .row{justify-content:flex-start}
+.batch-quality{font-size:12px;font-weight:700;margin-top:7px}
+.batch-quality.warning{color:#a35f00}.batch-quality.ready{color:#126842}
+.batch-review label.control-label{margin:6px 0}.batch-panel button:disabled{cursor:not-allowed;opacity:.5}
 </style></head><body>
 <header><a href="/">← Cổng giáo viên</a><h1>📚 Ngân hàng câu hỏi & giọng đọc</h1><p>Học liệu dùng chung cho AI Pose Quiz, Đua bi và các trò chơi tiếp theo · Supabase MotionClass</p></header>
 <main>
@@ -94,7 +106,7 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <section id="listView" class="library-screen">
  <div class="library-heading">
   <div><span class="eyebrow">MOTIONCLASS / HỌC LIỆU SỐ</span><h2>Thư viện câu hỏi</h2><p class="muted">Gom nhóm theo khối lớp, môn học và bài/chủ đề. Chọn một câu để xem chi tiết hoặc quản lý giọng đọc.</p></div>
-  <div class="row"><button id="newQuestion" class="primary" type="button">＋ Tạo câu hỏi</button><button id="openImport" type="button">↑ Nhập hàng loạt</button><a class="buttonlink" href="/marble-race/">🏁 Đua bi</a></div>
+  <div class="row"><button id="newQuestion" class="primary" type="button">＋ Tạo câu hỏi</button><button id="openImport" type="button">↑ Nhập hàng loạt</button><button id="openBatchAudio" type="button">🎧 Tạo giọng hàng loạt</button><a class="buttonlink" href="/marble-race/">🏁 Đua bi</a></div>
  </div>
  <div class="library-metrics" aria-label="Thống kê câu hỏi">
   <div class="metric"><span>Câu hỏi trong thư viện</span><strong id="statTotal">0</strong></div>
@@ -159,7 +171,7 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 </div>
 <div id="audioVoiceHint" class="helper">Giọng đã lưu sẽ hiển thị tự động. Một câu hỏi có thể chứa nhiều giọng và 7 loại đoạn âm thanh.</div>
 <div class="helper">NGHI-TTS: lần đầu tải mô hình về thiết bị. AI Studio: cần Internet, mã giáo viên và hạn mức Gemini còn đủ. Mở lại tệp WAV đã lưu không cần tạo giọng mới.</div>
-<div class="row"><button id="audioRefresh">⟳ Đồng bộ tệp đã lưu</button><button id="audioGenerate" class="primary">🎙️ Tạo / bổ sung đoạn còn thiếu</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
+<div class="row"><button id="goBatchAudio" type="button">🎧 Gom lô tiết kiệm API</button><button id="audioRefresh">⟳ Đồng bộ tệp đã lưu</button><button id="audioGenerate" class="primary">🎙️ Tạo / bổ sung đoạn còn thiếu</button><button id="audioBatch">🎧 Tạo giọng cho câu đã chọn</button></div>
 <div id="audioGrid" class="audio-list"></div>
 <div id="audioStatus" class="notice" role="status">Chọn câu hỏi đã lưu để xem và tạo giọng đọc.</div></div>
 
@@ -184,6 +196,24 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
 <div id="editStatus" class="notice" role="status">Tạo câu hỏi mới hoặc chọn một câu ở danh sách bên trái.</div></div>
 </section>
+<section id="batchView" class="library-screen" hidden>
+ <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">TẠO GIỌNG HÀNG LOẠT · GOOGLE AI STUDIO</span></div>
+ <div class="panel batch-panel">
+  <h2>🎧 Gom lô, tự cắt WAV và duyệt trước khi lưu</h2>
+  <p class="muted">Chọn nhiều câu hỏi của mình trong Thư viện. Hệ thống tự bỏ qua WAV hiện hành, gom nội dung trong giới hạn API rồi cắt thành từng đoạn. <strong>Không tệp nào được lưu lên Supabase cho đến khi giáo viên nghe và duyệt.</strong></p>
+  <div class="two">
+   <div><label for="batchTeacherPin">Mã truy cập Google AI Studio</label><input id="batchTeacherPin" type="password" autocomplete="off" maxlength="256" placeholder="Mã giáo viên đang dùng trên Đua bi" /></div>
+   <div><label for="batchMaxLength">Mức gom tự động</label><select id="batchMaxLength"><option value="900">Thận trọng (900 ký tự/lô)</option><option value="1200" selected>Cân bằng (1.200 ký tự/lô)</option><option value="1450">Ưu tiên tiết kiệm (1.450 ký tự/lô)</option></select></div>
+  </div>
+  <div class="row"><label class="control-label"><input id="batchSkipExisting" type="checkbox" checked disabled> Không tạo lại WAV đã có</label><label class="control-label"><input id="batchRequireReview" type="checkbox" checked disabled> Nghe & duyệt từng đoạn trước khi lưu</label></div>
+  <div class="row"><button id="batchAnalyze" type="button" class="primary">1 · Phân tích và lập lô</button><button id="batchGenerate" type="button" disabled>2 · Gọi AI Studio và cắt WAV</button><button id="batchCancel" type="button" disabled>■ Dừng sau lô hiện tại</button></div>
+  <div id="batchStatus" class="notice" role="status" aria-live="polite">Chưa phân tích. Hãy chọn câu hỏi trong danh sách trước khi mở màn hình này.</div>
+  <div id="batchPlan" class="batch-plan"></div>
+  <div id="batchReviews" class="batch-reviews"></div>
+  <div class="row" style="margin-top:18px"><button id="batchApproveSave" type="button" class="primary" disabled>3 · Lưu các WAV đã duyệt lên Supabase</button><button id="batchDiscard" type="button" disabled>🗑 Bỏ các đoạn chưa lưu</button></div>
+  <p class="muted">Bộ máy cắt dò khoảng lặng rồi ước tính ranh giới theo nội dung. <strong>Ứng dụng không thể bảo đảm toàn bộ chữ được đọc đúng chỉ bằng sóng âm.</strong> Thầy/cô cần nghe kiểm tra và chỉnh điểm cắt nếu cần. Tệp mơ hồ không được tự động duyệt. Tạo lại lô sẽ tốn lượt API Google.</p>
+ </div>
+</section>
 <section id="importView" class="library-screen" hidden>
  <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">NHẬP NGÂN HÀNG HỌC LIỆU</span></div>
  <div class="panel"><h2>📥 Nhập câu hỏi hàng loạt</h2><details open><summary>📥 Nhập nhanh câu hỏi hàng loạt</summary>
@@ -202,5 +232,6 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/pose-quiz/supabase-config.js"></script>
+<script src="/question-bank/batch-audio.js"></script>
 <script src="/question-bank/manager.js"></script>
 </body></html>
