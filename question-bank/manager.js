@@ -670,7 +670,7 @@ async function init(){
  $('filterSubject').onchange=()=>{fill($('filterLesson'),[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))],'Tất cả bài học','ALL');renderList()};
  $('filterLesson').onchange=renderList;$('filterSearch').oninput=renderList;$('onlyMine').onchange=renderList;$('filterAudio').onchange=renderList;
  batchAudio=window.QuestionBatchAudio?.create({
-  rows:()=>rows,current:()=>editing,selected:()=>selected,api,hash,upload:uploadVoice,
+  rows:()=>rows,current:()=>editing,selected:()=>selected,gradeOf,audioInfo,api,hash,upload:uploadVoice,
   studioCheck:checkStudioTTS,refresh:()=>refreshAudioState(true),notify:()=>markSync('audio.put')
  });
  $('newQuestion').onclick=newQuestionScreen;
