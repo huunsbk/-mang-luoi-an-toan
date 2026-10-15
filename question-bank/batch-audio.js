@@ -126,14 +126,14 @@ function create(ctx){
     const files=(await ctx.api('audio.list',{ids:selectedRows.slice(i,i+60).map(r=>r.id),voice_id:voice})).items||[];
     for(const file of files){
      const original=selectedRows.find(x=>x.id===file.id);
-     const text=String(original?.spoken?.[file.part]||'').trim();
+     const text=String(original?.spoken?.[file.part]||'');
      if(text&&file.textHash===await ctx.hash(text))previous.add(file.id+'/'+file.part);
     }
    }
    const entries=[];
    for(const q of selectedRows)for(const part of PARTS){
-    const text=String(q.spoken?.[part]||'').trim();
-    if(!text||previous.has(q.id+'/'+part))continue;
+    const text=String(q.spoken?.[part]||'');
+    if(!text.trim()||previous.has(q.id+'/'+part))continue;
     entries.push({id:q.id,part,text,question:q.text,hash:await ctx.hash(text)});
    }
    const limit=Number($('batchMaxLength').value)||1200,planned=plan(entries,limit);
