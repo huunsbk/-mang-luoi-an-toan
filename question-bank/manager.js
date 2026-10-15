@@ -191,7 +191,7 @@ function renderList(){
  $('statVoice').textContent=rows.filter(r=>audioInfo(r).ready>0).length;
  $('statOld').textContent=rows.filter(r=>audioInfo(r).stale>0).length;
  for(const [id,vis] of [['scopeCountAll','all'],['scopeCountPrivate','private'],['scopeCountPublic','public'],['scopeCountGroup','group']]){
-  $(''+id).textContent=rows.filter(r=>vis==='all'||r.visibility===vis).length;
+  $(''+id).textContent=rows.filter(r=>(!$('onlyMine').checked||r.owned)&&(vis==='all'||r.visibility===vis)).length;
  }
  document.querySelectorAll('.scope-tab').forEach(btn=>{
   const enabled=btn.dataset.scope===scope;btn.classList.toggle('active',enabled);btn.setAttribute('aria-selected',String(enabled));
@@ -225,8 +225,11 @@ function renderList(){
   const serial=document.createElement('td');serial.textContent=String(++index);tr.append(serial);
   const title=document.createElement('td');title.className='title-cell';
   const btn=action(item.text,()=>openScreen('preview',item));btn.className='resource-title';btn.style.cssText='text-align:left;background:transparent;padding:0;font-size:14px;font-weight:760;color:#1b3769';
-  title.append(btn);
-  const small=document.createElement('small');small.textContent='Trắc nghiệm 4 lựa chọn'+(item.imageUrl?' · Có ảnh':'');title.append(small);tr.append(title);
+  const wrap=document.createElement('div');wrap.className='resource-title-wrap';
+  const icon=document.createElement('div');icon.className='resource-thumb';icon.textContent='☑';icon.setAttribute('aria-hidden','true');
+  const copy=document.createElement('div');copy.className='resource-copy';copy.append(btn);
+  const small=document.createElement('small');small.textContent='Trắc nghiệm 4 lựa chọn'+(item.imageUrl?' · Có ảnh':'');copy.append(small);
+  wrap.append(icon,copy);title.append(wrap);tr.append(title);
   const gradeTd=document.createElement('td');gradeTd.textContent=gradeOf(item);tr.append(gradeTd);
   const subjectTd=document.createElement('td');subjectTd.textContent=item.subject||'—';tr.append(subjectTd);
   const lessonTd=document.createElement('td');lessonTd.textContent=item.lesson||'—';tr.append(lessonTd);
