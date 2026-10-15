@@ -142,7 +142,7 @@ function showEditor(item=null){
  $('editorImage').hidden=!item?.imageUrl;
  if(item?.imageUrl){$('editorImage').replaceChildren();let img=new Image();img.src=item.imageUrl;img.alt='Hình minh họa câu hỏi';img.style.cssText='max-height:140px;max-width:100%;border-radius:10px';$('editorImage').append(img)}
  report('editStatus',item?(item.owned?'Đang sửa câu hỏi của bạn. Bấm Lưu để cập nhật cho mọi trò chơi.':'Đây là câu hỏi chia sẻ, chỉ chủ sở hữu được sửa.'):'Đang tạo câu hỏi mới.');
- draw();showAudio().catch(()=>{});
+ showAudio().catch(error=>report('audioStatus','⚠ '+issue(error),true));
 }
 function formItem(){
  return{id:$('editId').value||undefined,subject:$('subject').value.trim(),lesson:$('lesson').value.trim(),text:$('question').value.trim(),options:K.map(k=>$('option'+k).value.trim()),correct:$('correct').value,
