@@ -83,7 +83,7 @@ function create(ctx){
  function reset(){
   urls.forEach(u=>URL.revokeObjectURL(u));urls=[];
   $('classroom20Plan').replaceChildren();$('classroom20Reviews').replaceChildren();
-  pending=[];groups=[];existing=new Map();localWavs=new Map();hashes=new Map();derivativeAdded=new Set();
+  rows=[];pending=[];groups=[];existing=new Map();localWavs=new Map();hashes=new Map();derivativeAdded=new Set();
  }
  function showReview(entry,blob,quality){
   const item={entry,blob,approved:false,listened:false};
@@ -109,9 +109,10 @@ function create(ctx){
   }return result;
  }
  async function analyze(){
-  rows=ctx.selectedQuestions();
-  if(!rows.length||rows.length>Q_CAP)throw Error('Hãy tích chọn từ 1 đến 20 câu hỏi của mình ở phía trên.');
-  if(rows.some(row=>!row.owned))throw Error('Chỉ được tạo giọng cho câu hỏi thuộc quyền sở hữu.');
+  const chosen=ctx.selectedQuestions();
+  if(!chosen.length||chosen.length>Q_CAP)throw Error('Hãy tích chọn từ 1 đến 20 câu hỏi của mình ở phía trên.');
+  if(chosen.some(row=>!row.owned))throw Error('Chỉ được tạo giọng cho câu hỏi thuộc quyền sở hữu.');
+  rows=[...chosen];
   const check=await ctx.studioCheck();
   if(!check.configured||!/^[a-f0-9]{16}$/.test(check.voiceVersion))
    throw Error('Google AI Studio chưa sẵn sàng; có thể chọn NGHI sau khi xác nhận.');
@@ -196,7 +197,9 @@ function create(ctx){
   }finally{await ac.close().catch(()=>{})}
  }
  async function start(){
-  if(working)return;working=true;stop=false;reset();buttons();
+  if(working)return;
+  if(pending.length&&!confirm('Tạo đợt mới sẽ bỏ các WAV chưa lưu đang chờ duyệt. Tiếp tục?'))return;
+  working=true;stop=false;reset();buttons();
   try{
    await analyze();
    for(let i=0;i<groups.length;i++){
@@ -279,7 +282,7 @@ function create(ctx){
   finally{working=false;buttons()}
  }
  async function fallback(){
-  if(working||!rows.length)return;
+  if(working||!rows.length||rows.length>Q_CAP||rows.some(q=>!q.owned))return;
   if(!confirm('Tạo đủ các WAV còn thiếu cho những câu chưa có đủ 7 WAV Google bằng NGHI-TTS? NGHI được lưu dưới giọng riêng, không ghi đè Gemini. Có thể phải tải mô hình khoảng 64 MB lần đầu.'))return;
   working=true;stop=false;buttons();let count=0;
   const model=$('voiceModel')?.value||'deepman3909',provider='nghi:'+model;
