@@ -420,7 +420,7 @@ function create(ctx){
  window.addEventListener('beforeunload',event=>{
   if(pending.length){event.preventDefault();event.returnValue='';}
  });
- return {open,reset,getState:()=>({groups:groups.length,pending:pending.length,done:groups.filter(g=>g.done).length,voice})};
+ return {open,reset,selectedQuestions:()=>selectedOwnedRows(),getState:()=>({groups:groups.length,pending:pending.length,done:groups.filter(g=>g.done).length,voice})};
 }
 window.QuestionBatchAudio={create,plan,locate,wavPCM};
 })();
