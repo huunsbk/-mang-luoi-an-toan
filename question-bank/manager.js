@@ -243,10 +243,10 @@ async function deleteAllQuestionVoices(item){
  const info=audioInfo(item);
  if(!info.total)return;
  const voices=new Set(inventoryFor(item.id).map(x=>x.voiceId));
- if(!confirm('XÓA TOÀN BỘ GIỌNG ĐỌC?\\n\\nCâu hỏi: '+item.text+
-  '\\n\\nSẽ xóa vĩnh viễn '+info.total+' tệp WAV của '+voices.size+
+ if(!confirm('XÓA TOÀN BỘ GIỌNG ĐỌC?\n\nCâu hỏi: '+item.text+
+  '\n\nSẽ xóa vĩnh viễn '+info.total+' tệp WAV của '+voices.size+
   ' giọng (bao gồm NGHI-TTS, Google AI Studio và tệp cũ).'+
-  '\\nNội dung câu hỏi và các phương án được giữ nguyên.\\n\\nThầy/cô có chắc chắn muốn xóa không?'))return;
+  '\nNội dung câu hỏi và các phương án được giữ nguyên.\n\nThầy/cô có chắc chắn muốn xóa không?'))return;
  removingVoiceFiles.add(item.id);renderList();
  let notice='',failed=false;
  try{
