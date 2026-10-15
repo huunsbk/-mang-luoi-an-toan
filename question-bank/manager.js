@@ -7,6 +7,7 @@ const PARTS={full:'Đọc cả câu + A–D',question:'Nội dung câu hỏi',op
 const K=['A','B','C','D'];
 let supabase=null,rows=[],selected=new Set(),editing=null,editingStamp=null,busy=false,files=[],audioURLs=new Map(),queue=0;
 let audioInventory=new Map(),audioListSerial=0,audioPanelSerial=0,audioLastCheck=0,audioInventorySerial=0;
+let scope='all',activeScreen='list',visibleRows=[],editSnapshot='',isRestoringRoute=false;
 function report(where,message,error=false){const el=$(where);el.textContent=message;el.classList.toggle('error',error)}
 function issue(e){return String(e?.message||e||'Lỗi không xác định').slice(0,400)}
 async function run(task){
@@ -150,29 +151,170 @@ function formItem(){
  return{id:$('editId').value||undefined,subject:$('subject').value.trim(),lesson:$('lesson').value.trim(),text:$('question').value.trim(),options:K.map(k=>$('option'+k).value.trim()),correct:$('correct').value,
   visibility:$('visibility').value,expected_updated_at:editingStamp||undefined};
 }
-function renderList(){
- const list=$('questionList');list.replaceChildren();
- const subject=$('filterSubject').value,lesson=$('filterLesson').value,query=$('filterSearch').value.trim().toLocaleLowerCase('vi'),mine=$('onlyMine').checked;
- const audioFilter=$('filterAudio').value;
- const filtered=rows.filter(r=>(!mine||r.owned)&&(subject==='ALL'||r.subject===subject)&&(lesson==='ALL'||r.lesson===lesson)&&(!query||String(r.text).toLocaleLowerCase('vi').includes(query))&&(audioFilter==='all'||(audioFilter==='ready'&&audioInfo(r).ready>0)||(audioFilter==='none'&&audioInfo(r).ready===0)||(audioFilter==='stale'&&audioInfo(r).stale>0)));
- if(!filtered.length){const p=document.createElement('p');p.className='muted';p.style.padding='10px';p.textContent='Không có câu hỏi phù hợp.';list.append(p)}
- for(const item of filtered){
-  const row=document.createElement('div');row.className='item'+(editing?.id===item.id?' active':'');
-  const check=document.createElement('input');check.type='checkbox';check.checked=selected.has(item.id);
-  check.ariaLabel='Chọn '+item.text;check.onchange=()=>{if(check.checked)selected.add(item.id);else selected.delete(item.id)};
-  const btn=document.createElement('button');btn.className='itembutton';btn.type='button';
-  const title=document.createElement('strong');title.textContent=item.text;
-  const small=document.createElement('small');small.textContent=item.subject+' · '+item.lesson+' · '+(item.owned?'Của tôi':item.visibility==='public'?'Công khai':'Nhóm');
-  const aud=audioInfo(item),pill=document.createElement('span');
-  pill.className='audio-chip '+(aud.ready?'ready':aud.stale?'stale':'empty');
-  pill.textContent=aud.ready?'🎙 '+aud.voices.length+' giọng · '+aud.ready+' WAV':aud.stale?'⚠ '+aud.stale+' tệp cần cập nhật':'Chưa có giọng';
-  btn.append(title,small,pill);btn.onclick=()=>{showEditor(item);renderList()};
-  row.append(check,btn);list.append(row);
+
+function gradeOf(row){
+ const candidates=[String(row.subject||''),String(row.lesson||'')];
+ for(const str of candidates){
+  let m=str.match(/(?:lớp|khối)\s*(1[0-2]|[1-9])(?:\D|$)/i)
+       ||str.match(/(?:tin(?:\s*học)?|toán|ngữ\s*văn|khoa\s*học|công\s*nghệ)\s*(1[0-2]|[1-9])(?:\D|$)/i);
+  if(m)return 'Lớp '+m[1];
  }
- $('bankTotals').textContent=rows.length+' câu có quyền truy cập · Đang hiển thị '+filtered.length;
+ return 'Chưa phân lớp';
+}
+function groupValue(item,by){
+ if(by==='grade')return gradeOf(item);
+ if(by==='subject')return item.subject||'Chưa xác định môn';
+ if(by==='lesson')return (item.subject||'Chưa có môn')+' · '+(item.lesson||'Chưa có bài học');
+ return '';
+}
+function getFilteredRows(){
+ const sub=$('filterSubject').value,lesson=$('filterLesson').value,grade=$('filterGrade').value;
+ const audio=$('filterAudio').value,needle=$('filterSearch').value.trim().toLocaleLowerCase('vi');
+ const mine=$('onlyMine').checked;
+ return rows.filter(r=>
+  (!mine||r.owned)&&
+  (scope==='all'||r.visibility===scope)&&
+  (sub==='ALL'||r.subject===sub)&&
+  (lesson==='ALL'||r.lesson===lesson)&&
+  (grade==='ALL'||gradeOf(r)===grade)&&
+  (audio==='all'||(audio==='ready'&&audioInfo(r).ready>0)||(audio==='none'&&audioInfo(r).ready===0)||(audio==='stale'&&audioInfo(r).stale>0))&&
+  (!needle||[r.text,...r.options,r.subject,r.lesson].join(' ').toLocaleLowerCase('vi').includes(needle))
+ );
+}
+function pill(kind,value){const span=document.createElement('span');span.className='audio-chip '+kind;span.textContent=value;return span}
+function action(label,handler){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=handler;return b}
+function renderList(){
+ const body=$('questionList');body.replaceChildren();
+ visibleRows=getFilteredRows();
+ $('statTotal').textContent=rows.length;
+ $('statMine').textContent=rows.filter(r=>r.owned).length;
+ $('statVoice').textContent=rows.filter(r=>audioInfo(r).ready>0).length;
+ $('statOld').textContent=rows.filter(r=>audioInfo(r).stale>0).length;
+ for(const [id,vis] of [['scopeCountAll','all'],['scopeCountPrivate','private'],['scopeCountPublic','public'],['scopeCountGroup','group']]){
+  $(''+id).textContent=rows.filter(r=>(!$('onlyMine').checked||r.owned)&&(vis==='all'||r.visibility===vis)).length;
+ }
+ document.querySelectorAll('.scope-tab').forEach(btn=>{
+  const enabled=btn.dataset.scope===scope;btn.classList.toggle('active',enabled);btn.setAttribute('aria-selected',String(enabled));
+ });
+ $('listInfo').textContent='Đang hiển thị '+visibleRows.length+'/'+rows.length+' câu';
+ $('selectedCount').textContent=selected.size?'Đã chọn '+selected.size+' câu hỏi':'Chưa chọn câu hỏi';
+ $('bankTotals').textContent=rows.length+' câu hỏi';
+ $('checkVisible').checked=visibleRows.length>0&&visibleRows.every(r=>selected.has(r.id));
+ $('checkVisible').indeterminate=visibleRows.some(r=>selected.has(r.id))&&!$('checkVisible').checked;
+ if(!visibleRows.length){
+  const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.className='muted';td.style.padding='26px';td.textContent='Không tìm thấy câu hỏi phù hợp. Hãy thay đổi bộ lọc hoặc tạo câu hỏi mới.';tr.append(td);body.append(tr);return;
+ }
+ const by=$('groupBy').value,sorted=[...visibleRows].sort((a,b)=>{
+  const groupA=groupValue(a,by),groupB=groupValue(b,by);
+  return groupA.localeCompare(groupB,'vi')||String(a.text).localeCompare(String(b.text),'vi');
+ });
+ let prevGroup=null,index=0;
+ for(const item of sorted){
+  const group=groupValue(item,by);
+  if(by!=='none'&&group!==prevGroup){
+   const tr=document.createElement('tr');tr.className='group-row';const td=document.createElement('td');td.colSpan=9;
+   const num=sorted.filter(r=>groupValue(r,by)===group).length;
+   td.textContent='▸ '+group+' ('+num+' câu)';tr.append(td);body.append(tr);prevGroup=group;
+  }
+  const tr=document.createElement('tr');tr.className='resource-row'+(editing?.id===item.id?' active':'');
+  const select=document.createElement('td');const checkbox=document.createElement('input');
+  checkbox.type='checkbox';checkbox.checked=selected.has(item.id);
+  checkbox.setAttribute('aria-label','Chọn '+item.text);
+  checkbox.onchange=()=>{checkbox.checked?selected.add(item.id):selected.delete(item.id);renderList()};
+  select.append(checkbox);tr.append(select);
+  const serial=document.createElement('td');serial.textContent=String(++index);tr.append(serial);
+  const title=document.createElement('td');title.className='title-cell';
+  const btn=action(item.text,()=>openScreen('preview',item));btn.className='resource-title';btn.style.cssText='text-align:left;background:transparent;padding:0;font-size:14px;font-weight:760;color:#1b3769';
+  const wrap=document.createElement('div');wrap.className='resource-title-wrap';
+  const icon=document.createElement('div');icon.className='resource-thumb';icon.textContent='☑';icon.setAttribute('aria-hidden','true');
+  const copy=document.createElement('div');copy.className='resource-copy';copy.append(btn);
+  const small=document.createElement('small');small.textContent='Trắc nghiệm 4 lựa chọn'+(item.imageUrl?' · Có ảnh':'');copy.append(small);
+  wrap.append(icon,copy);title.append(wrap);tr.append(title);
+  const gradeTd=document.createElement('td');gradeTd.textContent=gradeOf(item);tr.append(gradeTd);
+  const subjectTd=document.createElement('td');subjectTd.textContent=item.subject||'—';tr.append(subjectTd);
+  const lessonTd=document.createElement('td');lessonTd.textContent=item.lesson||'—';tr.append(lessonTd);
+  const visibility=document.createElement('td');const vis=document.createElement('span');vis.className='scope-label '+item.visibility;
+  vis.textContent=item.visibility==='public'?'🌐 Công khai':item.visibility==='private'?'🔒 Riêng tư':'👥 Nhóm';visibility.append(vis);tr.append(visibility);
+  const voices=document.createElement('td');const info=audioInfo(item);
+  voices.append(pill(info.ready?'ready':info.stale?'stale':'empty',info.ready?'🎙 '+info.voices.length+' giọng · '+info.ready+' WAV':info.stale?'⚠ '+info.stale+' WAV cũ':'Chưa có giọng'));tr.append(voices);
+  const tdAction=document.createElement('td'),actions=document.createElement('div');actions.className='actions-inline';
+  actions.append(action('👁 Xem',()=>openScreen('preview',item)));
+  const edit=action('✏️ Sửa',()=>openScreen('edit',item));edit.disabled=!item.owned;actions.append(edit);
+  actions.append(action('🎙 WAV',()=>openScreen('audio',item)));
+  const extra=action('⋯',()=>{if(!item.owned){openScreen('preview',item);return}if(confirm('Xóa câu hỏi này? Âm thanh liên quan cũng sẽ bị xóa.')){void run(async()=>{await api('bank.delete',{id:item.id});selected.delete(item.id);await reload(false);setListMessage('Đã xóa câu hỏi.')})}});
+  extra.className='more';extra.title=item.owned?'Xóa câu hỏi':'Xem câu hỏi';actions.append(extra);
+  tdAction.append(actions);tr.append(tdAction);body.append(tr);
+ }
+}
+function setListMessage(message,error=false){
+ const text=$('listInfo');text.textContent=message;text.style.color=error?'#b82d46':'#246097';
+}
+function snapshot(){return JSON.stringify(['subject','lesson','question','optionA','optionB','optionC','optionD','correct','visibility'].map(id=>$(id).value))}
+function canLeaveEditor(){
+ return activeScreen!=='edit'||!editSnapshot||snapshot()===editSnapshot||confirm('Câu hỏi chưa được lưu. Thầy/cô muốn rời màn hình biên tập?');
+}
+function showPreview(item){
+ const meta=$('previewMeta');meta.replaceChildren();
+ $('previewTitle').textContent='Chi tiết câu hỏi';
+ $('previewQuestion').textContent=item.text;
+ $('previewOptions').replaceChildren();
+ K.forEach((letter,i)=>{
+  const div=document.createElement('div');div.className='preview-option'+(item.correct===letter?' correct':'');
+  const symbol=document.createElement('b');symbol.textContent=letter+'.';
+  div.append(symbol,document.createTextNode(item.options[i]||''));if(item.correct===letter)div.append(document.createTextNode(' ✓ Đáp án đúng'));
+  $('previewOptions').append(div);
+ });
+ for(const text of [gradeOf(item),item.subject,item.lesson,item.visibility==='public'?'Công khai':item.visibility==='private'?'Riêng tư':'Nhóm']){
+  const chip=document.createElement('span');chip.className='pill';chip.textContent=text;meta.append(chip);
+ }
+ const info=audioInfo(item);
+ $('previewAudioStatus').textContent=info.ready?'🎙 Đã có '+info.ready+' WAV của '+info.voices.length+' giọng đọc'+(info.stale?' · '+info.stale+' tệp cũ':''):'Chưa có giọng đọc hợp lệ'+(info.stale?' · '+info.stale+' tệp cũ':'');
+ $('previewEdit').disabled=!item.owned;
+ $('previewCopy').disabled=!item.owned;
+}
+function openScreen(screen,item=null,updateHash=true){
+ if(!['list','preview','edit','audio','import'].includes(screen))screen='list';
+ if(!canLeaveEditor())return false;
+ if(['preview','audio'].includes(screen)&&!item?.id)return false;
+ if(item&&screen==='edit'&&!item.owned)return false;
+ activeScreen=screen;
+ document.querySelectorAll('.library-screen').forEach(view=>{view.hidden=view.id!==screen+'View'});
+ if(['preview','edit','audio'].includes(screen)){showEditor(item);if(screen==='preview')showPreview(item)}
+ if(screen==='edit')editSnapshot=snapshot();
+ if(screen==='audio')$('audioPageTitle').textContent='🎙 Giọng đọc: '+item.text;
+ if(screen==='list')renderList();
+ if(updateHash){
+  const hash=screen==='list'?'#library':screen==='import'?'#import':screen==='edit'&&!item?.id?'#new':'#'+screen+'/'+encodeURIComponent(item?.id||'');
+  if(location.hash!==hash)history.pushState({screen,id:item?.id},'',hash);
+ }
+ window.scrollTo({top:0,behavior:'instant'});
+ return true;
+}
+function newQuestionScreen(){
+ if(!openScreen('edit',null))return;
+ showEditor(null);editSnapshot=snapshot();
+ const url='#new';if(location.hash!==url)history.replaceState({screen:'edit'},'',url);
+}
+function cloneCurrent(){
+ if(!editing?.owned)return;
+ const copy={...editing,id:null,visibility:'private',updatedAt:null,owned:true};
+ if(!openScreen('edit',null))return;
+ showEditor(copy);$('editId').value='';editing=null;editingStamp=null;editSnapshot=snapshot();
+ report('editStatus','Đang nhân bản thành một câu hỏi mới. Nhấn Lưu câu hỏi để hoàn tất.');
+ history.replaceState({screen:'edit'},'','#new');
+}
+function restoreRoute(){
+ if($('appPanel').hidden)return;
+ const route=decodeURIComponent(location.hash.replace(/^#/,'')).split('/');
+ const screen=route[0]==='new'?'edit':route[0]==='library'?'list':route[0];
+ const item=rows.find(x=>x.id===route[1]);
+ if(screen==='import')openScreen('import',null,false);
+ else if(screen==='edit'&&route[0]==='new')newQuestionScreen();
+ else if(['preview','edit','audio'].includes(screen)&&item)openScreen(screen,item,false);
+ else openScreen('list',null,false);
 }
 async function reload(preserveEditor=true){
- const old=preserveEditor?editing?.id:null,sub=$('filterSubject').value,lesson=$('filterLesson').value;
+ const old=preserveEditor?editing?.id:null,sub=$('filterSubject').value,lesson=$('filterLesson').value,grade=$('filterGrade').value;
  let offset=0,data=null;const collected=[];
  for(let page=0;page<40;page++){
   data=await api('bank.list',{subject:'ALL',lesson:'ALL',search:'',offset,limit:250});
@@ -183,6 +325,7 @@ async function reload(preserveEditor=true){
  rows=collected;
  selected=new Set([...selected].filter(id=>rows.some(x=>x.id===id)));
  fill($('filterSubject'),data.facets?.subjects||[],'Tất cả môn học',sub);
+ fill($('filterGrade'),[...new Set(rows.map(gradeOf))],'Tất cả khối lớp',grade);
  const lessons=[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))];
  fill($('filterLesson'),lessons,'Tất cả bài học',lesson);
  const active=rows.find(x=>x.id===old);
@@ -201,7 +344,7 @@ async function login(e){
 async function sessionChanged(user){
  $('loginPanel').hidden=!!user;$('appPanel').hidden=!user;$('userLabel').textContent=user?'👤 '+user.email:'';
  if(!user){rows=[];selected.clear();renderList();return}
- await reload(false);
+ await reload(false);restoreRoute();
 }
 async function saveQuestion(){
  await run(async()=>{
@@ -209,13 +352,13 @@ async function saveQuestion(){
   const result=await api('bank.save',{item});
   const saved=result.items?.[0];if(!saved)throw Error('Máy chủ chưa trả về mã câu hỏi mới.');
   report('editStatus','✅ Đã '+(saved.created?'tạo':'cập nhật')+' câu hỏi trong ngân hàng.');await reload(false);
-  showEditor(rows.find(r=>r.id===saved.id)||null);
+  const updated=rows.find(r=>r.id===saved.id);editSnapshot=snapshot();if(updated)openScreen('preview',updated);
  });
 }
 async function deleteQuestion(){
  if(!editing?.owned)return;
  if(!confirm('Xóa vĩnh viễn câu hỏi này cùng các âm thanh dùng chung?'))return;
- await run(async()=>{await api('bank.delete',{id:editing.id});showEditor(null);await reload(false);report('editStatus','Đã xóa câu hỏi thành công.')});
+ await run(async()=>{await api('bank.delete',{id:editing.id});selected.delete(editing.id);editSnapshot=snapshot();showEditor(null);await reload(false);openScreen('list');setListMessage('Đã xóa câu hỏi thành công.')});
 }
 async function jpegFile(file){
  if(!file||!file.type.startsWith("image/"))throw Error('Hãy chọn tệp ảnh JPEG, PNG hoặc WebP.');
@@ -258,7 +401,7 @@ async function bulkDelete(){
  await run(async()=>{
   let count=0;
   for(const r of owned){await api('bank.delete',{id:r.id});count++}
-  await reload(false);report('editStatus','Đã xóa '+count+' câu hỏi.');
+  await reload(false);setListMessage('Đã xóa '+count+' câu hỏi.');
  });
 }
 function parseText(text){
@@ -306,7 +449,7 @@ async function bulkSave(){
   if(!filtered.length){report('bulkStatus','Các câu hỏi này đã tồn tại; không tạo bản trùng.');return}
   const result=await api('bank.save_many',{items:filtered});
   $('bulkText').value='';report('bulkStatus','✅ Đã lưu '+result.created+' câu. Bỏ qua '+(items.length-filtered.length)+' câu trùng.');
-  await reload();
+  await reload();openScreen('list');setListMessage('Đã nhập thành công '+result.created+' câu hỏi.');
  });
 }
 function download(name,data,type){
@@ -437,11 +580,23 @@ async function init(){
  $('reloadBank').onclick=()=>run(()=>reload());
  $('filterSubject').onchange=()=>{fill($('filterLesson'),[...new Set(rows.filter(r=>$('filterSubject').value==='ALL'||r.subject===$('filterSubject').value).map(r=>r.lesson))],'Tất cả bài học','ALL');renderList()};
  $('filterLesson').onchange=renderList;$('filterSearch').oninput=renderList;$('onlyMine').onchange=renderList;$('filterAudio').onchange=renderList;
- $('newQuestion').onclick=()=>showEditor(null);
+ $('newQuestion').onclick=newQuestionScreen;
+ $('openImport').onclick=()=>openScreen('import');
+ document.querySelectorAll('.backToList').forEach(b=>b.onclick=()=>openScreen('list'));
+ document.querySelectorAll('.scope-tab').forEach(b=>b.onclick=()=>{scope=b.dataset.scope||'all';renderList()});
+ $('groupBy').onchange=renderList;$('filterGrade').onchange=renderList;
+ $('checkVisible').onchange=e=>{for(const r of getFilteredRows()){if(e.target.checked)selected.add(r.id);else selected.delete(r.id)}renderList()};
+ $('previewEdit').onclick=()=>{if(editing?.owned)openScreen('edit',editing)};
+ $('previewAudio').onclick=()=>{if(editing)openScreen('audio',editing)};
+ $('previewCopy').onclick=cloneCurrent;
+ $('audioToPreview').onclick=()=>{if(editing)openScreen('preview',editing)};
+ $('audioToEdit').onclick=()=>{if(editing?.owned)openScreen('edit',editing)};
+ window.addEventListener('popstate',restoreRoute);
+ window.addEventListener('hashchange',()=>{if(!$('appPanel').hidden)restoreRoute()});
  $('saveQuestion').onclick=saveQuestion;$('deleteQuestion').onclick=deleteQuestion;$('bulkDelete').onclick=bulkDelete;
  $('uploadQuestionImage').onclick=uploadQuestionImage;$('removeQuestionImage').onclick=deleteQuestionImage;
- $('duplicateQuestion').onclick=()=>{if(!editing)return;const clone={...editing,id:null,owned:true,visibility:'private',updatedAt:null};showEditor(clone);$('editId').value='';editing=null;editingStamp=null;report('editStatus','Đang nhân bản thành câu hỏi mới.')};
- $('selectAll').onclick=()=>{rows.filter(r=>r.owned&&(!$('onlyMine').checked||r.owned)).forEach(r=>selected.add(r.id));renderList()};
+ $('duplicateQuestion').onclick=cloneCurrent;
+ $('selectAll').onclick=()=>{getFilteredRows().forEach(r=>selected.add(r.id));renderList()};
  $('unselectAll').onclick=()=>{selected.clear();renderList()};
  $('exportJson').onclick=()=>exportQuestions(false);$('exportCsv').onclick=()=>exportQuestions(true);
  $('bulkPreview').onclick=()=>{try{const items=bulkItems();report('bulkStatus','✅ Hợp lệ '+items.length+' câu. Chọn Lưu tất cả để đưa vào ngân hàng.')}catch(e){report('bulkStatus','⚠ '+issue(e),true)}};

@@ -39,3 +39,10 @@ Tất cả đều có hai header `Authorization: Bearer <Supabase access token>`
 - Khi lưu ở bất kỳ trang nào, phát tín hiệu `localStorage('motionclass:shared-bank-sync')` để tab đang mở tự kiểm tra lại. Khi quay về tab bằng `focus` hay `visibilitychange`, Ngân hàng kiểm tra Supabase; không tin tưởng cache local cho trạng thái âm thanh.
 - Không ghi lại vào hai bộ dữ liệu riêng; hai trang sử dụng `bank_question_id` và `voice_id` giống nhau. Ngân hàng hiện có 7 loại đoạn âm thanh, Đua bi thường lưu hai loại `full` và `answer`.
 - Dịch vụ lưu giọng tách biệt với điều kiện đăng nhập MotionClass và quyền xem nội dung. WAV ký URL tạm thời; inventory không công khai liên kết tải.
+
+## Giao diện thư viện học liệu (tháng 10/2026)
+- **Màn hình chính /question-bank/**: dạng bảng như thư viện học liệu, có tab Tất cả, Riêng tư, Công khai, Theo nhóm; lọc theo từ khóa, môn học, khối lớp, bài/chủ đề và trạng thái WAV; gom nhóm theo bài, khối, môn hoặc không gom. Hàng câu hỏi hiển thị huy hiệu giọng, quyền chia sẻ và các nút Xem/Sửa/WAV.
+- **Màn hình con** trên cùng đường dẫn với hash: `#preview/<question-id>`, `#edit/<question-id>`, `#audio/<question-id>`, `#new`, `#import`. Giữ URL dễ chia sẻ tới cùng hệ thống đăng nhập; phần chi tiết kiểm tra quyền từ backend khi lấy dữ liệu. Màn hình nhập và màn hình biên tập tách biệt, không hiện tất cả các khối chức năng cùng lúc.
+- Khối lớp **được suy ra có điều kiện từ trường môn học hoặc bài/chủ đề** (như “Tin học 5”, “Lớp 3”, “Khối 6”), chưa có cột khối lớp độc lập trong Supabase. Các câu không xác định hiển thị “Chưa phân lớp”; không tự sửa dữ liệu gốc.
+- Bản thiết kế này chỉ thay đổi `question-bank/index.html` và `question-bank/manager.js`, không thay đổi bảng, dữ liệu, RLS, giọng NGHI-TTS hoặc trò chơi Giaipic. Khi sửa câu hỏi làm thay đổi lời đọc, các tệp WAV được kiểm tra hash như trước và đánh dấu cần tạo lại.
+- Kiểm thử trên trình duyệt Chromium và WebKit giả lập iPhone với MotionClass API giả lập: bảng, các tab quyền chia sẻ, bộ lọc, gom nhóm, màn hình xem/sửa/WAV, lưu mới, nhập hàng loạt, responsive và lỗi JavaScript.
