@@ -118,5 +118,68 @@ else{x.strokeStyle='#ffffffbb';x.lineWidth=2;x.beginPath();x.arc(mid,mid,66,0,7)
 x.save();x.beginPath();x.arc(mid,mid,68,0,7);x.clip();let gloss=x.createLinearGradient(32,20,137,144);gloss.addColorStop(0,'#fff9');gloss.addColorStop(.16,'#fffa');gloss.addColorStop(.32,'#fff1');gloss.addColorStop(.7,'#fff0');gloss.addColorStop(1,'#b5f9ff6e');x.fillStyle=gloss;x.beginPath();x.ellipse(66,40,48,24,-.45,0,7);x.fill();x.strokeStyle='#fff8';x.lineWidth=3;x.beginPath();x.arc(mid,mid,61,3.4,5.65);x.stroke();x.restore();s.orb=c;return c}
 
 function orbCanvas(student,img=null){return makeOrb({...student,image:img,orb:null,color:bounded(student.color,0,11),style:bounded(student.style,0,4)})}
-window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,orbCanvas,avatarSvg,COLORS,BUCKET};
+
+const VOICE_BUCKET='teacher-student-voices';
+const hex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+async function studentNameHash(value){
+ const normalized=cleanName(value);
+ if(!globalThis.crypto?.subtle)throw Error('Trình duyệt cần HTTPS để tạo mã xác minh tên.');
+ return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(normalized))));
+}
+function validateVoiceId(voice){
+ if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(String(voice)))throw Error('Mã giọng đọc không hợp lệ.');
+ return voice;
+}
+async function listStudentNameVoices(c,classId){
+ await user(c);
+ const rows=err(await c.from('teacher_student_name_audio')
+  .select('student_id,class_id,voice_id,name_hash,storage_path,size_bytes,updated_at')
+  .eq('class_id',assertId(classId)).limit(500));
+ if(!rows.length)return [];
+ const paths=rows.map(x=>x.storage_path);
+ const {data:urls,error}=await c.storage.from(VOICE_BUCKET).createSignedUrls(paths,3600);
+ if(error)throw Error('Không lấy được đường dẫn giọng đọc: '+error.message);
+ return rows.map((row,i)=>({
+  studentId:row.student_id,classId:row.class_id,voiceId:row.voice_id,nameHash:row.name_hash,
+  storagePath:row.storage_path,sizeBytes:row.size_bytes,updatedAt:row.updated_at,
+  url:urls?.[i]?.error?null:urls?.[i]?.signedUrl||null
+ }));
+}
+async function saveStudentNameVoice(c,{classId,studentId,voiceId,nameHash,blob}){
+ const u=await user(c),id=assertId(studentId),cls=assertId(classId);
+ validateVoiceId(voiceId);
+ if(!/^[a-f0-9]{64}$/.test(nameHash))throw Error('Mã xác minh tên học sinh không hợp lệ.');
+ if(!(blob instanceof Blob)||blob.size<45||blob.size>3*1024*1024||blob.type!=='audio/wav')
+  throw Error('WAV học sinh phải từ 45 byte đến 3 MB.');
+ const head=new Uint8Array(await blob.slice(0,12).arrayBuffer());
+ if(String.fromCharCode(...head.slice(0,4))!=='RIFF'||String.fromCharCode(...head.slice(8,12))!=='WAVE')
+  throw Error('Tệp không phải WAV RIFF hợp lệ.');
+ const student=err(await c.from('teacher_classroom_students').select('id,full_name')
+  .eq('id',id).eq('class_id',cls).eq('owner_id',u.id).single());
+ if(await studentNameHash(student.full_name)!==nameHash)throw Error('Tên học sinh đã thay đổi. Không lưu giọng đọc cũ.');
+ const oldRows=err(await c.from('teacher_student_name_audio').select('storage_path')
+  .eq('student_id',id).eq('voice_id',voiceId).limit(1));
+ const path=u.id+'/'+cls+'/'+id+'/'+voiceId.replace(':','-')+'-'+crypto.randomUUID()+'.wav';
+ err(await c.storage.from(VOICE_BUCKET).upload(path,blob,{contentType:'audio/wav',upsert:false,cacheControl:'3600'}));
+ try{
+  err(await c.from('teacher_student_name_audio').upsert({
+   owner_id:u.id,class_id:cls,student_id:id,voice_id:voiceId,name_hash:nameHash,
+   storage_path:path,size_bytes:blob.size,mime_type:'audio/wav',updated_at:new Date().toISOString()
+  },{onConflict:'student_id,voice_id'}).select('id').single());
+ }catch(e){
+  await c.storage.from(VOICE_BUCKET).remove([path]).catch(()=>{});
+  throw e;
+ }
+ const stale=oldRows.map(r=>r.storage_path).filter(x=>x&&x!==path);
+ if(stale.length)await c.storage.from(VOICE_BUCKET).remove(stale);
+ return path;
+}
+async function removeStudentNameVoices(c,studentId){
+ await user(c);const id=assertId(studentId);
+ const rows=err(await c.from('teacher_student_name_audio').select('storage_path').eq('student_id',id));
+ err(await c.from('teacher_student_name_audio').delete().eq('student_id',id));
+ for(let i=0;i<rows.length;i+=50)await c.storage.from(VOICE_BUCKET).remove(rows.slice(i,i+50).map(r=>r.storage_path));
+}
+
+window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,studentNameHash,listStudentNameVoices,saveStudentNameVoice,removeStudentNameVoices,orbCanvas,avatarSvg,COLORS,BUCKET,VOICE_BUCKET};
 })();
