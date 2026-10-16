@@ -68,10 +68,10 @@ function showClass(){
 async function selectClass(id){
  const stamp=++loadSerial;
  active=classes.find(c=>c.id===id)||null;showClass();renderClasses();
- if(!active){students=[];renderStudents();window.studentNameApp?.onClassChange();return}
+ if(!active){students=[];renderStudents();window.studentNameApp?.onClassChange();window.dispatchEvent(new CustomEvent('motionclass:class-loaded'));return}
  const list=await api.listStudents(client,active.id);
  if(stamp!==loadSerial)return;
- students=list;renderStudents();window.studentNameApp?.onClassChange();setStatus('Đã nạp '+students.length+' học sinh của lớp '+active.name+'.');
+ students=list;renderStudents();window.studentNameApp?.onClassChange();window.dispatchEvent(new CustomEvent('motionclass:class-loaded'));setStatus('Đã nạp '+students.length+' học sinh của lớp '+active.name+'.');
 }
 function previewImage(s,canvas){
  const img=new Image();

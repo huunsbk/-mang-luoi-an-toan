@@ -107,6 +107,8 @@ await page.waitForFunction(() => /Mã giáo viên/.test(document.getElementById(
 
 // Tạo thật bằng giọng Microsoft.
 const t0 = Date.now();
+// Đường nghe duyệt thủ công: tắt "Tạo xong tự lưu" (đường tự lưu kiểm ở qa/unified-voice-launcher.mjs).
+await page.uncheck('#autoSave');
 await page.fill('#pin', PIN); await page.click('#genStart');
 await page.waitForFunction(() => /Đã tạo \d+ đoạn/.test(document.getElementById('status').textContent), null, { timeout: 180000 });
 const genSeconds = ((Date.now() - t0) / 1000).toFixed(1);

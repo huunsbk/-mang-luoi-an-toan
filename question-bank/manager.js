@@ -125,6 +125,14 @@ function showInventoryStats(){
  const withVoice=rows.filter(r=>audioInfo(r).ready>0).length;
  const stale=rows.filter(r=>audioInfo(r).stale>0).length;
  $('audioStats').textContent=withVoice+' có giọng · '+(rows.length-withVoice)+' chưa có'+(stale?' · '+stale+' cần cập nhật':'');
+ showUnifiedVoiceBadge();
+}
+/* Nút "🎙️ Tạo giọng ngay": đếm câu hỏi CỦA MÌNH còn thiếu phần nào ở giọng thống nhất (Microsoft). */
+async function showUnifiedVoiceBadge(){
+ const L=window.UnifiedVoiceLauncher,btn=$('uvBankVoice');if(!L||!btn)return;
+ const voice=await L.currentVoice(),parts=['question','option_a','option_b','option_c','option_d','answer','full'];
+ const missing=rows.filter(r=>r.owned&&r.spoken).filter(r=>{const have=new Set(inventoryFor(r.id).filter(x=>x.current&&x.voiceId===voice).map(x=>x.part));return parts.some(p=>r.spoken[p]&&!have.has(p))}).length;
+ L.setBadge(btn,missing,'câu');
 }
 async function loadAudioInventory(){
  const serial=++audioInventorySerial;
@@ -715,6 +723,7 @@ async function voiceFor(items,parts){
  report('audioStatus','✅ Đã lưu '+completed+' WAV mới bằng '+voiceIdLabel(voice)+', giữ nguyên '+skipped+' đoạn đã có.');
 }
 async function init(){
+ $('uvBankVoice')&&($('uvBankVoice').onclick=()=>window.UnifiedVoiceLauncher?.open('questions',{onDone:()=>run(()=>loadAudioInventory())}));
  if(!cfg?.url||!cfg?.publishableKey||!window.supabase){report('editStatus','Không tải được kết nối MotionClass.',true);return}
  supabase=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
  $('loginForm').onsubmit=login;

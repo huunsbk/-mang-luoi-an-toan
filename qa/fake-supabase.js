@@ -6,7 +6,8 @@ let db=load();const persist=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const USER={id:'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',email:'giaovien@example.com'};
 const uuid=()=>crypto.randomUUID();
 window.__fakeDB=()=>db;window.__fakeLog=window.__fakeLog||[];
-function table(name){return db.tables[name]||(db.tables[name]=[])}
+// Đọc lại mỗi lần truy vấn: trang mẹ và cửa sổ nhúng (iframe) dùng chung một kho giả lập.
+function table(name){db=load();return db.tables[name]||(db.tables[name]=[])}
 function query(name){
  let filters=[],op='select',payload=null,single=false,conflict=null,lim=1e9;
  const api={

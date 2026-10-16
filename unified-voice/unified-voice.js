@@ -8,12 +8,18 @@
 const $=id=>document.getElementById(id);
 const CS=window.TeacherClassroomStore,S=window.TeacherScriptStore,AUDIO=window.QuestionBatchAudio,cfg=window.POSE_QUIZ_SUPABASE;
 const PARTS=['question','option_a','option_b','option_c','option_d','answer','full'];
+const QS=new URLSearchParams(location.search),EMBED=QS.get('embed')==='1',SCOPE=String(QS.get('scope')||'all');
+const SCOPE_CLASS=SCOPE.startsWith('class:')?SCOPE.slice(6):'',ONLY_NAMES=!!SCOPE_CLASS,ONLY_QUESTIONS=SCOPE==='questions';
+const PIN_KEY='motionclass:uv-pin',CONSENT_KEY='motionclass:uv-consent',AUTOSAVE_KEY='motionclass:uv-autosave';
+const store={get(k,area=localStorage){try{return area.getItem(k)}catch(_){return null}},set(k,v,area=localStorage){try{v==null?area.removeItem(k):area.setItem(k,v)}catch(_){}}};
+/** Báo trang mẹ (nút "Tạo giọng ngay") trạng thái, chỉ khi đang nhúng cùng nguồn. */
+function notifyParent(msg){if(EMBED&&window.parent!==window)try{window.parent.postMessage(msg,location.origin)}catch(_){}}
 const CHUNK=8,ID_RE=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const message=e=>{const m=String(e?.message||e||'Không rõ lỗi');return /Failed to fetch|NetworkError/i.test(m)?'Không kết nối được máy chủ. Kiểm tra Internet rồi thử lại.':m.slice(0,300)};
 function tell(text,bad=false){const n=$('status');n.textContent=text;n.classList.toggle('error',bad)}
 const el=(t,x,c)=>{const n=document.createElement(t);if(x!==undefined)n.textContent=x;if(c)n.className=c;return n};
 
-let maxStudents=0,c=null,VOICE='edge:namminh-b1',classes=[],plan={names:[],phrases:[],questions:[],totals:{}},reviews=[],running=false,stopping=false,verified='';
+let lastMissing=null,maxStudents=0,c=null,VOICE='edge:namminh-b1',classes=[],plan={names:[],phrases:[],questions:[],totals:{}},reviews=[],running=false,stopping=false,verified='';
 
 /* ---------- Kết nối ---------- */
 async function edgeInfo(){
@@ -87,7 +93,8 @@ async function refresh(){
  if(running)return;
  tell('⏳ Đang kiểm tra những phần còn thiếu với giọng '+VOICE+'...');
  try{
-  const [n,q]=await Promise.all([loadNames(),loadQuestions()]);
+  const none={need:[],total:0,students:0,questions:0,others:0,bankSize:0};
+  const [n,q]=await Promise.all([ONLY_QUESTIONS?none:loadNames(),ONLY_NAMES?none:loadQuestions()]);
   // Số thứ tự câu hỏi và điểm cuối giờ: đủ tới số câu trong ngân hàng / số học sinh lớn nhất.
   const p=await loadPhrases(Math.min(99,Math.max(20,q.bankSize,n.students,maxStudents)));
   plan={names:n.need,phrases:p.need,questions:q.need,totals:{n,p,q}};
@@ -97,7 +104,8 @@ async function refresh(){
   const missing=n.need.length+p.need.length+q.need.length;
   $('genStart').disabled=!missing;
   $('genStart').textContent=missing?'⚡ Tạo đủ '+missing+' đoạn còn thiếu':'✅ Đã đủ giọng thống nhất';
-  tell(missing?'Còn thiếu: '+n.need.length+' tên · '+p.need.length+' câu dẫn ('+(p.scripts-(S.BUILTIN?1:0))+' kịch bản + mặc định) · '+q.need.length+' phần câu hỏi ('+q.questions+' câu của bạn).'+(q.others?' '+q.others+' câu của người khác không thể lưu giọng.':'')
+  lastMissing=missing;
+  tell(missing?'Còn thiếu: '+[ONLY_QUESTIONS?'':n.need.length+' tên',p.need.length+' câu dẫn ('+(p.scripts-(S.BUILTIN?1:0))+' kịch bản + mặc định)',ONLY_NAMES?'':q.need.length+' phần câu hỏi ('+q.questions+' câu của bạn)'].filter(Boolean).join(' · ')+'.'+(q.others?' '+q.others+' câu của người khác không thể lưu giọng.':'')
    :'✅ Tên học sinh, câu dẫn và câu hỏi đều đã có giọng '+VOICE+'.');
  }catch(e){tell('⚠ '+message(e),true)}
 }
@@ -140,6 +148,8 @@ async function generate(){
  let done=0,failed=0;
  try{
   await verifyPin(pin);
+  store.set(PIN_KEY,$('rememberPin').checked?pin:null,sessionStorage);
+  if($('consent').checked)store.set(CONSENT_KEY,'1');
   for(let i=0;i<jobs.length&&!stopping;i+=CHUNK){
    const chunk=jobs.slice(i,i+CHUNK);
    tell('🎙️ Đang tạo '+(i+1)+'–'+(i+chunk.length)+' / '+jobs.length+' đoạn...');
@@ -156,7 +166,9 @@ async function generate(){
   }
   tell((stopping?'⏹ Đã dừng. ':'✅ ')+'Đã tạo '+reviews.length+' đoạn'+(failed?', '+failed+' đoạn lỗi (bấm Kiểm tra lại rồi tạo tiếp)':'')+'. Nghe nhanh rồi bấm “Lưu các đoạn đã chọn”.',failed>0&&!reviews.length);
  }catch(e){tell('⚠ '+message(e)+(reviews.length?' · '+reviews.length+' đoạn đã tạo vẫn ở danh sách nghe duyệt.':''),true)}
- finally{running=false;$('genStop').disabled=true;$('refresh').disabled=false;$('genStart').disabled=false}
+ finally{running=false;$('genStop').disabled=true;$('refresh').disabled=false;$('genStart').disabled=false;notifyParent({type:'motionclass:uv-state',pending:reviews.length})}
+ // Giọng Microsoft (không tốn lượt Google): nếu giáo viên bật "Tạo xong tự lưu" thì lưu luôn, không qua bước nghe.
+ if(!stopping&&reviews.length&&$('autoSave').checked)await saveAll();
 }
 function addReview(job,{blob,seconds}){
  $('reviewPanel').hidden=false;
@@ -191,6 +203,8 @@ async function saveAll(){
   await refresh();
   // Kết quả lưu hiện sau cùng để không bị dòng kiểm tra độ phủ che mất.
   if(summary)tell(summary+' '+$('status').textContent.replace(/^✅\s*/,''),errors>0);
+  notifyParent({type:'motionclass:uv-state',pending:reviews.length});
+  if(summary)notifyParent({type:'motionclass:uv-done',saved,errors,missing:lastMissing});
  }
 }
 let playRun=0;
@@ -207,12 +221,23 @@ async function enter(user){
   await edgeInfo();
   classes=await CS.listClasses(c);
   const sel=$('classPick');sel.replaceChildren(...(classes.length?[new Option('Tất cả lớp ('+classes.length+')','*'),...classes.map(x=>new Option(x.name+(x.school_year?' · '+x.school_year:''),x.id))]:[new Option('— Chưa có lớp —','')]));
-  try{const last=localStorage.getItem('motionclass:unified-voice-class');if(last==='*'||classes.some(x=>x.id===last))sel.value=last}catch(_){}
+  if(SCOPE_CLASS&&classes.some(x=>x.id===SCOPE_CLASS)){sel.value=SCOPE_CLASS;sel.disabled=true}
+  else try{const last=localStorage.getItem('motionclass:unified-voice-class');if(last==='*'||classes.some(x=>x.id===last))sel.value=last}catch(_){}
   maxStudents=0;for(const x of classes){try{maxStudents=Math.max(maxStudents,(await CS.listStudents(c,x.id)).filter(s=>s.active!==false).length)}catch(_){}}
   await refresh();
+  // Mở từ nút "Tạo giọng ngay": đã nhớ mã + đã đồng ý + bật tự lưu → chạy luôn, giáo viên không phải bấm thêm.
+  if(EMBED&&lastMissing>0&&$('pin').value&&$('autoSave').checked&&(!plan.names.length||$('consent').checked)){tell('⚡ Đang tạo '+lastMissing+' đoạn còn thiếu...');await generate()}
  }catch(e){tell('⚠ '+message(e),true)}
 }
-$('classPick').onchange=()=>{try{localStorage.setItem('motionclass:unified-voice-class',$('classPick').value)}catch(_){}refresh()};
+$('pin').value=store.get(PIN_KEY,sessionStorage)||'';$('rememberPin').checked=!!$('pin').value||store.get(PIN_KEY+':on')==='1';
+$('consent').checked=store.get(CONSENT_KEY)==='1';
+$('autoSave').checked=store.get(AUTOSAVE_KEY)!=='0';
+$('rememberPin').onchange=()=>{store.set(PIN_KEY+':on',$('rememberPin').checked?'1':'0');if(!$('rememberPin').checked)store.set(PIN_KEY,null,sessionStorage)};
+$('autoSave').onchange=()=>store.set(AUTOSAVE_KEY,$('autoSave').checked?'1':'0');
+$('consent').onchange=()=>store.set(CONSENT_KEY,$('consent').checked?'1':null);
+if(EMBED)document.body.classList.add('embed');
+$('cardQuestions').hidden=ONLY_NAMES;$('cardNames').hidden=ONLY_QUESTIONS;
+$('classPick').onchange=()=>{if(SCOPE_CLASS)return;try{localStorage.setItem('motionclass:unified-voice-class',$('classPick').value)}catch(_){}refresh()};
 $('refresh').onclick=refresh;
 $('genStart').onclick=generate;
 $('genStop').onclick=()=>{stopping=true;tell('Sẽ dừng sau nhóm hiện tại.')};
@@ -227,7 +252,7 @@ $('loginForm').onsubmit=async e=>{
 $('logoutButton').onclick=async()=>{if(reviews.length&&!confirm('Còn đoạn chưa lưu. Vẫn đăng xuất?'))return;await c.auth.signOut();location.reload()};
 window.addEventListener('beforeunload',e=>{if(reviews.length){e.preventDefault();e.returnValue=''}});
 window.addEventListener('unhandledrejection',e=>tell('⚠ '+message(e.reason),true));
-window.__unifiedVoiceTest={state:()=>({voice:VOICE,plan:{names:plan.names.length,phrases:plan.phrases.length,questions:plan.questions.length},reviews:reviews.length,running})};
+window.__unifiedVoiceTest={state:()=>({embed:EMBED,scope:SCOPE,missing:lastMissing,voice:VOICE,plan:{names:plan.names.length,phrases:plan.phrases.length,questions:plan.questions.length},reviews:reviews.length,running})};
 (async()=>{
  try{c=CS.createClient()}catch(e){$('loginStatus').textContent='⚠ '+message(e);return}
  const {data:{session}}=await c.auth.getSession();
