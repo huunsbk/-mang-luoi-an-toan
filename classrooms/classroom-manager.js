@@ -68,10 +68,10 @@ function showClass(){
 async function selectClass(id){
  const stamp=++loadSerial;
  active=classes.find(c=>c.id===id)||null;showClass();renderClasses();
- if(!active){students=[];renderStudents();return}
+ if(!active){students=[];renderStudents();window.studentNameApp?.onClassChange();return}
  const list=await api.listStudents(client,active.id);
  if(stamp!==loadSerial)return;
- students=list;renderStudents();setStatus('Đã nạp '+students.length+' học sinh của lớp '+active.name+'.');
+ students=list;renderStudents();window.studentNameApp?.onClassChange();setStatus('Đã nạp '+students.length+' học sinh của lớp '+active.name+'.');
 }
 function previewImage(s,canvas){
  const img=new Image();
@@ -184,6 +184,7 @@ function init(){
 }
 window.ClassroomManagerBridge={
  context:()=>({classId:active?.id||null,className:active?.name||'',students:students.map(st=>({...st}))}),
+ getClient:()=>client,
  async assignCroppedPhoto(classId,studentId,blob){
   if(!user||!active||active.id!==classId)throw Error('Lớp đã thay đổi, vui lòng mở lại ảnh lớp.');
   const student=students.find(st=>st.id===studentId);
