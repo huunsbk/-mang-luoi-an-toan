@@ -3,43 +3,78 @@
 'use strict';
 const $=id=>document.getElementById(id),store=window.TeacherClassroomStore,game=window.MarbleClassroomHooks;
 let client=null,classes=[],busy=false;
-let savedNames=new Map(),voiceAudio=null,activeVoiceClass=null;
+let savedNames=new Map(),voiceAudio=null,activeVoiceClass=null,loadEpoch=0;
+const nameBlobs=new Map();
 function clearNames(){
  if(voiceAudio){voiceAudio.pause();voiceAudio.src='';voiceAudio=null}
- savedNames.clear();activeVoiceClass=null;
+ savedNames.clear();nameBlobs.clear();activeVoiceClass=null;loadEpoch++;
  $('raceNameSelect').replaceChildren(new Option('— Chọn học sinh —',''));
  $('raceNamePlay').disabled=true;
 }
+function chosenClip(studentId,requestedVoice){
+ const variants=savedNames.get(studentId)||[];
+ if(!variants.length||requestedVoice==='device')return null;
+ return variants.find(x=>x.voiceId===requestedVoice)||
+  variants.find(x=>x.voiceId.startsWith('studio:'))||variants[0];
+}
+function refreshVoiceStatus(){
+ const src=$('raceSavedVoice')?.value||'device',ctx=[...savedNames.keys()];
+ const matching=src==='device'?0:ctx.filter(id=>savedNames.get(id)?.some(x=>x.voiceId===src)).length;
+ const usable=src==='device'?0:ctx.length;
+ $('raceNamePlay').disabled=src==='device'||!usable;
+ $('raceNameStatus').textContent=src==='device'
+  ?'Đang chọn giọng thiết bị; WAV tên đã lưu sẽ không phát.'
+  :'Tên học sinh: '+matching+' WAV đúng giọng đã chọn, '+(usable-matching)+' WAV bằng giọng đã lưu khác (được sử dụng khi thiếu đúng giọng).';
+}
 async function syncNameAudio(c,classId,students){
- clearNames();
+ clearNames();const epoch=loadEpoch;
  const items=await store.listStudentNameVoices(c,classId);
- if(activeVoiceClass && activeVoiceClass!==classId)return;
- activeVoiceClass=classId;
  const hashes=await Promise.all(students.map(async st=>[st.id,await store.studentNameHash(st.name)]));
+ if(epoch!==loadEpoch||game.currentClassId()!==classId)return;
+ activeVoiceClass=classId;
  const hashById=new Map(hashes);
  for(const item of items){
-  if(item.url && hashById.get(item.studentId)===item.nameHash){
+  if(item.url&&hashById.get(item.studentId)===item.nameHash){
    if(!savedNames.has(item.studentId))savedNames.set(item.studentId,[]);
    savedNames.get(item.studentId).push(item);
   }
  }
- for(const student of students){
-  if(savedNames.has(student.id))$('raceNameSelect').append(new Option(student.name,student.id));
- }
- $('raceNamePlay').disabled=$('raceNameSelect').options.length<2;
+ const select=$('raceNameSelect');
+ for(const student of students)if(savedNames.has(student.id))select.append(new Option(student.name,student.id));
+ refreshVoiceStatus();
 }
-function playSavedName(studentId){
- const preferred=game.preferredVoice?.()||'';
- const variants=savedNames.get(studentId)||[];
- const picked=variants.find(x=>x.voiceId===preferred);
- if(!picked?.url)return false;
+async function getNameBlob(studentId,voice){
+ const row=chosenClip(studentId,voice);
+ if(!row)return null;
+ const cacheKey=row.storagePath+':'+row.updatedAt;
+ if(nameBlobs.has(cacheKey))return nameBlobs.get(cacheKey);
+ const task=fetch(row.url,{cache:'no-store'}).then(async res=>{
+  if(!res.ok)throw Error('WAV tên học sinh chưa tải được');
+  const blob=await res.blob();
+  const head=String.fromCharCode(...new Uint8Array(await blob.slice(0,12).arrayBuffer()));
+  if(blob.size<45||!head.startsWith('RIFF')||head.slice(8,12)!=='WAVE')throw Error('WAV tên không hợp lệ');
+  return blob;
+ }).catch(e=>{nameBlobs.delete(cacheKey);throw e});
+ nameBlobs.set(cacheKey,task);return task;
+}
+async function playSavedName(studentId){
+ const voice=game.preferredVoice?.()||'device';
+ if(voice==='device')return false;
+ let blob;
+ try{blob=await getNameBlob(studentId,voice)}catch(e){status('⚠ '+(e.message||e),true);return false}
+ if(!blob)return false;
  if(voiceAudio){voiceAudio.pause();voiceAudio.src=''}
- const audio=new Audio(picked.url);voiceAudio=audio;
+ const url=URL.createObjectURL(blob),audio=new Audio(url);voiceAudio=audio;
  audio.volume=Math.max(.05,Math.min(1,Number($('winVol').value||80)/100));
- audio.play().catch(()=>{});
+ audio.onended=()=>{URL.revokeObjectURL(url);if(voiceAudio===audio)voiceAudio=null};
+ audio.onerror=()=>{URL.revokeObjectURL(url);if(voiceAudio===audio)voiceAudio=null};
+ audio.play().catch(()=>{URL.revokeObjectURL(url);if(voiceAudio===audio)voiceAudio=null});
  return true;
 }
-window.MarbleNameAudio={has:(id)=>savedNames.has(id),play:playSavedName,clear:clearNames};
+window.MarbleNameAudio={
+ has:id=>savedNames.has(id),play:playSavedName,loadBlob:getNameBlob,
+ refreshVoiceStatus,clear:clearNames
+};
 
 function status(text,error=false){const box=$('raceClassStatus');box.textContent=text;box.style.color=error?'#ffbdc4':'#a4d5f4'}
 async function getClient(){
@@ -53,14 +88,14 @@ async function refreshClasses(keepSelection=true){
  if(!user){status('Cần đăng nhập MotionClass trong Quản lý lớp học, sau đó quay lại và nhấn Làm mới.',true);return []}
  classes=await store.listClasses(c);
  const select=$('raceClassSelect'),selected=keepSelection?(select.value||game.currentClassId()):'';
- select.replaceChildren(new Option('— Danh sách tự nhập trên thiết bị —',''));
+ select.replaceChildren(new Option('— Chọn lớp đã lưu —',''));
  for(const item of classes)select.append(new Option(item.name+(item.school_year?' · '+item.school_year:''),item.id));
  if(classes.some(c=>c.id===selected))select.value=selected;
  status('Đã kết nối MotionClass. Có '+classes.length+' lớp; chọn lớp rồi nhấn “Nạp lớp và viên bi”.');
  return classes;
 }
 async function loadClass(id){
- if(!id){clearNames();status('Chế độ danh sách tự nhập. Muốn chuyển sang danh sách mới, hãy dùng nút Tạo viên bi.');return}
+ if(!id){clearNames();status('Hãy chọn lớp đã lưu trong Quản lý lớp học.');return}
  if(game.isRunning())throw Error('Không thể thay lớp trong khi đang đua.');
  const c=await getClient();
  const data=await store.listStudents(c,id);
@@ -69,7 +104,7 @@ async function loadClass(id){
  try{await syncNameAudio(c,id,data)}catch(e){status('Đã nạp lớp; chưa tải được WAV tên đã lưu: '+(e.message||String(e)),true)}
 
  const picked=classes.find(x=>x.id===id);
- status('✅ Đã đồng bộ '+data.length+' học sinh từ lớp '+(picked?.name||'đã chọn')+', bao gồm ảnh và kiểu viên bi.');
+ status('✅ Đã nạp '+data.length+' học sinh lớp '+(picked?.name||'đã chọn')+' cùng ảnh và WAV tên đã lưu (nếu có).');
 }
 async function guard(task){
  if(busy)return;busy=true;
@@ -81,7 +116,7 @@ async function guard(task){
 $('raceNamePlay').onclick=()=>{
  const id=$('raceNameSelect').value;
  if(!id)return;
- if(!playSavedName(id))status('Chưa có WAV phù hợp với nguồn giọng đã chọn. Chọn đúng giọng trong mục Nguồn giọng đọc.',true);
+ void playSavedName(id).then(ok=>{if(!ok)status('Chưa có WAV tên tương ứng với giọng đã chọn; vào Quản lý lớp học để kiểm tra.',true)});
 };
 $('raceClassRefresh').onclick=()=>guard(()=>refreshClasses(true));
 $('raceClassLoad').onclick=()=>guard(()=>loadClass($('raceClassSelect').value));
