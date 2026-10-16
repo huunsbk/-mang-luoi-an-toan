@@ -57,7 +57,26 @@ async function refreshVoiceInventory(){
   const result=await api('audio.overview',{ids:rows.slice(i,i+100).map(x=>x.id)});
   for(const item of result.items||[]){if(!map.has(item.id))map.set(item.id,[]);map.get(item.id).push(item)}
  }
- voiceInventory=map;lastAudioInventoryCheck=Date.now();render();
+ voiceInventory=map;lastAudioInventoryCheck=Date.now();render();refreshSavedVoiceChoices();
+}
+function refreshSavedVoiceChoices(){
+ const select=$('raceSavedVoice');if(!select)return;
+ const previous=select.value||sessionStorage.getItem('marble.saved.voice')||'';
+ const totals=new Map();
+ for(const items of voiceInventory.values())for(const file of items){
+  if(!file.current||!['full','answer'].includes(file.part))continue;
+  totals.set(file.voiceId,(totals.get(file.voiceId)||0)+1);
+ }
+ select.replaceChildren(new Option('Giọng thiết bị (khi chưa có WAV)','device'));
+ for(const [id,total] of [...totals].sort((a,b)=>b[1]-a[1])){
+  if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(id))continue;
+  select.append(new Option((id.startsWith('studio:')?'✨ Google đã lưu':'🎙️ NGHI đã lưu')+' · '+total+' đoạn',id));
+ }
+ const preferred=[previous,[...totals].find(([id])=>id.startsWith('studio:'))?.[0],[...totals.keys()][0],'device'].find(id=>id&&[...select.options].some(o=>o.value===id));
+ select.value=preferred||'device';
+ $('raceSavedAudioStatus').textContent=totals.size
+  ?'Có '+[...totals.values()].reduce((a,b)=>a+b,0)+' WAV câu hỏi/đáp án hiện hành. Chọn giọng đã lưu để nạp; không cần mã Google.'
+  :'Chưa có WAV câu hỏi/đáp án hợp lệ trong bộ lọc. Có thể sử dụng giọng thiết bị hoặc vào Ngân hàng câu hỏi để tạo.';
 }
 function render(rowsToShow=rows){
  const box=$('bankList');
@@ -118,7 +137,7 @@ async function refreshLogin(){
  const {data:{session:s},error}=await client.auth.getSession();
  if(error)throw error;
  updateSessionUI(s?.user||null);
- if(s?.user)await fetchAllFacets();
+ if(s?.user){await fetchAllFacets();if(hooks.questions().length)await loadSavedVoice().catch(e=>status('Chưa tải được WAV của bộ câu hỏi đang dùng: '+errorMessage(e),true))}
 }
 async function withButton(id,task){
  const button=$(id);if(button.disabled)return;
@@ -133,8 +152,8 @@ function validateChoice(items){
 async function chooseQuestions(){
  const items=validateChoice(selectedRows());
  const added=hooks.importQuestions(items);
- status('✓ Đã thêm '+added+' câu vào Đua bi. '+(items.length-added)+' câu có thể đã tồn tại.');
- if(hooks.isNghi())await loadSavedVoice(items.filter(i=>hooks.questions().some(q=>q.id===i.id)));
+ status('✓ Đã nạp '+added+' câu mới từ Ngân hàng câu hỏi, đang tải WAV đã lưu...');
+ try{await loadSavedVoice()}catch(e){status('Đã nạp câu hỏi; chưa tải đủ WAV: '+errorMessage(e)+'. Có thể dùng giọng thiết bị.',true)}
 }
 function sha256(value){
  return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))
@@ -154,33 +173,50 @@ async function readySharedVoice(creating=false){
  }
  return selected;
 }
-async function fetchVoiceRows(items){
+async function fetchVoiceRows(items,voiceId=hooks.voice().id){
  const valid=items.filter(x=>idpattern.test(x.id));
  if(!valid.length)return [];
- return (await api('audio.list',{ids:valid.map(x=>x.id),voice_id:hooks.voice().id})).items||[];
+ if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(voiceId))return [];
+ const out=[];
+ for(let i=0;i<valid.length;i+=80){
+  const data=await api('audio.list',{ids:valid.slice(i,i+80).map(x=>x.id),voice_id:voiceId});
+  out.push(...(data.items||[]));
+ }
+ return out;
 }
 async function loadSavedVoice(explicit=null){
- await readySharedVoice(false);
+ const targetVoice=hooks.voice().id;
  const bankQuestions=hooks.questions();
  const requested=explicit||bankQuestions;
- if(!requested.length){status('Chưa có câu hỏi liên kết với Supabase trong Đua bi.');return}
- const items=await fetchVoiceRows(requested);
+ if(!requested.length){status('Chưa có câu hỏi từ Ngân hàng câu hỏi trong Đua bi.');return 0}
+ if(targetVoice==='device'){
+  status('Đang chọn giọng thiết bị; không gọi Google hoặc NGHI để tạo âm thanh.');
+  return 0;
+ }
+ const items=await fetchVoiceRows(requested,targetVoice);
  const byId=new Map(bankQuestions.map(q=>[q.id,q]));
- let loaded=0,stale=0;
+ let loaded=0,stale=0,unavailable=0;
  for(const item of items){
+  if(!['full','answer'].includes(item.part))continue;
   const question=byId.get(item.id);
   const speech=question?.spoken?.[item.part];
   if(!speech)continue;
   if(await sha256(speech)!==item.textHash){stale++;continue}
-  const response=await fetch(item.url);
-  if(!response.ok)continue;
-  const blob=await response.blob();
-  if(blob.size){
-   hooks.storeClip(speech,blob);
-   loaded++;
-  }
+  try{
+   const response=await fetch(item.url);
+   if(!response.ok){unavailable++;continue}
+   const blob=await response.blob();
+   if(blob.size>44 && (await blob.slice(0,12).arrayBuffer()).byteLength===12){
+    hooks.storeClip(speech,blob,targetVoice);loaded++;
+   }
+  }catch(_e){unavailable++}
  }
- status('⬇ Đã nạp '+loaded+' đoạn âm thanh vào bộ nhớ. '+(stale?'Có '+stale+' đoạn cũ cần tạo lại.':'Có thể chơi và phát ngay.'));
+ const total=requested.length*2;
+ status('🔊 Đã nạp '+loaded+'/'+total+' WAV câu hỏi và đáp án cho giọng '+targetVoice+'.'+
+  (stale?' '+stale+' WAV cũ không khớp nội dung.':'')+
+  (unavailable?' '+unavailable+' WAV tạm thời không truy cập được.':'')+
+  ' Phần chưa có sẽ dùng giọng thiết bị, không gọi API tạo mới.');
+ $('raceSavedAudioStatus').textContent='Đã nạp '+loaded+'/'+total+' WAV từ Ngân hàng câu hỏi · '+targetVoice;
  return loaded;
 }
 async function saveVoices(){
@@ -326,6 +362,13 @@ function bind(){
   try{await quickSave(true)}catch(e){$('quickBankStatus').textContent='⚠ '+errorMessage(e);throw e}
  });
  $('bankLoadVoice').onclick=()=>withButton('bankLoadVoice',()=>loadSavedVoice());
+ $('raceSavedVoice').onchange=()=>withButton('bankLoadVoice',async()=>{
+  const voice=$('raceSavedVoice').value;
+  sessionStorage.setItem('marble.saved.voice',voice);
+  hooks.onSavedVoiceChange?.();
+  await loadSavedVoice();
+  window.MarbleNameAudio?.refreshVoiceStatus?.();
+ });
  $('bankSaveVoice').onclick=()=>withButton('bankSaveVoice',saveVoices);
  $('bankExport').onclick=()=>withButton('bankExport',downloadPack);
  client.auth.onAuthStateChange((evt,s)=>{if(evt==='SIGNED_OUT'){updateSessionUI(null)}});
@@ -340,5 +383,5 @@ client=window.supabase.createClient(settings.url,settings.publishableKey,{
 });
 bind();
 refreshLogin().catch(e=>status('⚠ '+errorMessage(e),true));
-window.MarbleSharedBankUI={loadSavedVoice,exportSelected:downloadPack,load:fetchBank};
+window.MarbleSharedBankUI={loadSavedVoice,exportSelected:downloadPack,load:fetchBank,refreshSavedVoiceChoices};
 })();
