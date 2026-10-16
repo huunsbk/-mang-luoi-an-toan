@@ -210,9 +210,10 @@ async function loadSavedVoice(explicit=null){
    const response=await fetch(item.url);
    if(!response.ok){unavailable++;continue}
    const blob=await response.blob();
-   if(blob.size>44 && (await blob.slice(0,12).arrayBuffer()).byteLength===12){
+   const header=String.fromCharCode(...new Uint8Array(await blob.slice(0,12).arrayBuffer()));
+   if(blob.size>44 && header.startsWith('RIFF') && header.slice(8,12)==='WAVE'){
     hooks.storeClip(speech,blob,targetVoice);loaded++;
-   }
+   }else unavailable++;
   }catch(_e){unavailable++}
  }
  const total=requested.length*2;
