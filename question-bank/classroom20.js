@@ -83,7 +83,7 @@ function create(ctx){
  function reset(){
   urls.forEach(u=>URL.revokeObjectURL(u));urls=[];
   $('classroom20Plan').replaceChildren();$('classroom20Reviews').replaceChildren();
-  rows=[];pending=[];groups=[];existing=new Map();localWavs=new Map();hashes=new Map();derivativeAdded=new Set();
+  rows=[];pending=[];groups=[];existing=new Map();localWavs=new Map();hashes=new Map();derivativeAdded=new Set();verifiedPin=null;
  }
  function showReview(entry,blob,quality){
   const item={entry,blob,approved:false,listened:false};
@@ -156,6 +156,23 @@ function create(ctx){
    remain=Math.max(0,MIN_GAP-(Date.now()-(Number(getItem(k))||0)));
   }
  }
+ let verifiedPin=null;
+ async function verifyTeacherPin(pin){
+  if(verifiedPin===pin)return;
+  const response=await fetch('/api/marble-tts',{method:'POST',
+   headers:{'Content-Type':'application/json','X-Marble-Teacher-Code':pin},
+   body:JSON.stringify({verifyOnly:true})});
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok||body.verified!==true){
+   const message=response.status===403
+    ?(body.code==='INVALID_ORIGIN'
+      ?'Nguồn yêu cầu bị từ chối. Vui lòng mở đúng giaovien-psi.vercel.app.'
+      :'Mã giáo viên chưa đúng. Nhập chính xác MARBLE_TTS_PIN trong cấu hình Vercel, không nhập Gemini API key. Không tốn lượt Google.')
+    :(body.error||'Không kiểm tra được mã giáo viên (HTTP '+response.status+').');
+   throw Object.assign(Error(message),{status:response.status,code:body.code});
+  }
+  verifiedPin=pin;
+ }
  async function createGroup(group){
   const cacheKey='speech-'+await ctx.hash(voice+'|'+group.entries.map(x=>key(x.id,x.part)+':'+x.text).join('|'));
   let blob=await cacheGet(cacheKey);
@@ -173,6 +190,7 @@ function create(ctx){
    // alter bytes of X-Marble-Teacher-Code (the old one-click flow did).
    const pin=field.value;
    if(!pin.trim())throw Error('Hãy nhập mã giáo viên MARBLE_TTS_PIN vào ô ngay trên nút tạo 20 câu. Đây không phải khóa Gemini API.');
+   await verifyTeacherPin(pin);
    await waitSlot();if(stop)throw Error('Đã dừng.');
    const previousQuota=Number(getItem(quotaKey()))||0;
    const lastKey='motionclass:classroom20:last-request';
