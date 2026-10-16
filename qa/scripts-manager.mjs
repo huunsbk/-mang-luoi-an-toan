@@ -70,6 +70,18 @@ await page.fill('#loginEmail', 'giaovien@example.com'); await page.fill('#loginP
 await page.click('#loginForm button[type=submit]');
 await page.waitForSelector('#appPanel:not([hidden])');
 
+// 0) Backend chưa có bảng (lỗi giáo viên gặp ngày 16/10): bấm "Tạo từ mẫu" PHẢI có phản hồi nhìn thấy.
+await page.evaluate(() => localStorage.setItem('__fakeMissingTables', '1'));
+await page.reload(); await page.waitForSelector('#appPanel:not([hidden])');
+await page.waitForFunction(() => /chưa sẵn sàng/.test(document.getElementById('listStatus').textContent), null, { timeout: 8000 });
+await page.click('#newFromTemplate');
+await page.waitForFunction(() => /Chưa tạo được kịch bản/.test(document.getElementById('listStatus').textContent), null, { timeout: 8000 });
+assert(await page.isVisible('#listStatus') && await page.isEnabled('#newFromTemplate'), 'Lỗi không hiển thị hoặc nút bị khóa vĩnh viễn');
+const missingMsg = await page.textContent('#listStatus');
+await page.evaluate(() => localStorage.removeItem('__fakeMissingTables'));
+await page.reload(); await page.waitForSelector('#appPanel:not([hidden])');
+await page.waitForFunction(() => /Chưa có kịch bản/.test(document.getElementById('listStatus').textContent), null, { timeout: 8000 });
+
 const num = async id => Number(await page.textContent('#' + id));
 const quota = () => page.evaluate(() => { const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); return Number(localStorage.getItem('motionclass:classroom20:requests:' + d)) || 0; });
 async function approveAndSave(expected) {
@@ -83,6 +95,8 @@ async function approveAndSave(expected) {
 // 1) Kịch bản mẫu đầu tiên: số đoạn và số lượt dự kiến.
 await page.selectOption('#templatePick', 'am-ap'); await page.click('#newFromTemplate');
 await page.waitForSelector('#editor:not([hidden])');
+await page.waitForFunction(() => /✅ Đã tạo/.test(document.getElementById('listStatus').textContent));
+assert(await page.isVisible('#slot-call') && (await page.inputValue('#scriptTitle')) === 'Ấm áp – nhẹ nhàng', 'Tạo xong nhưng không mở trình soạn kịch bản');
 const need1 = await num('qNeeded'), calls1 = await num('qCalls');
 assert(need1 === 43 && calls1 >= 2 && calls1 <= 4, `Kế hoạch kịch bản 1 bất thường: ${need1} đoạn / ${calls1} lượt`);
 const segText = await page.textContent('#qSegments');
@@ -143,5 +157,5 @@ await page.click('#saveScript');
 assert((await page.textContent('#editorStatus')).includes('{tên}'), 'Không chặn câu gọi thiếu {tên}');
 
 assert(errors.length === 0, 'Lỗi trang: ' + errors.join(' | '));
-console.log('SCRIPTS_MANAGER_OK', JSON.stringify({ script1: { phrases: need1, calls: calls1, avg: segText, cutWarnings: needsReview }, script2: { newPhrases: need2, calls: calls2, reuse: reuse2 }, totalGoogleCalls: batchPosts.length }));
+console.log('SCRIPTS_MANAGER_OK', JSON.stringify({ missingTableMessage: missingMsg.slice(0, 90), script1: { phrases: need1, calls: calls1, avg: segText, cutWarnings: needsReview }, script2: { newPhrases: need2, calls: calls2, reuse: reuse2 }, totalGoogleCalls: batchPosts.length }));
 await browser.close();

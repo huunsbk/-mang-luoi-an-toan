@@ -13,7 +13,14 @@ const $=id=>document.getElementById(id);
 const S=window.TeacherScriptStore,AUDIO=window.QuestionBatchAudio;
 const API_CHARS=1800,PAUSE=.72,RPM_GAP=22500,DAY_CAP=10,SEP='\n\n\n\n';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const message=e=>String(e?.message||e||'Không rõ lỗi').slice(0,320);
+function message(e){
+ const raw=String(e?.message||e||'Không rõ lỗi');
+ if(/teacher_voice_scripts|teacher_phrase_audio|schema cache|does not exist|PGRST205|404/i.test(raw))
+  return 'Kho kịch bản trên MotionClass chưa sẵn sàng (thiếu bảng dữ liệu). Hãy báo quản trị để kích hoạt. Chi tiết: '+raw.slice(0,160);
+ if(/JWT|session|đăng nhập/i.test(raw))return 'Phiên đăng nhập đã hết hạn. Hãy đăng xuất rồi đăng nhập lại. ('+raw.slice(0,120)+')';
+ if(/Failed to fetch|NetworkError|network/i.test(raw))return 'Không kết nối được máy chủ. Kiểm tra Internet rồi thử lại.';
+ return raw.slice(0,320);
+}
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
 function tell(id,text,bad=false){const n=$(id);if(!n)return;n.textContent=text;n.classList.toggle('error',bad)}
 
@@ -90,7 +97,8 @@ $('loginForm').onsubmit=async e=>{
 $('logoutButton').onclick=async()=>{if(reviews.length&&!confirm('Còn WAV chưa lưu trong khung nghe duyệt. Vẫn đăng xuất?'))return;await c.auth.signOut()};
 async function enter(user){
  $('loginPanel').hidden=true;$('appPanel').hidden=false;$('userEmail').textContent=user.email||'';
- await refreshAll();
+ tell('listStatus','⏳ Đang tải kịch bản...');
+ try{await refreshAll();tell('listStatus',scripts.length?'':'Chưa có kịch bản. Chọn một mẫu rồi bấm “Tạo từ mẫu”.')}catch(_){}
 }
 async function checkStudio(){
  try{
@@ -108,20 +116,30 @@ async function refreshAll(){
   if(!genSelected.size&&scripts.length)genSelected=new Set(scripts.filter(s=>s.isActive).slice(0,1).map(s=>s.id));
   for(const id of [...genSelected])if(!scripts.some(s=>s.id===id))genSelected.delete(id);
   renderList();renderEditor();renderPlan();renderLibrary();
- }catch(e){tell('editorStatus','⚠ '+message(e),true);
-  if(/relation .* does not exist|teacher_voice_scripts/i.test(message(e)))tell('editorStatus','⚠ Cơ sở dữ liệu chưa có bảng kịch bản. Cần áp dụng migration teacher_voice_scripts.',true)}
+ }catch(e){tell('listStatus','⚠ '+message(e),true);throw e}
 }
 
 /* ---------- Danh sách ---------- */
 for(const t of S.TEMPLATES)$('templatePick').append(new Option(t.title,t.theme));
 $('templatePick').value=S.TEMPLATES[0].theme;
-async function create(input){
- if(dirty&&!confirm('Kịch bản đang sửa chưa lưu. Bỏ thay đổi?'))return;
- try{const saved=await S.saveScript(c,input);dirty=false;currentId=saved.id;genSelected.add(saved.id);await refreshAll();tell('editorStatus','✅ Đã tạo kịch bản “'+saved.title+'”.')}
- catch(e){tell('editorStatus','⚠ '+message(e),true)}
+async function busyButton(id,label,task){
+ const b=$(id),old=b.textContent;b.disabled=true;b.textContent=label;
+ try{return await task()}finally{b.disabled=false;b.textContent=old}
 }
-$('newFromTemplate').onclick=()=>{const t=S.TEMPLATES.find(x=>x.theme===$('templatePick').value)||S.TEMPLATES[0];create(JSON.parse(JSON.stringify(t)))};
-$('newBlank').onclick=()=>create({title:'Kịch bản mới',theme:'custom',slots:{call:['Mời em {tên} trả lời. Câu hỏi số {số}.'],correct:['Chính xác! {đáp án} Chúc mừng em {tên}!'],wrong:['Chưa chính xác rồi. {đáp án} Em cố gắng hơn nhé!']}});
+async function create(input,buttonId){
+ if(dirty&&!confirm('Kịch bản đang sửa chưa lưu. Bỏ thay đổi?'))return;
+ tell('listStatus','⏳ Đang tạo kịch bản “'+input.title+'”...');
+ await busyButton(buttonId,'⏳ Đang tạo...',async()=>{
+  try{
+   const saved=await S.saveScript(c,input);dirty=false;currentId=saved.id;genSelected.add(saved.id);
+   await refreshAll();
+   tell('listStatus','✅ Đã tạo “'+saved.title+'”. Sửa nội dung bên phải, rồi tạo giọng ở mục bên dưới.');
+   $('editor').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){tell('listStatus','⚠ Chưa tạo được kịch bản: '+message(e),true)}
+ });
+}
+$('newFromTemplate').onclick=()=>{const t=S.TEMPLATES.find(x=>x.theme===$('templatePick').value)||S.TEMPLATES[0];create(JSON.parse(JSON.stringify(t)),'newFromTemplate')};
+$('newBlank').onclick=()=>create({title:'Kịch bản mới',theme:'custom',slots:{call:['Mời em {tên} trả lời. Câu hỏi số {số}.'],correct:['Chính xác! {đáp án} Chúc mừng em {tên}!'],wrong:['Chưa chính xác rồi. {đáp án} Em cố gắng hơn nhé!']}},'newBlank');
 function renderList(){
  const root=$('scriptList');root.replaceChildren();
  if(!scripts.length)root.append(el('p','Chưa có kịch bản. Hãy tạo từ một mẫu.','tiny'));
@@ -177,12 +195,13 @@ function renderEditor(){
 }
 $('saveScript').onclick=async()=>{
  const s=current();if(!s)return;
- try{S.cleanScript(draft());const saved=await S.saveScript(c,draft(),s.id);dirty=false;currentId=saved.id;await refreshAll();tell('editorStatus','✅ Đã lưu kịch bản. Các đoạn mới sẽ hiện trong kế hoạch tạo giọng.')}
- catch(e){tell('editorStatus','⚠ '+message(e),true)}
+ tell('editorStatus','⏳ Đang lưu...');
+ await busyButton('saveScript','⏳ Đang lưu...',async()=>{try{S.cleanScript(draft());const saved=await S.saveScript(c,draft(),s.id);dirty=false;currentId=saved.id;await refreshAll();tell('editorStatus','✅ Đã lưu kịch bản. Các đoạn mới sẽ hiện trong kế hoạch tạo giọng.')}
+ catch(e){tell('editorStatus','⚠ '+message(e),true)}});
 };
 $('deleteScript').onclick=async()=>{
  const s=current();if(!s||!confirm('Xóa kịch bản “'+s.title+'”? WAV câu dẫn vẫn giữ trong kho để kịch bản khác dùng chung.'))return;
- try{await S.deleteScript(c,s.id);dirty=false;currentId=null;genSelected.delete(s.id);await refreshAll();tell('editorStatus','Đã xóa kịch bản.')}
+ try{await S.deleteScript(c,s.id);dirty=false;currentId=null;genSelected.delete(s.id);await refreshAll();tell('listStatus','Đã xóa kịch bản “'+s.title+'”.')}
  catch(e){tell('editorStatus','⚠ '+message(e),true)}
 };
 
@@ -410,6 +429,8 @@ $('previewScript').onclick=async()=>{
  }
 };
 
+window.addEventListener('unhandledrejection',e=>tell($('appPanel').hidden?'loginStatus':'listStatus','⚠ '+message(e.reason),true));
+window.addEventListener('error',e=>tell($('appPanel').hidden?'loginStatus':'listStatus','⚠ Lỗi trang: '+String(e.message||'').slice(0,200),true));
 window.__scriptManagerTest={pack,estimatedSeconds,state:()=>({scripts:scripts.length,currentId,voice,library:library.length,reviews:reviews.length,running,genSelected:[...genSelected]})};
 boot().catch(e=>tell('loginStatus','⚠ '+message(e),true));
 })();

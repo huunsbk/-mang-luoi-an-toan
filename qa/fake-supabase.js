@@ -19,6 +19,9 @@ function query(name){
  };
  function exec(){
   window.__fakeLog.push(op+':'+name);
+  // Giả lập đúng lỗi thật khi chưa áp dụng migration (PostgREST 404 / PGRST205).
+  if(localStorage.getItem('__fakeMissingTables')==='1'&&/^teacher_(voice_scripts|phrase_audio)$/.test(name))
+   return{data:null,error:{code:'PGRST205',message:"Could not find the table 'public."+name+"' in the schema cache"}};
   const t=table(name),match=r=>filters.every(f=>f(r));let out;
   if(op==='select')out=t.filter(match).slice(0,lim);
   else if(op==='insert'){const row={id:uuid(),owner_id:USER.id,created_at:new Date().toISOString(),sort_order:0,...payload};t.push(row);out=[row]}
