@@ -30,6 +30,8 @@ const BANK = [
   { id: Q2, owned: true, subject: 'Tin học', lesson: 'Bài 2', text: 'Thiết bị nào phát ra âm thanh?', options: ['Loa', 'Chuột', 'Bàn phím', 'Màn hình'], correct: 'A' },
   { id: QX, owned: false, subject: 'Tin học', lesson: 'Bài 1', text: 'Câu của giáo viên khác?', options: ['A1', 'B1', 'C1', 'D1'], correct: 'C' }
 ].map(q => ({ ...q, spoken: spoken(q.text, q.options, q.correct) }));
+// Q2 có giải thích (giáo viên điền) → thêm phần đọc 'explain'.
+BANK[1].spoken.explain = 'Loa là thiết bị phát ra âm thanh.';
 // Kho WAV câu hỏi giả lập: Q1 có "full" (giọng hệ thống, đúng nội dung), "answer" (giọng hệ thống nhưng nội dung đã sửa), NGHI cũ.
 const qaudio = [{ id: Q1, voiceId: B1, part: 'full', current: true }, { id: Q1, voiceId: B1, part: 'answer', current: false }, { id: Q1, voiceId: 'nghi:calmwoman3688', part: 'answer', current: true }];
 const puts = [], deletes = [];
@@ -105,7 +107,7 @@ let s0 = await st();
 // 1) Trạng thái từng loại đoạn.
 assert(s0.voice === B1 && (await page.textContent('#voiceNow')).includes('trẻ, tự tin'), 'Giọng hệ thống mặc định sai: ' + s0.voice);
 assert(JSON.stringify(s0.counts.name) === JSON.stringify({ total: 4, ok: 0, missing: 3, stale: 1 }), 'Đếm tên sai: ' + JSON.stringify(s0.counts.name));
-assert(JSON.stringify(s0.counts.question) === JSON.stringify({ total: 14, ok: 1, missing: 12, stale: 1 }), 'Đếm câu hỏi sai (chỉ câu của mình, 7 phần): ' + JSON.stringify(s0.counts.question));
+assert(JSON.stringify(s0.counts.question) === JSON.stringify({ total: 15, ok: 1, missing: 13, stale: 1 }), 'Đếm câu hỏi sai (chỉ câu của mình, 7 phần + giải thích): ' + JSON.stringify(s0.counts.question));
 assert(s0.counts.phrase.total === seed.phrases && s0.counts.phrase.ok === 1, 'Đếm câu dẫn sai (mọi kịch bản + mặc định): ' + JSON.stringify(s0.counts.phrase) + ' / ' + seed.phrases);
 assert(s0.old['studio:ea9246ceeac13ba0']?.name === 1 && s0.old['nghi:calmwoman3688']?.question === 1, 'Không liệt kê giọng cũ đang được giữ: ' + JSON.stringify(s0.old));
 assert(await page.isVisible('#oldPanel'), 'Không hiện mục giọng cũ');
@@ -139,7 +141,7 @@ let t = await db();
 assert(t.teacher_student_name_audio.filter(r => r.voice_id === B1).length === 4, 'Chưa lưu đủ 4 WAV tên');
 assert(t.teacher_student_name_audio.some(r => r.voice_id.startsWith('studio:')), 'Đã xóa nhầm WAV giọng Google cũ');
 assert(t.teacher_phrase_audio.filter(r => r.voice_id === B1).length === seed.phrases, 'Chưa lưu đủ câu dẫn');
-assert(puts.length === 13 && puts.every(p => p.voice_id === B1 && p.wavHead === 'RIFFWAVE'), 'Lưu câu hỏi sai: ' + puts.length);
+assert(puts.length === 14 && puts.some(p => p.part === 'explain' && p.id === Q2) && puts.every(p => p.voice_id === B1 && p.wavHead === 'RIFFWAVE'), 'Lưu câu hỏi sai: ' + puts.length);
 for (const p of puts) { const q = BANK.find(b => b.id === p.id); assert(q.owned && p.expected_text_hash === sha(q.spoken[p.part]), 'Mã xác minh nội dung câu hỏi sai'); }
 assert(ttsBodies.filter(b => b.items).every(b => b.voiceId === B1 && b.items.length <= 8), 'Yêu cầu tạo giọng sai mã giọng hoặc quá 8 đoạn/lần');
 const styles = new Set(ttsBodies.flatMap(b => (b.items || []).map(i => i.style)));
@@ -172,11 +174,11 @@ await page.selectOption('#styleOverride', '');
 await page.click('.tab[data-tab="question"]');
 await page.selectOption('#groupFilter', 'Tin học · Bài 2');
 await page.check('#checkAll');
-assert((await page.textContent('#selCount')).startsWith('7 '), 'Chọn tất cả đang hiện sai: ' + await page.textContent('#selCount'));
+assert((await page.textContent('#selCount')).startsWith('8 '), 'Chọn tất cả đang hiện sai: ' + await page.textContent('#selCount'));
 await page.click('#bulkDelete');
-await page.waitForFunction(() => /Đã xóa giọng của 7 đoạn/.test(document.getElementById('status').textContent));
-assert(deletes.length === 7 && deletes.every(d => d.id === Q2 && d.voice_id === B1), 'Xóa hàng loạt sai: ' + JSON.stringify(deletes.slice(0, 2)));
-assert((await st()).counts.question.missing === 7, 'Sau khi xóa phải còn 7 phần thiếu');
+await page.waitForFunction(() => /Đã xóa giọng của 8 đoạn/.test(document.getElementById('status').textContent));
+assert(deletes.length === 8 && deletes.every(d => d.id === Q2 && d.voice_id === B1), 'Xóa hàng loạt sai: ' + JSON.stringify(deletes.slice(0, 2)));
+assert((await st()).counts.question.missing === 8, 'Sau khi xóa phải còn 8 phần thiếu');
 
 // 8) Đổi người đọc: nghe thử (không lưu) rồi áp dụng cho toàn hệ thống.
 await page.selectOption('#profilePick', MY);

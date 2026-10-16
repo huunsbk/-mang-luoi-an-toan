@@ -5,6 +5,8 @@
  *   {tên}     → WAV tên học sinh đã lưu
  *   {số}      → số thứ tự câu hỏi, đọc LIỀN với đoạn đứng trước ("trả lời câu hỏi số ba")
  *   {đáp án}  → WAV công bố đáp án của câu hỏi
+ *   {giải thích} → WAV giải thích của câu hỏi (chỉ đọc khi giáo viên có điền; không có thì bỏ qua).
+ *              Mẫu không ghi {giải thích} thì giải thích tự đọc ngay sau {đáp án}.
  *   {chuỗi}   → số bạn đúng liên tiếp (3, 5, 10, 15, 20), đọc liền với đoạn đứng trước
  *   {đúng} {tổng} → số liệu cuối giờ, đọc trực tiếp bằng giọng dự phòng (không tạo trước)
  * Mỗi mẫu được tách thành các ĐOẠN; WAV của đoạn khóa theo SHA-256 nội dung + giọng,
@@ -21,14 +23,14 @@ const SLOTS=[
  {key:'intro',label:'Mở đầu phần trả lời',hint:'Đọc một lần khi bắt đầu hỏi.',allowed:[]},
  {key:'call',label:'Gọi học sinh',hint:'Bắt buộc có {tên}. Sau câu này, hệ thống phát WAV câu hỏi.',allowed:['tên','số'],required:['tên']},
  {key:'think',label:'Nhắc suy nghĩ',hint:'Đọc sau câu hỏi (bỏ qua nếu WAV đọc cả câu đã có câu nhắc).',allowed:[]},
- {key:'correct',label:'Khi trả lời đúng',hint:'Nên có {đáp án} và {tên}.',allowed:['tên','đáp án']},
- {key:'wrong',label:'Khi trả lời sai',hint:'Nên có {đáp án}.',allowed:['tên','đáp án']},
+ {key:'correct',label:'Khi trả lời đúng',hint:'Nên có {đáp án}, {giải thích} và {tên}. {giải thích} chỉ đọc khi câu hỏi có giải thích.',allowed:['tên','đáp án','giải thích']},
+ {key:'wrong',label:'Khi trả lời sai',hint:'Nên có {đáp án} và {giải thích}. {giải thích} chỉ đọc khi câu hỏi có giải thích.',allowed:['tên','đáp án','giải thích']},
  {key:'fiveLeft',label:'Còn 5 giây',hint:'Dùng khi bật đồng hồ suy nghĩ.',allowed:[]},
  {key:'timeUp',label:'Hết giờ',hint:'Dùng khi bật đồng hồ suy nghĩ.',allowed:[]},
  {key:'streak',label:'Nhiều bạn đúng liên tiếp',hint:'Dùng {chuỗi}: 3, 5, 10, 15, 20 bạn.',allowed:['chuỗi']},
  {key:'summary',label:'Tổng kết cuối giờ',hint:'{đúng} và {tổng} đọc bằng giọng dự phòng; muốn toàn bộ bằng WAV thì không dùng hai chỗ trống này.',allowed:['đúng','tổng']}
 ];
-const PLACEHOLDER=/\{(tên|số|đáp án|đúng|tổng|chuỗi)\}/gu;
+const PLACEHOLDER=/\{(tên|số|đáp án|giải thích|đúng|tổng|chuỗi)\}/gu;
 const BOUND=new Set(['số','chuỗi']);
 
 const TEMPLATES=[
@@ -36,8 +38,8 @@ const TEMPLATES=[
   intro:['Tất cả các bạn đã về đích. Bây giờ, chúng ta cùng bước vào phần trả lời câu hỏi nhé!'],
   call:['Mời em {tên} trả lời. Câu hỏi số {số}.','Bây giờ, mời em {tên}. Câu hỏi số {số}.'],
   think:['Em hãy suy nghĩ thật kỹ trước khi trả lời nhé!'],
-  correct:['Chính xác! {đáp án} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} Chúc mừng em {tên}! Em thật xuất sắc!'],
-  wrong:['Chưa chính xác rồi. {đáp án} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} Không sao cả, lần sau em sẽ làm tốt hơn!'],
+  correct:['Chính xác! {đáp án} {giải thích} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} {giải thích} Chúc mừng em {tên}! Em thật xuất sắc!'],
+  wrong:['Chưa chính xác rồi. {đáp án} {giải thích} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} {giải thích} Không sao cả, lần sau em sẽ làm tốt hơn!'],
   fiveLeft:['Còn năm giây!'],timeUp:['Hết giờ! Mời em chọn đáp án.'],
   streak:['Đã có {chuỗi} bạn liên tiếp trả lời đúng. Cả lớp thật tuyệt vời!'],
   summary:['Chúng ta đã hoàn thành phần trả lời câu hỏi. Cảm ơn các em đã tham gia, chúc các em học thật tốt!']}},
@@ -45,8 +47,8 @@ const TEMPLATES=[
   intro:['Các tay đua đã về đích! Bây giờ là vòng đua trí tuệ, các em đã sẵn sàng chưa?'],
   call:['Tay đua {tên} ơi, mời em trả lời. Câu hỏi số {số}.'],
   think:['Bình tĩnh nào, hãy suy nghĩ thật kỹ rồi mới chọn nhé!'],
-  correct:['Tuyệt vời! {đáp án} Tay đua {tên} đã về đích với đáp án đúng!','Xuất sắc! {đáp án} Chúc mừng tay đua {tên}!'],
-  wrong:['Ôi, tiếc quá! {đáp án} Vòng sau em sẽ tăng tốc tốt hơn nhé!'],
+  correct:['Tuyệt vời! {đáp án} {giải thích} Tay đua {tên} đã về đích với đáp án đúng!','Xuất sắc! {đáp án} {giải thích} Chúc mừng tay đua {tên}!'],
+  wrong:['Ôi, tiếc quá! {đáp án} {giải thích} Vòng sau em sẽ tăng tốc tốt hơn nhé!'],
   fiveLeft:['Năm giây cuối cùng!'],timeUp:['Hết giờ rồi! Tay đua hãy chọn đáp án nào.'],
   streak:['{chuỗi} tay đua liên tiếp trả lời đúng. Cả đoàn đua thật đỉnh!'],
   summary:['Vòng đua trí tuệ đã kết thúc. Cảm ơn tất cả các tay đua!']}},
@@ -54,8 +56,8 @@ const TEMPLATES=[
   intro:['Phòng thí nghiệm tri thức đã mở cửa! Các nhà khoa học nhí, chúng ta bắt đầu nhé!'],
   call:['Nhà khoa học nhí {tên}, mời em trả lời. Câu hỏi số {số}.'],
   think:['Hãy quan sát và suy luận thật cẩn thận nhé!'],
-  correct:['Thí nghiệm thành công! {đáp án} Giỏi lắm, nhà khoa học {tên}!'],
-  wrong:['Thí nghiệm chưa thành công. {đáp án} Nhà khoa học nào cũng cần thử lại, em cố lên nhé!'],
+  correct:['Thí nghiệm thành công! {đáp án} {giải thích} Giỏi lắm, nhà khoa học {tên}!'],
+  wrong:['Thí nghiệm chưa thành công. {đáp án} {giải thích} Nhà khoa học nào cũng cần thử lại, em cố lên nhé!'],
   fiveLeft:['Còn năm giây!'],timeUp:['Hết giờ quan sát! Mời em đưa ra kết luận.'],
   streak:['Đã có {chuỗi} nhà khoa học liên tiếp tìm ra đáp án đúng!'],
   summary:['Buổi thí nghiệm hôm nay đã kết thúc. Cảm ơn các nhà khoa học nhí!']}},
@@ -63,8 +65,8 @@ const TEMPLATES=[
   intro:['Chuyến phiêu lưu tìm kho báu tri thức bắt đầu!'],
   call:['Mời em {tên} mở khóa kho báu. Câu hỏi số {số}.'],
   think:['Kho báu chỉ mở với đáp án đúng, em hãy suy nghĩ thật kỹ nhé!'],
-  correct:['Mở khóa thành công! {đáp án} Hoan hô {tên}!'],
-  wrong:['Kho báu chưa mở rồi. {đáp án} Mình cùng cố gắng ở câu sau nhé!'],
+  correct:['Mở khóa thành công! {đáp án} {giải thích} Hoan hô {tên}!'],
+  wrong:['Kho báu chưa mở rồi. {đáp án} {giải thích} Mình cùng cố gắng ở câu sau nhé!'],
   fiveLeft:['Còn năm giây!'],timeUp:['Hết giờ! Mời em chọn chìa khóa.'],
   streak:['{chuỗi} nhà thám hiểm liên tiếp đã mở được kho báu!'],
   summary:['Chuyến phiêu lưu hôm nay đã kết thúc. Cảm ơn các nhà thám hiểm!']}}
@@ -75,8 +77,8 @@ const BUILTIN={id:'builtin',title:'Mặc định (có sẵn)',slots:{
  intro:['Tất cả các bạn đã về đích. Bây giờ, chúng ta cùng bước vào phần trả lời câu hỏi nhé!'],
  call:['Mời em {tên} trả lời. Câu hỏi số {số}.'],
  think:['Em hãy suy nghĩ thật kỹ trước khi trả lời nhé!'],
- correct:['Chính xác! {đáp án} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} Chúc mừng em {tên}! Em thật xuất sắc!','Rất chính xác! {đáp án} Chúc mừng em {tên}! Cả lớp cho bạn một tràng pháo tay nào!'],
- wrong:['Chưa chính xác rồi. {đáp án} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} Không sao cả, lần sau em sẽ làm tốt hơn!','Chưa chính xác rồi. {đáp án} Em hãy ghi nhớ đáp án này nhé!'],
+ correct:['Chính xác! {đáp án} {giải thích} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} {giải thích} Chúc mừng em {tên}! Em thật xuất sắc!','Rất chính xác! {đáp án} {giải thích} Chúc mừng em {tên}! Cả lớp cho bạn một tràng pháo tay nào!'],
+ wrong:['Chưa chính xác rồi. {đáp án} {giải thích} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} {giải thích} Không sao cả, lần sau em sẽ làm tốt hơn!','Chưa chính xác rồi. {đáp án} {giải thích} Em hãy ghi nhớ đáp án này nhé!'],
  fiveLeft:['Còn năm giây!'],timeUp:['Hết giờ! Mời em chọn đáp án.'],
  streak:['Đã có {chuỗi} bạn liên tiếp trả lời đúng. Cả lớp thật tuyệt vời!'],
  summary:['Cả lớp đã trả lời đúng {đúng} trên {tổng} câu hỏi. Cảm ơn các em đã tham gia, chúc các em học thật tốt!'],
@@ -132,7 +134,7 @@ function tokenize(template){
  for(const p of pieces){
   if(p.type==='text'){const text=norm(stripLeadPunct(p.text));if(text&&hasWords(text))out.push({type:'text',text})}
   else if(BOUND.has(p.key))out.push({type:'bound',key:p.key,prefix:p.prefix,suffix:p.suffix,tail:p.tail});
-  else out.push({type:p.key==='tên'?'name':p.key==='đáp án'?'answer':'number',key:p.key});
+  else out.push({type:p.key==='tên'?'name':p.key==='đáp án'?'answer':p.key==='giải thích'?'explain':'number',key:p.key});
  }
  return out;
 }

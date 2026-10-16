@@ -24,8 +24,8 @@ const BUILTIN=window.TeacherScriptStore?.BUILTIN||{id:'builtin',title:'Mặc đ�
  intro:['Tất cả các bạn đã về đích. Bây giờ, chúng ta cùng bước vào phần trả lời câu hỏi nhé!'],
  call:['Mời em {tên} trả lời. Câu hỏi số {số}.'],
  think:['Em hãy suy nghĩ thật kỹ trước khi trả lời nhé!'],
- correct:['Chính xác! {đáp án} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} Chúc mừng em {tên}! Em thật xuất sắc!','Rất chính xác! {đáp án} Chúc mừng em {tên}! Cả lớp cho bạn một tràng pháo tay nào!'],
- wrong:['Chưa chính xác rồi. {đáp án} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} Không sao cả, lần sau em sẽ làm tốt hơn!','Chưa chính xác rồi. {đáp án} Em hãy ghi nhớ đáp án này nhé!'],
+ correct:['Chính xác! {đáp án} {giải thích} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} {giải thích} Chúc mừng em {tên}! Em thật xuất sắc!','Rất chính xác! {đáp án} {giải thích} Chúc mừng em {tên}! Cả lớp cho bạn một tràng pháo tay nào!'],
+ wrong:['Chưa chính xác rồi. {đáp án} {giải thích} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} {giải thích} Không sao cả, lần sau em sẽ làm tốt hơn!','Chưa chính xác rồi. {đáp án} {giải thích} Em hãy ghi nhớ đáp án này nhé!'],
  fiveLeft:['Còn năm giây!'],timeUp:['Hết giờ! Mời em chọn đáp án.'],
  streak:['Đã có {chuỗi} bạn liên tiếp trả lời đúng. Cả lớp thật tuyệt vời!'],
  summary:['Cả lớp đã trả lời đúng {đúng} trên {tổng} câu hỏi. Cảm ơn các em đã tham gia, chúc các em học thật tốt!'],
@@ -224,7 +224,8 @@ async function questionAudio(question){
 }
 function spokenParts(q){
  const h=hooks(),spoken=q.bankSpoken||{};
- return{full:h.questionText(q),answer:h.answerText(q),question:spoken.question,option_a:spoken.option_a,option_b:spoken.option_b,option_c:spoken.option_c,option_d:spoken.option_d};
+ const exp=String(q.explanation||'').replace(/\s+/g,' ').trim();
+ return{full:h.questionText(q),answer:h.answerText(q),explain:spoken.explain||(exp?(/[.!?]$/.test(exp)?exp:exp+'.'):''),question:spoken.question,option_a:spoken.option_a,option_b:spoken.option_b,option_c:spoken.option_c,option_d:spoken.option_d};
 }
 /** Câu hỏi: ưu tiên 5 WAV lẻ (+ câu nhắc suy nghĩ của kịch bản), rồi WAV đọc cả câu
  *  (đã có câu "Em hãy suy nghĩ và lựa chọn một đáp án"), cuối cùng là văn bản. */
@@ -243,15 +244,24 @@ async function answerSegment(q){
  const spoken=spokenParts(q),urls=await questionAudio(q);
  return{kind:'question',part:'answer',text:spoken.answer,url:urls.get('answer')||null,urlSource:'saved-question',gap:220};
 }
+/** Giải thích của câu hỏi (giáo viên điền ở Ngân hàng câu hỏi). Không có → null, bỏ qua. */
+async function explainSegment(q){
+ const spoken=spokenParts(q);if(!spoken.explain)return null;
+ const urls=await questionAudio(q);
+ return{kind:'question',part:'explain',text:spoken.explain,url:urls.get('explain')||null,urlSource:'saved-question',gap:240};
+}
 /** Ghép một mẫu câu thành các đoạn phát. ctx: {student, number, streak, right, total, answer} */
 function templateSegments(template,ctx){
  const store=S();if(!store||!template)return[];
- const out=[];
- for(const t of store.tokenize(template)){
+ const out=[],tokens=store.tokenize(template);
+ // Mẫu cũ chưa có {giải thích}: giải thích tự đọc ngay sau {đáp án}.
+ const autoExplain=!tokens.some(t=>t.type==='explain');
+ for(const t of tokens){
   if(t.type==='text')out.push(phraseSegment(t.text,140));
   else if(t.type==='bound'){const v=t.key==='số'?ctx.number:ctx.streak;if(v!==undefined)out.push(phraseSegment(store.boundText(t,v),220))}
   else if(t.type==='name'&&ctx.student)out.push(nameSegment(ctx.student));
-  else if(t.type==='answer'&&ctx.answer)out.push(ctx.answer);
+  else if(t.type==='answer'&&ctx.answer){out.push(ctx.answer);if(autoExplain&&ctx.explain)out.push(ctx.explain)}
+  else if(t.type==='explain'&&ctx.explain)out.push(ctx.explain);
   else if(t.type==='number'){const v=t.key==='đúng'?ctx.right:ctx.total;if(v!==undefined)out.push(phraseSegment(store.numberWords(v),90))}
  }
  return out;
@@ -360,11 +370,11 @@ async function result(student,question,correct,{force=false}={}){
  h.stopGame();const token=++run;
  if(!force&&!h.voiceOn())return;
  const script=scriptFor(student.id);
- const answerTask=answerSegment(question);// lấy WAV đáp án song song với tiếng chuông
+ const answerTask=Promise.all([answerSegment(question),explainSegment(question)]);// lấy WAV đáp án + giải thích song song với tiếng chuông
  await wait(correct?380:320);// để tiếng chuông đúng/sai kịp vang
  if(token!==run)return;
- const answer=await answerTask;
- const plan=templateSegments(variant(script,correct?'correct':'wrong'),{student,answer});
+ const [answer,explain]=await answerTask;
+ const plan=templateSegments(variant(script,correct?'correct':'wrong'),{student,answer,explain});
  if(settings.streak&&correct){
   const answers=h.answers?.()||[];let streak=0;
   for(let i=answers.length-1;i>=0&&answers[i].correct;i--)streak++;

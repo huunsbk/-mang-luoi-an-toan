@@ -61,7 +61,7 @@
 @keyframes correctPulse{50%{transform:scale(1.04)}}@keyframes wrongShake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .quiz-feedback{min-height:70px;display:flex;align-items:center;gap:13px;border-radius:18px;background:#e7edfb;color:#5b6385;padding:12px;font-size:clamp(13px,2vw,19px);font-weight:950;line-height:1.3;border:2px dashed #b9c9ec}
 .quiz-feedback.good{background:#d9ffeb;border-color:#54c896;color:#087546;animation:correctPulse .55s}.quiz-feedback.bad{background:#ffe1e6;border-color:#f08da0;color:#a23250;animation:wrongShake .38s}
-.quiz-feedback-icon{font-size:30px;flex-shrink:0}
+.quiz-feedback-icon{font-size:30px;flex-shrink:0}.quiz-explain{display:block;margin-top:6px;font-weight:700;font-size:.85em;line-height:1.35;color:#3a4a6b}
 .quiz-buttons{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:15px}
 .quiz-next{border:0;border-radius:14px;padding:13px 22px;font-size:15px;font-weight:1000;color:#fff;background:linear-gradient(115deg,#8756d5,#5356d5);box-shadow:0 6px 0 #454095;cursor:pointer}
 .quiz-next:disabled{opacity:.45;cursor:not-allowed}
@@ -915,6 +915,10 @@ function parseQuestionBank(raw){
   if(!block){errors.push('Có nội dung nằm trước dòng “Câu 1: ...”.');continue}
   const ans=line.match(/^(?:Đáp\s*án\s*(?:đúng)?|Dap\s*an\s*(?:dung)?)\s*:\s*([ABCD])\s*[.)]?\s*$/i);
   if(ans){block.correct=ans[1].toUpperCase();block.part='answer';continue}
+  // "Giải thích: ..." (không bắt buộc): đọc nối sau đáp án khi chấm đúng/sai.
+  const exp=line.match(/^(?:Giải\s*thích|Giai\s*thich)\s*:\s*(.*)$/i);
+  if(exp){block.explanation=exp[1].trim();block.part='explain';continue}
+  if(block.part==='explain'){block.explanation+=' '+line;continue}
   const opt=line.match(/^([ABCD])(?:\s*[.):\-]\s*|\s+)(.*)$/i);
   if(opt){const key=opt[1].toUpperCase();if(Object.hasOwn(block.options,key))errors.push(`Câu ${block.num}: phương án ${key} bị lặp.`);block.options[key]=opt[2].trim();block.part=key;continue}
   if(block.part==='text')block.text+='\n'+line;
@@ -939,8 +943,8 @@ function importSharedQuestions(items){
   const signature=studyQuestionSignature(question);
   if(seen.has(signature))continue;seen.add(signature);
   refs.set(signature,{id:item.id,spoken:item.spoken,imageUrl:item.imageUrl||null});
-  const num=lines.length+1;
-  lines.push('Câu '+num+': '+question.text+'\n'+answerKeys.map(k=>k+'. '+question.options[k]).join('\n')+'\nĐáp án đúng: '+question.correct);
+  const num=lines.length+1,why=normal(item.explanation||'');
+  lines.push('Câu '+num+': '+question.text+'\n'+answerKeys.map(k=>k+'. '+question.options[k]).join('\n')+'\nĐáp án đúng: '+question.correct+(why?'\nGiải thích: '+why:''));
  }
  if(!lines.length)throw Error('Các câu đã chọn không hợp lệ hoặc không có phương án A–D.');
  sharedQuestionRefs=refs;
@@ -1595,6 +1599,8 @@ function renderQuizScoreboard(){
  row.append(rank,label,r);root.appendChild(row);
  });
 }
+/** Giải thích của câu hỏi: dòng "Giải thích:" đã nhập hoặc từ Ngân hàng câu hỏi. Không có → ''. */
+function quizExplanation(q){return String(q?.explanation||q?.bankSpoken?.explain||'').replace(/\s+/g,' ').trim()}
 function respondQuiz(key){
  const f=studyFinishers[studyIndex];if(!f||studyAnswers.has(f.id))return;
  const question=studyQuestions[studyIndex%studyQuestions.length];const correct=question.correct===key;
@@ -1602,11 +1608,13 @@ function respondQuiz(key){
  $('quizOptions').querySelectorAll('button').forEach(b=>{b.disabled=true;if(b.dataset.key===key)b.classList.add(correct?'answer-correct':'answer-wrong');if(!correct&&b.dataset.key===question.correct)b.classList.add('reveal-answer')});
  const feedback=$('quizFeedback');feedback.className='quiz-feedback '+(correct?'good':'bad');feedback.firstElementChild.textContent=correct?'🎉':'💡';
  $('quizFeedbackText').textContent=correct?'CHÍNH XÁC! EM RẤT XUẤT SẮC! 🌟':`CHƯA CHÍNH XÁC! ĐÁP ÁN ĐÚNG LÀ ${question.correct}. CỐ GẮNG LÊN NHÉ!`;
+ const why=quizExplanation(question);
+ if(why){const note=document.createElement('span');note.className='quiz-explain';note.textContent='💡 '+why;$('quizFeedbackText').append(document.createElement('br'),note)}
  $('quizNext').disabled=false;
  quizAnswerAudio(correct);if(correct)quizConfetti();
  const answered=students.find(st=>st.id===f.id);
  if(scriptOn()&&answered)window.MarbleQuizScript.result(answered,question,correct);
- else playPreparedSpeech([correct?goodSpeech:badSpeech,correctAnswerSpeech(question)]);
+ else playPreparedSpeech([correct?goodSpeech:badSpeech,correctAnswerSpeech(question),...(quizExplanation(question)?[quizExplanation(question)]:[])]);
  renderQuizScoreboard();renderRoster();save();
 }
 function exportStudyResults(){
@@ -1717,7 +1725,7 @@ window.MarbleQuizHooks={
  sample:()=>{inspectQuestions(false);const student=students[0],question=studyQuestions[0];return student&&question?{student,question}:null}
 };
 window.MarbleSharedBankHooks={
- currentQuestions:()=>{if(!inspectQuestions(false))throw Error('Hãy sửa các lỗi câu hỏi trước khi lưu.');return studyQuestions.map(q=>({num:q.num,text:q.text,options:answerKeys.map(k=>q.options[k]),correct:q.correct,id:q.bankId||null}))},
+ currentQuestions:()=>{if(!inspectQuestions(false))throw Error('Hãy sửa các lỗi câu hỏi trước khi lưu.');return studyQuestions.map(q=>({num:q.num,text:q.text,options:answerKeys.map(k=>q.options[k]),correct:q.correct,id:q.bankId||null,...(q.explanation?{explanation:q.explanation}:{})}))},
  linkSaved:(items,results)=>{items.forEach((q,i)=>{const result=results[i];if(!result?.id)return;const normalized={text:q.text,options:{},correct:q.correct};answerKeys.forEach((k,j)=>normalized.options[k]=q.options[j]);const key=studyQuestionSignature(normalized);sharedQuestionRefs.set(key,{id:result.id,owned:true})});inspectQuestions(false);save()},
  importQuestions:importSharedQuestions,
  questions:()=>studyQuestions.filter(q=>q.bankId).map(q=>({id:q.bankId,question:q,spoken:{full:questionSpeech(q),answer:correctAnswerSpeech(q)}})),

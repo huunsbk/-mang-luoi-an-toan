@@ -130,7 +130,7 @@ function showInventoryStats(){
 /* Nút "🎙️ Tạo giọng ngay": đếm câu hỏi CỦA MÌNH còn thiếu phần nào ở giọng thống nhất (Microsoft). */
 async function showUnifiedVoiceBadge(){
  const L=window.UnifiedVoiceLauncher,btn=$('uvBankVoice');if(!L||!btn)return;
- const voice=await L.systemVoice(supabase),parts=['question','option_a','option_b','option_c','option_d','answer','full'];
+ const voice=await L.systemVoice(supabase),parts=['question','option_a','option_b','option_c','option_d','answer','explain','full'];
  const missing=rows.filter(r=>r.owned&&r.spoken).filter(r=>{const have=new Set(inventoryFor(r.id).filter(x=>x.current&&x.voiceId===voice).map(x=>x.part));return parts.some(p=>r.spoken[p]&&!have.has(p))}).length;
  L.setBadge(btn,missing,'câu');
 }
@@ -214,7 +214,7 @@ function showEditor(item=null){
  $('editGrade').value=grade>=1&&grade<=12?String(grade):'';
  $('lesson').value=item?.lesson||'';$('question').value=item?.text||'';
  K.forEach((k,i)=>{$('option'+k).value=item?.options?.[i]||''});
- $('correct').value=item?.correct||'A';$('visibility').value=item?.visibility||'private';
+ $('correct').value=item?.correct||'A';$('visibility').value=item?.visibility||'private';$('explanation').value=item?.explanation||'';
  $('visibility').querySelector('option[value=group]').disabled=item?.visibility!=='group';
  $('deleteQuestion').disabled=!item?.owned;$('duplicateQuestion').disabled=!item;
  $('uploadQuestionImage').disabled=!item?.id||!item?.owned;
@@ -229,7 +229,7 @@ function formItem(){
  const grade=Number($('editGrade').value);
  if(!Number.isInteger(grade)||grade<1||grade>12)throw Error('Vui lòng chọn lớp từ 1 đến 12 trước khi lưu câu hỏi.');
  return{id:$('editId').value||undefined,grade,subject:$('subject').value.trim(),lesson:$('lesson').value.trim(),text:$('question').value.trim(),options:K.map(k=>$('option'+k).value.trim()),correct:$('correct').value,
-  visibility:$('visibility').value,expected_updated_at:editingStamp||undefined};
+  visibility:$('visibility').value,explanation:$('explanation').value.replace(/\s+/g,' ').trim(),expected_updated_at:editingStamp||undefined};
 }
 
 function gradeOf(row){
@@ -379,7 +379,7 @@ function renderList(){
 function setListMessage(message,error=false){
  const text=$('listInfo');text.textContent=message;text.style.color=error?'#b82d46':'#246097';
 }
-function snapshot(){return JSON.stringify(['editGrade','subject','lesson','question','optionA','optionB','optionC','optionD','correct','visibility'].map(id=>$(id).value))}
+function snapshot(){return JSON.stringify(['editGrade','subject','lesson','question','optionA','optionB','optionC','optionD','correct','visibility','explanation'].map(id=>$(id).value))}
 function canLeaveEditor(){
  return activeScreen!=='edit'||!editSnapshot||snapshot()===editSnapshot||confirm('Câu hỏi chưa được lưu. Thầy/cô muốn rời màn hình biên tập?');
 }
@@ -394,6 +394,7 @@ function showPreview(item){
   div.append(symbol,document.createTextNode(item.options[i]||''));if(item.correct===letter)div.append(document.createTextNode(' ✓ Đáp án đúng'));
   $('previewOptions').append(div);
  });
+ if(item.explanation){const div=document.createElement('div');div.className='preview-option';div.style.background='#fff8e1';div.textContent='💡 Giải thích: '+item.explanation;$('previewOptions').append(div)}
  for(const text of [gradeOf(item),item.subject,item.lesson,item.visibility==='public'?'Công khai':item.visibility==='private'?'Riêng tư':'Nhóm']){
   const chip=document.createElement('span');chip.className='pill';chip.textContent=text;meta.append(chip);
  }
@@ -545,18 +546,20 @@ function parseText(text){
  const records=[],errors=[];let q=null,part=null;
  function commit(){if(!q)return;
   if(!q.text||K.some(k=>!q.options[k])||!K.includes(q.correct))errors.push('Câu '+q.num+' chưa có đủ nội dung, bốn phương án hoặc đáp án.');
-  else records.push({text:q.text,options:K.map(k=>q.options[k]),correct:q.correct});
+  else records.push({text:q.text,options:K.map(k=>q.options[k]),correct:q.correct,...(q.explanation?{explanation:q.explanation.trim()}:{})});
  }
  for(const raw of String(text).replace(/\r/g,'').split('\n')){
   const line=raw.trim();if(!line)continue;
   const heading=line.match(/^(?:Câu|Cau)\s*(\d+)\s*[.:)\-]\s*(.*)$/i);
   if(heading){commit();q={num:Number(heading[1]),text:heading[2],options:{},correct:''};part='text';continue}
   if(!q){errors.push('Nội dung cần bắt đầu bằng Câu 1: ...');continue}
+  const explain=line.match(/^(?:Giải\s*thích|Giai\s*thich)\s*:\s*(.*)$/i);
+  if(explain){q.explanation=explain[1];part='explain';continue}
   const answer=line.match(/^(?:Đáp\s*án\s*(?:đúng)?|Dap\s*an\s*(?:dung)?)\s*:\s*([ABCD])\s*[.)]?$/i);
   if(answer){q.correct=answer[1].toUpperCase();part='correct';continue}
   const opt=line.match(/^([ABCD])(?:\s*[.):\-]\s*|\s+)(.*)$/i);
   if(opt){part=opt[1].toUpperCase();q.options[part]=opt[2].trim();continue}
-  if(part==='text')q.text+=' '+line;else if(K.includes(part))q.options[part]+=' '+line;
+  if(part==='text')q.text+=' '+line;else if(part==='explain')q.explanation+=' '+line;else if(K.includes(part))q.options[part]+=' '+line;
  }
  commit();return{items:records,errors};
 }
@@ -571,7 +574,7 @@ function bulkItems(){
   if(!Array.isArray(list))throw Error('JSON cần một danh sách câu hỏi.');
   parsed={items:list.map(r=>{
    const opts=r.options||r.answers;
-   return {text:r.text||r.question,options:Array.isArray(opts)?opts.map(x=>typeof x==='object'?x.text:x):K.map(k=>opts?.[k]),correct:r.correct||r.answer||K[(r.answers||[]).findIndex(x=>x.isCorrect)]};
+   return {text:r.text||r.question,options:Array.isArray(opts)?opts.map(x=>typeof x==='object'?x.text:x):K.map(k=>opts?.[k]),correct:r.correct||r.answer||K[(r.answers||[]).findIndex(x=>x.isCorrect)],...(r.explanation?{explanation:String(r.explanation)}:{})};
   }),errors:[]};
  }else parsed=parseText(raw);
  if(parsed.errors.length)throw Error(parsed.errors.slice(0,5).join('\n'));

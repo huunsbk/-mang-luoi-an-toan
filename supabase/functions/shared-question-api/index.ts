@@ -64,6 +64,7 @@ async function accessible(userId:string) {
   return [...rows.values()].sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at)));
 }
 const keys=["A","B","C","D"];
+const AUDIO_PARTS=["full","question","option_a","option_b","option_c","option_d","answer","explain"];
 function punctuation(value:string) {
   value=String(value||"").trim();
   return /[.!?]$/.test(value)?value:value+".";
@@ -80,7 +81,10 @@ function spoken(row:any) {
     answer:"Đáp án đúng là phương án "+keys[answer]+". "+punctuation(options[answer].text)
   };
   keys.forEach((k,i)=>{words["option_"+k.toLowerCase()]="Phương án "+k+". "+punctuation(options[i].text)});
-  return {correct:keys[answer],options:options.map((x:any)=>String(x.text)),spoken:words};
+  // Giải thích (không bắt buộc): giáo viên điền thì có thêm phần đọc "explain", đọc nối sau đáp án.
+  const explanation=String(q.explanation||"").replace(/\s+/g," ").trim();
+  if(explanation)words.explain=punctuation(explanation);
+  return {correct:keys[answer],options:options.map((x:any)=>String(x.text)),spoken:words,explanation};
 }
 async function hashString(s:string) {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))]
@@ -109,7 +113,7 @@ async function listQuestions(req:Request,userId:string,body:any) {
   const items=await Promise.all(filtered.map(async row=>{
     const normalized=spoken(row)!;
     return {id:row.id,subject:row.subject_name,lesson:row.lesson_name,grade:row.grade??null,visibility:row.visibility,owned:row.user_id===userId,
-      text:row.question.text,options:normalized.options,correct:normalized.correct,spoken:normalized.spoken,
+      text:row.question.text,options:normalized.options,correct:normalized.correct,spoken:normalized.spoken,explanation:normalized.explanation||"",
       imageUrl:await imageUrl(row.question),updatedAt:row.updated_at};
   }));
   return {ok:true,version:"shared-bank-v1",items,facets:{subjects,lessons},totalAccessible:usable.length,totalFiltered:allFiltered.length,nextOffset:offset+limit<allFiltered.length?offset+limit:null};
@@ -173,7 +177,7 @@ async function putAudio(userId:string,form:FormData) {
   const voice=String(form.get("voice_id")||"");
   const part=String(form.get("part")||"");
   if(!validAudioVoiceId(voice))throw Object.assign(new Error("Mã giọng không hợp lệ."),{status:400});
-  if(!["full","question","option_a","option_b","option_c","option_d","answer"].includes(part))
+  if(!AUDIO_PARTS.includes(part))
     throw Object.assign(new Error("Loại âm thanh không hợp lệ."),{status:400});
   const {data:row,error:lookupError}=await admin.from("pose_quiz_question_bank").select("id,user_id,question").eq("id",id).maybeSingle();
   if(lookupError)throw lookupError;
@@ -234,7 +238,10 @@ function questionInput(raw:any){
  if(!subject||!lesson||subject.length>120||lesson.length>200)
   throw Object.assign(new Error("Hãy chọn môn học và bài học (độ dài hợp lệ)."),{status:422});
  if(!["private","public","group"].includes(visibility))throw Object.assign(new Error("Phạm vi chia sẻ không hợp lệ."),{status:422});
- return{text,opts,correct,subject,lesson,visibility,grade};
+ // Giải thích: không bắt buộc; undefined = giữ nguyên giá trị cũ (trò chơi khác lưu câu hỏi không làm mất giải thích).
+ const explanation=raw.explanation===undefined?undefined:String(raw.explanation||"").replace(/\s+/g," ").trim();
+ if(explanation&&explanation.length>1000)throw Object.assign(new Error("Giải thích tối đa 1000 ký tự."),{status:422});
+ return{text,opts,correct,subject,lesson,visibility,grade,explanation};
 }
 async function upsertOne(userId:string,raw:any){
  const v=questionInput(raw),id=String(raw.id||"");
@@ -257,7 +264,8 @@ async function upsertOne(userId:string,raw:any){
   answers:v.opts.map((value:string,i:number)=>({
    ...(answers[i]||{}),pose:answers[i]?.pose||POSES[i],image:answers[i]?.image??null,text:value,isCorrect:keys[i]===v.correct
   })),
-  image:old.image??null,audio:old.audio??null
+  image:old.image??null,audio:old.audio??null,
+  explanation:v.explanation===undefined?(old.explanation||""):v.explanation
  };
  const record={subject_name:v.subject,lesson_name:v.lesson,grade:raw.grade===undefined?(stored?.grade??null):v.grade,
   visibility:stored?.visibility==="group"&&raw.visibility===undefined?"group":v.visibility,
@@ -347,7 +355,7 @@ async function deleteAllQuestionAudio(userId:string,body:any){
 async function deleteAudioPart(userId:string,body:any){
  const id=String(body.id||""),voice=String(body.voice_id||""),part=String(body.part||"");
  await imageOwner(userId,id);
- if(!validAudioVoiceId(voice)||!["full","question","option_a","option_b","option_c","option_d","answer"].includes(part))
+ if(!validAudioVoiceId(voice)||!AUDIO_PARTS.includes(part))
   throw Object.assign(new Error("Giọng đọc hoặc thành phần âm thanh không hợp lệ."),{status:422});
  const {data,error}=await admin.from("shared_question_audio").select("storage_path").eq("bank_question_id",id).eq("voice_id",voice).eq("part",part).maybeSingle();
  if(error)throw error;

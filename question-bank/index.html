@@ -220,6 +220,8 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <label for="question">Câu hỏi</label><textarea id="question" rows="3" maxlength="1600" placeholder="Nhập nội dung câu hỏi..."></textarea>
 <div class="two"><div><label for="optionA">A</label><input id="optionA" maxlength="800"></div><div><label for="optionB">B</label><input id="optionB" maxlength="800"></div><div><label for="optionC">C</label><input id="optionC" maxlength="800"></div><div><label for="optionD">D</label><input id="optionD" maxlength="800"></div></div>
 <div class="two"><div><label for="correct">Đáp án đúng</label><select id="correct"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div><div><label for="visibility">Phạm vi chia sẻ</label><select id="visibility"><option value="private">Riêng tư</option><option value="public">Công khai</option><option value="group">Nhóm (giữ nguyên nếu đã có)</option></select></div></div>
+<label for="explanation">💡 Giải thích đáp án (không bắt buộc)</label><textarea id="explanation" rows="3" maxlength="1000" placeholder="Ví dụ: 12 × 24 = 288, vì 12 × 20 = 240 và 12 × 4 = 48."></textarea>
+<p class="muted" style="margin-top:4px">Có điền thì Đua bi đọc phần giải thích ngay sau đáp án, cả khi học sinh trả lời đúng hay sai. Để trống thì bỏ qua.</p>
 <div id="editorImage" class="helper" hidden></div><div><label for="questionImageFile">Ảnh minh họa (JPEG, PNG, WebP)</label>
 <input id="questionImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/*">
 <div class="row" style="margin-top:8px"><button id="uploadQuestionImage">↑ Tải ảnh vào câu hỏi</button><button id="removeQuestionImage" class="danger">Xóa ảnh minh họa</button></div>
@@ -284,11 +286,11 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <section id="importView" class="library-screen" hidden>
  <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">NHẬP NGÂN HÀNG HỌC LIỆU</span></div>
  <div class="panel"><h2>📥 Nhập câu hỏi hàng loạt</h2><details open><summary>📥 Nhập nhanh câu hỏi hàng loạt</summary>
-<p class="muted">Dán nội dung từ Đua bi hoặc tải tệp TXT/JSON. Mỗi câu gồm Câu 1:, A., B., C., D. và Đáp án đúng: A–D.</p>
+<p class="muted">Dán nội dung từ Đua bi hoặc tải tệp TXT/JSON. Mỗi câu gồm Câu 1:, A., B., C., D., Đáp án đúng: A–D và (không bắt buộc) Giải thích: ...</p>
 <label for="bulkGrade">Lớp áp dụng cho bộ câu hỏi <span style="color:#c13535">*</span></label><select id="bulkGrade" required><option value="">-- Chọn lớp (1–12) --</option><option value="1">Lớp 1</option><option value="2">Lớp 2</option><option value="3">Lớp 3</option><option value="4">Lớp 4</option><option value="5">Lớp 5</option><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option></select>
 <label for="bulkSubject">Môn học khi nhập</label><input id="bulkSubject" placeholder="Ví dụ: Tin học 5">
 <label for="bulkLesson">Bài học khi nhập</label><input id="bulkLesson" placeholder="Ví dụ: Chủ đề Máy tính và em">
-<textarea id="bulkText" rows="9" placeholder="Câu 1: Thiết bị nào giúp gõ chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Loa&#10;D. Chuột&#10;Đáp án đúng: B"></textarea>
+<textarea id="bulkText" rows="9" placeholder="Câu 1: Thiết bị nào giúp gõ chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Loa&#10;D. Chuột&#10;Đáp án đúng: B&#10;Giải thích: Bàn phím dùng để nhập chữ."></textarea>
 <label for="bulkFile">Hoặc chọn TXT/JSON</label><input type="file" id="bulkFile" accept=".txt,.json,text/plain,application/json">
 <label class="control-label"><input id="bulkPublic" type="checkbox"> Chia sẻ công khai những câu mới</label>
 <div class="row"><button id="bulkPreview">✓ Kiểm tra danh sách</button><button id="bulkSave" class="primary">☁ Lưu tất cả lên Supabase</button></div>

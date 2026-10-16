@@ -11,8 +11,8 @@ const CS=window.TeacherClassroomStore,S=window.TeacherScriptStore,AUDIO=window.Q
 const QS=new URLSearchParams(location.search),EMBED=QS.get('embed')==='1',SCOPE=String(QS.get('scope')||'all');
 const SCOPE_CLASS=SCOPE.startsWith('class:')?SCOPE.slice(6):'',SCOPE_QUESTION=SCOPE.startsWith('question:')?SCOPE.slice(9):'',ONLY_QUESTIONS=SCOPE==='questions'||!!SCOPE_QUESTION;
 const PIN_KEY='motionclass:uv-pin',CONSENT_KEY='motionclass:uv-consent',TAB_KEY='motionclass:uv-tab';
-const PARTS=['question','option_a','option_b','option_c','option_d','answer','full'];
-const PART_LABEL={question:'Câu hỏi',option_a:'Phương án A',option_b:'Phương án B',option_c:'Phương án C',option_d:'Phương án D',answer:'Đáp án',full:'Đọc cả câu'};
+const PARTS=['question','option_a','option_b','option_c','option_d','answer','explain','full'];// 'explain' chỉ có khi giáo viên điền giải thích
+const PART_LABEL={question:'Câu hỏi',option_a:'Phương án A',option_b:'Phương án B',option_c:'Phương án C',option_d:'Phương án D',answer:'Đáp án',explain:'Giải thích',full:'Đọc cả câu'};
 const STYLE_LABEL={neutral:'trung tính',cheer:'vui mừng',praise:'khen ngợi',congrats:'chúc mừng',soft:'nhẹ nhàng',encourage:'động viên',lively:'sôi nổi',alert:'nhắc giờ'};
 const CHUNK=8,ID_RE=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const store={get(k,a=localStorage){try{return a.getItem(k)}catch(_){return null}},set(k,v,a=localStorage){try{v==null?a.removeItem(k):a.setItem(k,v)}catch(_){}}};
