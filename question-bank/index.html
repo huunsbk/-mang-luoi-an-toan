@@ -263,6 +263,11 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
   <div class="panel" style="margin:18px 0;padding:18px;border:2px solid #d4e8fa;border-radius:16px">
    <h3>⚡ Chuẩn bị giọng đọc cho tối đa 20 câu – một lần bấm</h3>
    <p class="muted">Tích chọn câu hỏi phía trên rồi bấm một lần để gom lô và tạo WAV Google. Hệ thống tận dụng WAV đã có và ghép đoạn đọc toàn câu/đáp án. <strong>Phải nghe và duyệt từng WAV Google trước khi lưu.</strong></p>
+   <div style="max-width:560px;margin:10px 0">
+    <label for="classroom20TeacherPin">Mã giáo viên AI Studio (MARBLE_TTS_PIN trên Vercel)</label>
+    <input id="classroom20TeacherPin" type="password" autocomplete="off" maxlength="256" placeholder="Nhập mã giáo viên, không nhập khóa Gemini API" aria-describedby="classroom20PinHelp">
+    <p id="classroom20PinHelp" class="muted" style="margin:5px 0">Có thể tự lấy mã đang nhập ở ô phía trên. Mã phải khớp chính xác, kể cả khoảng trắng đầu/cuối. Lỗi 403 không dùng lượt Google.</p>
+   </div>
    <div class="row"><button id="classroom20Start" type="button" class="primary">⚡ Tạo giọng cho các câu đã chọn (tối đa 20)</button><button id="classroom20Stop" type="button" disabled>Dừng sau lượt hiện tại</button></div>
    <p id="classroom20Status" class="notice" role="status" aria-live="polite">Chưa bắt đầu. Chỉ xử lý các câu được tích chọn.</p>
    <div id="classroom20Plan" class="batch-plan"></div>
