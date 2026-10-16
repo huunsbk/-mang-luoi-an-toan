@@ -164,7 +164,7 @@
 <div class="field"><label for="bankSubject">Môn học</label></div><select id="bankSubject" class="voice-select"><option value="ALL">Tất cả môn học</option></select>
 <div class="field"><label for="bankLesson">Bài học</label></div><select id="bankLesson" class="voice-select"><option value="ALL">Tất cả bài học</option></select>
 <input id="bankSearch" placeholder="🔍 Tìm câu hỏi..." aria-label="Tìm câu hỏi Supabase" style="width:100%;margin:8px 0;padding:9px;border-radius:7px">
-<div class="btnrow"><button id="bankSelectAll" class="btn fill" type="button">✓ Chọn tất cả</button><button id="bankImport" class="btn blue fill" type="button">＋ Thêm vào Đua bi</button></div>
+<div class="btnrow"><button id="bankSelectAll" class="btn fill" type="button">✓ Chọn tất cả</button><button id="bankImport" class="btn blue fill" type="button">✓ Nạp bộ câu hỏi đã chọn</button></div><div id="raceQuestionLoadStatus" class="sub" role="status">Chưa nạp câu hỏi từ ngân hàng.</div>
 <div id="bankList" style="max-height:270px;overflow:auto;border:1px solid #395b92;border-radius:8px;margin:8px 0;padding:5px"></div>
 <div class="sub">Âm thanh được lưu theo từng câu hỏi và giọng đọc; trò chơi sau có thể dùng lại qua API.</div>
 <div class="btnrow" hidden><button id="bankSaveVoice" class="btn gold fill" type="button">🔊 Tạo &amp; lưu giọng NGHI-TTS</button></div>
@@ -483,7 +483,7 @@ const byZone=Array.from({length:n},()=>[]);for(const item of items)byZone[item.z
 function courseSegments(o,t){if(o.shape==='segment')return [o.x1,o.y1,o.x2,o.y2,0,0];if(o.shape==='rotor'){const a=t*o.spd+o.phase;return[o.x-Math.cos(a)*o.len,o.y-Math.sin(a)*o.len,o.x+Math.cos(a)*o.len,o.y+Math.sin(a)*o.len,o.spd,0]}if(o.shape==='gate'){const shift=Math.sin(t*1.13+o.phase)*112;return[o.x-o.len/2+shift,o.y,o.x+o.len/2+shift,o.y,0,Math.cos(t*1.13+o.phase)*112*1.13]}return null}
 function makeGame(preview=false){const duration=getN();const course=makeCourse(duration);const all=isLearning()?students.slice():$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students.slice();const entrants=all.slice();if($('shuffle').checked)for(let i=entrants.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[entrants[i],entrants[j]]=[entrants[j],entrants[i]]};const count=Math.max(entrants.length,1);const cols=Math.min(count,22);const radius=count>80?10:count>48?12:count>28?14:count>15?17:21;const xMin=55+radius,xMax=705-radius;const spacing=(xMax-xMin)/(cols+1);const balls=entrants.map((s,i)=>{const col=i%cols,row=Math.floor(i/cols);return{s,id:s.id,x:xMin+spacing*(col+1)+(Math.random()-.5)*3,y:112+row*(radius*2+5),vx:rand(-12,12),vy:rand(0,20),r:radius,angle:0,spin:0,stuck:0,startY:112+row*(radius*2+5),tie:Math.random()}});return{course,balls,duration,time:0,camera:0,particles:[],finishers:[],winner:null,running:!preview,preview,done:false,musicScale:1,lead:0,bounceFactor:1}}
 function resetPreview(){if(game?.running)return;clearTimeout(winnerTimer);game=makeGame(true);game.camera=0;$('stateText').textContent='CHỜ XUẤT PHÁT';$('timerLabel').textContent='THỜI GIAN MỤC TIÊU';updateSettings();$('pause').disabled=true;$('duration').disabled=false;$('start').disabled=false;$('start').textContent='▶ BẮT ĐẦU CUỘC ĐUA';$('statusText').textContent=`Sẵn sàng: ${students.length} học sinh • ${game.course.n} chặng`; $('learningQuickInfo').textContent=`🏁 Đã về đích ${studyFinishers.length}/${students.length} học sinh`;}
-function start(){clearTimeout(winnerTimer);if(isLearning()&&!inspectQuestions(true)){ $('learningQuestionSection').scrollIntoView({behavior:'smooth',block:'nearest'});return}if(!students.length){toast('Vui lòng nhập danh sách học sinh trước.');return}if(game?.running)return;const available=isLearning()?students:$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students;if(!available.length){toast('Tất cả học sinh đã được chọn! Hãy khôi phục danh sách.');return}if($('shuffle').checked){for(const s of available){s.style=Math.floor(Math.random()*5);s.color=Math.floor(Math.random()*COLORS.length);s.orb=null}renderRoster();save()}if(isLearning()){studyFinishers=[];studyAnswers.clear();$('learnRankButton').hidden=true;renderRoster()} game=makeGame(false);paused=false;currentWinner=null;document.querySelectorAll('.mode-choice').forEach(b=>b.disabled=true);$('winOverlay').hidden=true;$('stateText').textContent='ĐANG TRANH TÀI';$('timerLabel').textContent='THỜI GIAN CÒN LẠI';$('pause').disabled=false;$('pause').textContent='⏸ Tạm dừng';$('start').disabled=true;$('duration').disabled=true;$('start').textContent='● ĐANG ĐUA';$('statusText').textContent=`Đã xuất phát! ${game.balls.length} viên bi trên ${game.course.n} chặng`;if(isLearning()){ $('learningQuickInfo').textContent=`🏁 Đã về đích 0/${game.balls.length} viên bi`;prepareSpeechClips(false) }
+function start(){clearTimeout(winnerTimer);if(isLearning()&&!studyQuestions.some(q=>q.bankId)){toast('Hãy chọn câu hỏi trong Ngân hàng câu hỏi trước khi bắt đầu.');$('sharedBankPanel').open=true;return}if(isLearning()&&!inspectQuestions(true)){ $('learningQuestionSection').scrollIntoView({behavior:'smooth',block:'nearest'});return}if(!students.length){toast('Vui lòng nhập danh sách học sinh trước.');return}if(game?.running)return;const available=isLearning()?students:$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students;if(!available.length){toast('Tất cả học sinh đã được chọn! Hãy khôi phục danh sách.');return}if($('shuffle').checked){for(const s of available){s.style=Math.floor(Math.random()*5);s.color=Math.floor(Math.random()*COLORS.length);s.orb=null}renderRoster();save()}if(isLearning()){studyFinishers=[];studyAnswers.clear();$('learnRankButton').hidden=true;renderRoster()} game=makeGame(false);paused=false;currentWinner=null;document.querySelectorAll('.mode-choice').forEach(b=>b.disabled=true);$('winOverlay').hidden=true;$('stateText').textContent='ĐANG TRANH TÀI';$('timerLabel').textContent='THỜI GIAN CÒN LẠI';$('pause').disabled=false;$('pause').textContent='⏸ Tạm dừng';$('start').disabled=true;$('duration').disabled=true;$('start').textContent='● ĐANG ĐUA';$('statusText').textContent=`Đã xuất phát! ${game.balls.length} viên bi trên ${game.course.n} chặng`;if(isLearning()){ $('learningQuickInfo').textContent=`🏁 Đã về đích 0/${game.balls.length} viên bi`;prepareSpeechClips(false) }
  lastMusic=0;musicIndex=0;playIntro()}
 $('start').onclick=start;
 $('pause').onclick=()=>{if(!game?.running)return;paused=!paused;$('pause').textContent=paused?'▶ Tiếp tục':'⏸ Tạm dừng';$('stateText').textContent=paused?'ĐANG TẠM DỪNG':'ĐANG TRANH TÀI';if(!paused)soundReady()};$('fullScreen').onclick=()=>{const el=$('stage');if(document.fullscreenElement)document.exitFullscreen?.();else el.requestFullscreen?.().catch(()=>toast('Trình duyệt chưa hỗ trợ toàn màn hình'))};
@@ -648,25 +648,31 @@ function hydrateSharedQuestionLinks(){
  for(const q of studyQuestions){const ref=sharedQuestionRefs.get(studyQuestionSignature(q));if(ref){q.bankId=ref.id;q.bankSpoken=ref.spoken;q.bankImageUrl=ref.imageUrl||null}}
 }
 function importSharedQuestions(items){
- if(game?.running)throw Error('Hãy kết thúc cuộc đua trước khi nhập câu hỏi.');
- const old=parseQuestionBank($('questionsInput').value);
- if(old.errors.length&&$('questionsInput').value.trim())throw Error('Hãy sửa câu hỏi chưa hợp lệ đang soạn trước khi nhập từ Supabase.');
- const original=new Set(old.questions.map(studyQuestionSignature)),lines=[];let number=old.questions.length+1;
+ if(game?.running)throw Error('Hãy kết thúc cuộc đua trước khi nạp câu hỏi.');
+ const lines=[],refs=new Map(),seen=new Set();
  for(const item of items){
-  if(!item||!item.text||!Array.isArray(item.options)||item.options.length!==4||!answerKeys.includes(item.correct))continue;
+  if(!item||!item.id||!item.text||!Array.isArray(item.options)||item.options.length!==4||!answerKeys.includes(item.correct))continue;
   const normal=x=>String(x||'').replace(/\s+/g,' ').trim();
-  const q={text:normal(item.text),options:{},correct:item.correct};
-  for(let i=0;i<4;i++)q.options[answerKeys[i]]=normal(item.options[i]);
-  const signature=studyQuestionSignature(q);if(original.has(signature))continue;
-  original.add(signature);sharedQuestionRefs.set(signature,{id:item.id,spoken:item.spoken,imageUrl:item.imageUrl||null});
-  lines.push('Câu '+number+++': '+q.text+'\n'+answerKeys.map(k=>k+'. '+q.options[k]).join('\n')+'\nĐáp án đúng: '+q.correct);
+  const question={text:normal(item.text),options:{},correct:item.correct};
+  for(let i=0;i<4;i++)question.options[answerKeys[i]]=normal(item.options[i]);
+  const signature=studyQuestionSignature(question);
+  if(seen.has(signature))continue;seen.add(signature);
+  refs.set(signature,{id:item.id,spoken:item.spoken,imageUrl:item.imageUrl||null});
+  const num=lines.length+1;
+  lines.push('Câu '+num+': '+question.text+'\n'+answerKeys.map(k=>k+'. '+question.options[k]).join('\n')+'\nĐáp án đúng: '+question.correct);
  }
- if(lines.length){$('questionsInput').value=($('questionsInput').value.trim()+'\n\n'+lines.join('\n\n')).trim();inspectQuestions(false);save()}
+ if(!lines.length)throw Error('Các câu đã chọn không hợp lệ hoặc không có phương án A–D.');
+ sharedQuestionRefs=refs;
+ $('questionsInput').value=lines.join('\n\n');
+ studyFinishers=[];studyAnswers.clear();studyIndex=0;
+ inspectQuestions(false);save();
  return lines.length;
 }
 function inspectQuestions(showErrors=true){
  const result=parseQuestionBank($('questionsInput').value);studyQuestions=result.questions;hydrateSharedQuestionLinks();
  const msg=$('questionInfo');msg.classList.toggle('error',result.errors.length>0);
+ const imported=result.questions.filter(q=>q.bankId).length;
+ if($('raceQuestionLoadStatus'))$('raceQuestionLoadStatus').textContent='Đã nạp '+imported+' câu hỏi từ Ngân hàng câu hỏi MotionClass. '+(imported?'Có thể bắt đầu Đua bi học tập.':'Chọn câu trong ngân hàng để dùng chế độ Học tập.');
  msg.textContent=result.errors.length?`⚠ ${result.errors.length} vấn đề cần sửa:\n${result.errors.slice(0,5).join('\n')}${result.errors.length>5?'\n...':''}`:`✅ Hợp lệ ${result.questions.length} câu hỏi • 4 phương án/câu • có đáp án chính xác.`;
  if(result.errors.length&&showErrors)toast('Vui lòng sửa định dạng ngân hàng câu hỏi.');
  return result.errors.length===0;
