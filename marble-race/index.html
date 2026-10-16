@@ -633,8 +633,11 @@ function physics(g,dt){
   if(g.time<g.duration){
    // Global bounce reduction applies to walls, obstacles, moving rotors and collisions between balls.
    let factor=clamp(.8+(raceRatio-ahead)*1.65,.7,2.65);
-   b.vy+=(345*factor)*activeDt;
-   b.vx*=Math.pow(.988,activeDt*60);b.vy*=Math.pow(.996,activeDt*60);
+   const birdPause=b.pauseUntil>g.time&&raceRatio<.965;
+   b.vy+=(birdPause?40:345*factor)*activeDt;
+   b.vx*=Math.pow(birdPause?.89:.988,activeDt*60);
+   b.vy*=Math.pow(birdPause?.88:.996,activeDt*60);
+   if(b.slowUntil>g.time){b.vx*=Math.pow(.98,activeDt*60);b.vy*=Math.pow(.96,activeDt*60)}
    const speed=Math.hypot(b.vx,b.vy);
    if(speed>maxSpeed){b.vx*=maxSpeed/speed;b.vy*=maxSpeed/speed}
    b.x+=b.vx*activeDt;b.y+=b.vy*activeDt;b.angle+=b.vx*activeDt*.014;
@@ -656,6 +659,8 @@ function physics(g,dt){
      }
     }
    }
+   // Timed moving hazards are non-blocking, including a home-stretch surprise.
+   for(const h of course.hazards)if(Math.abs(h.y-b.y)<230)applySurprise(g,b,h,activeDt);
    // A continuous minimum-progress line prevents balls from circulating forever on springs/rotors.
    // Because the line advances every physics frame, this looks like forward motion, not a late teleport.
    const minY=b.startY+(maxY-b.startY)*Math.pow(raceRatio,2.05);
@@ -681,6 +686,7 @@ function physics(g,dt){
   }
  }
  if(g.time<g.duration){
+  advanceSurpriseBlasters(g,activeDt);
   // Ball-to-ball collisions: restitution fades to zero with the same global factor.
   for(let i=0;i<g.balls.length;i++)for(let j=i+1;j<g.balls.length;j++){
    const a=g.balls[i],b=g.balls[j];if(a.finished||b.finished||a.y>=maxY||b.y>=maxY)continue;
@@ -703,6 +709,17 @@ function physics(g,dt){
  }
  for(const p of g.particles){p.x+=p.vx*activeDt;p.y+=p.vy*activeDt;p.vy+=160*activeDt;p.life-=activeDt}
  g.particles=g.particles.filter(p=>p.life>0);g.lead=lead;
+ const leaders=g.balls.filter(b=>!b.finished);
+ const leader=leaders.length?leaders.reduce((a,b)=>a.y>b.y?a:b):null;
+ if(leader&&g.lastLeaderId&&leader.id!==g.lastLeaderId&&g.time-g.lastLeaderSwap>.35){
+  g.leadChanges++;g.lastLeaderSwap=g.time;
+ }
+ if(leader)g.lastLeaderId=leader.id;
+ if(g.running){
+  if(g.surpriseUntil>g.time)$('statusText').textContent=g.lastSurprise+' • CÒN '+(g.duration-g.time).toFixed(1)+' GIÂY';
+  else if(g.leadChanges&&g.time-g.lastLeaderSwap<1.6)$('statusText').textContent='🔀 ĐẢO NGÔI! VỊ TRÍ DẪN ĐẦU VỪA THAY ĐỔI';
+  else $('statusText').textContent='🎲 '+course.n+' chặng thử thách • '+g.leadChanges+' lần đổi người dẫn đầu • Đích vẫn còn bất ngờ';
+ }
  const viewHeight=ch/Math.min(cw/W,1.25);
  let dest=0;
  if($('autoCamera').checked)dest=clamp(lead-viewHeight*.50,0,Math.max(0,course.height-viewHeight));
@@ -713,7 +730,7 @@ function physics(g,dt){
  $('bounceValue').textContent=Math.round(g.bounceFactor*100)+'%';
  if(left<=0 && g.running){$('timerLabel').textContent='HOÀN THÀNH'}
  $('progress').textContent=(isLearning()?`🏁 ĐÃ VỀ ĐÍCH ${g.finishers.length}/${g.balls.length} • ${Math.round(Math.min(100,lead/course.finish*100))}%`:
- `🏁 ${Math.min(course.n,Math.floor(Math.max(0,lead-310)/course.gap)+1)}/${course.n} chặng • ${Math.round(Math.min(100,lead/course.finish*100))}%`)+` • Nảy ${Math.round(g.bounceFactor*100)}%`;
+ `🏁 ${Math.min(course.n,Math.floor(Math.max(0,lead-310)/course.gap)+1)}/${course.n} chặng • ${Math.round(Math.min(100,lead/course.finish*100))}%`)+` • Nảy ${Math.round(g.bounceFactor*100)}% • Đảo ngôi ${g.leadChanges}`;
 }
 
 function finishRace(g,b){document.querySelectorAll('.mode-choice').forEach(b=>b.disabled=false);g.running=false;g.done=true;currentWinner=b.s;chosenIds.add(b.id);renderRoster();save();$('pause').disabled=true;$('duration').disabled=false;$('start').disabled=false;$('start').textContent='▶ CHẠY LƯỢT MỚI';$('stateText').textContent='🏆 ĐÃ CÓ KẾT QUẢ';$('timerLabel').textContent='HOÀN THÀNH';$('timer').textContent=g.time.toFixed(1)+'s';$('statusText').textContent=`Vô địch: ${b.s.name} • ${g.time.toFixed(1)} giây`;winTune();winnerTimer=setTimeout(()=>{if(game===g)showWinner(b.s)},700)}
