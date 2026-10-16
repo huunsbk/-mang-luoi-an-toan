@@ -490,6 +490,60 @@ function surprisePosition(h,t){
   ?{x:380+285*Math.sin(t*(1.05+h.tier*.17)+h.phase),y:h.y+30*Math.cos(t*1.7+h.phase)}
   :{x:h.x,y:h.y};
 }
+// One moving flock per bird stage. Each bird has independent wingbeats,
+// size, lane offset and a short individual respawn after collision.
+function birdMembers(h,t){
+ const count=h.flockCount||5;
+ const phase=t*(1.05+h.tier*.17)+h.phase;
+ const facing=Math.cos(phase)>=0?1:-1;
+ const centerX=380+275*Math.sin(phase);
+ const centerY=h.y+22*Math.cos(t*1.7+h.phase);
+ const result=[];
+ for(let i=0;i<count;i++){
+  const offset=i-(count-1)/2;
+  result.push({
+   index:i,
+   x:centerX-facing*offset*38,
+   y:centerY+offset*20+6*Math.sin(t*2.1+i*.9+h.phase),
+   facing,
+   wing:Math.sin(t*(10.8+(i%3)*1.2)+h.phase+i*.95),
+   tilt:.09*Math.sin(t*1.8+i*.6),
+   scale:.86+(i%3)*.105,
+   hidden:(h.birdHiddenUntil?.[i]||0)>t
+  });
+ }
+ return result;
+}
+function drawFlyingBird(ctx,bird){
+ ctx.save();ctx.translate(bird.x,bird.y);
+ ctx.scale(bird.facing*bird.scale,bird.scale);
+ ctx.rotate(bird.tilt);
+ // Body, tapered tail, head and beak. Everything is vector-drawn,
+ // so the animation never falls back to a static emoji/image.
+ ctx.shadowColor='#162b4b';ctx.shadowBlur=5;
+ ctx.fillStyle='#718797';
+ ctx.beginPath();ctx.moveTo(-13,1);ctx.lineTo(-29,-5);ctx.lineTo(-25,5);
+ ctx.lineTo(-12,6);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#a9c2cb';ctx.beginPath();ctx.ellipse(0,0,16,7,-.08,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#c9dee2';ctx.beginPath();ctx.arc(13,-5,5,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#e1b15e';ctx.beginPath();
+ ctx.moveTo(17,-6);ctx.lineTo(25,-3.5);ctx.lineTo(17,-1);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#243c50';ctx.beginPath();ctx.arc(14.5,-6.5,1.3,0,Math.PI*2);ctx.fill();
+ ctx.shadowBlur=0;
+ // Far and near wings fold and extend in opposite phases. The shoulder,
+ // elbow and feather tips shift every animation frame.
+ const flap=bird.wing;
+ ctx.fillStyle='#819aa7';ctx.beginPath();
+ ctx.moveTo(-4,1);ctx.bezierCurveTo(-10,-6+flap*8,-20,-11+flap*13,-19,-19+flap*17);
+ ctx.bezierCurveTo(-9,-11+flap*14,-1,-6,5,0);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#d6e5e7';ctx.beginPath();
+ ctx.moveTo(4,-1);ctx.bezierCurveTo(0,-10-flap*10,-13,-17-flap*18,-17,-25-flap*22);
+ ctx.bezierCurveTo(-10,-10-flap*13,1,-5,10,1);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='#78949f';ctx.lineWidth=1.2;ctx.beginPath();
+ ctx.moveTo(3,-2);ctx.quadraticCurveTo(-7,-9-flap*13,-16,-23-flap*22);ctx.stroke();
+ ctx.restore();
+}
+
 function makeSurprises(n,gap,finish){
  const hazards=[];
  for(let i=0;i<n;i++){
@@ -498,7 +552,8 @@ function makeSurprises(n,gap,finish){
    x:pattern.kind==='blaster'?(i%2?695:65):pattern.kind==='portal'?320:380,
    y:310+i*gap+145,zone:i,
    tier:Math.min(1.3,.72+i/Math.max(1,n-1)*.55),
-   phase:i*1.61+.6,nextFire:0,angle:0,hiddenUntil:0});
+   phase:i*1.61+.6,nextFire:0,angle:0,hiddenUntil:0,
+   flockCount:pattern.kind==='bird'?4+(i%3):0,birdHiddenUntil:[]});
  }
  // The home stretch is intentionally not empty: three distinct late surprises
  // can still change order just before the checkered line.
@@ -507,7 +562,8 @@ function makeSurprises(n,gap,finish){
  hazards.push({id:'sprint-boost',kind:'boost',name:'BỆ TĂNG TỐC CUỐI',x:380,y:finish-187,
   zone:n+1,tier:1.1,phase:1.3,nextFire:0,angle:0,hiddenUntil:0});
  hazards.push({id:'sprint-bird',kind:'bird',name:'CHIM VỀ ĐÍCH',x:380,y:finish-115,
-  zone:n+2,tier:.95,phase:1.8,nextFire:0,angle:0,hiddenUntil:0});
+  zone:n+2,tier:.95,phase:1.8,nextFire:0,angle:0,hiddenUntil:0,
+  flockCount:6,birdHiddenUntil:[]});
  return hazards;
 }
 function markSurprise(g,b,h,text){
@@ -529,7 +585,7 @@ function holdBallAfterHit(g,b,seconds){
  const remaining=Math.max(0,g.duration-g.time);
  // Keep the final deadline authoritative. Near time zero reduce the stun rather
  // than holding a ball past the requested completion time.
- const hold=Math.min(seconds,Math.max(0,remaining-.7)*.48);
+ const hold=Math.min(seconds,Math.max(0,remaining-.7));
  if(hold<=.04)return false;
  b.freezeUntil=Math.max(b.freezeUntil||0,g.time+hold);
  b.vx=0;b.vy=0;
@@ -544,14 +600,17 @@ function applySurprise(g,b,h,dt){
  const ready=()=>!cooldown[h.id]||t>=cooldown[h.id];
  const mark=seconds=>{cooldown[h.id]=t+seconds};
  if(h.kind==='bird'){
-  if(h.hiddenUntil>t)return;
-  const pos=surprisePosition(h,t),range=b.r+23;
-  if(ready()&&Math.hypot(b.x-pos.x,b.y-pos.y)<range){
+  if(!ready())return;
+  for(const bird of birdMembers(h,t)){
+   if(bird.hidden)continue;
+   const range=b.r+17*bird.scale;
+   if(Math.hypot(b.x-bird.x,b.y-bird.y)>=range)continue;
    const held=holdBallAfterHit(g,b,.82+.26*tier);
-   h.hiddenUntil=t+.9; // Bird pops into a cartoon sparkle, respawns after a short wait.
-   mark(1.9);
-   cartoonExplosion(g,pos.x,pos.y,'bird');
+   h.birdHiddenUntil[bird.index]=t+.95;
+   mark(1.6);
+   cartoonExplosion(g,bird.x,bird.y,'bird');
    markSurprise(g,b,h,held?'💥 CHIM NỔ · BI TẠM DỪNG':'💥 CHIM NỔ · CÚ VA CHẠM');
+   break;
   }
  }else if(h.kind==='wind' && distY<85&&Math.abs(b.x-h.x)<320){
   const dir=Math.sin(t*(.75+tier*.2)+h.phase)>=0?1:-1;
@@ -619,9 +678,11 @@ function advanceSurpriseBlasters(g,dt){
   const hitX=p.prevX+dx*segmentT,hitY=p.prevY+dy*segmentT;
   if(Math.hypot(b.x-hitX,b.y-hitY)>b.r+p.r)continue;
   const cd=b.hazardCooldown||(b.hazardCooldown={});
-  if((cd[p.source]||0)>g.time){p.life=0;continue}
-  const held=holdBallAfterHit(g,b,.7+.23*p.tier);
-  cd[p.source]=g.time+.35;p.life=0;
+  if((cd[p.source]||0)>g.time||(b.freezeUntil||0)>g.time||(b.cannonGraceUntil||0)>g.time){p.life=0;continue}
+  const held=holdBallAfterHit(g,b,.3);
+  // One hit freezes the marble for only 0.3 seconds. A short immunity
+  // prevents a rapid volley from chaining multiple separate freezes.
+  cd[p.source]=g.time+.65;b.cannonGraceUntil=g.time+.65;p.life=0;
   cartoonExplosion(g,hitX,hitY,'foam');
   // The soft foam round makes a cartoon explosion and freezes the leader
   // briefly, instead of applying violent impulses or harming anything.
@@ -645,7 +706,7 @@ function makeCourse(sec){const n=Math.max(4,Math.round(sec/4)),gap=385,height=35
  if(typ===9){peg(200,y+75,34,'bumper');peg(560,y+75,34,'bumper');seg(65,y+198,310,y+295,'spring');seg(695,y+198,450,y+295,'spring');items.push({shape:'rotor',x:380,y:y+200,len:125,phase:0,spd:.7,zone:rnd})}}
 const byZone=Array.from({length:n},()=>[]);for(const item of items)byZone[item.zone].push(item);return{n,height,gap,items,byZone,decor,finish:height-174,hazards:makeSurprises(n,gap,height-174)}}
 function courseSegments(o,t){if(o.shape==='segment')return [o.x1,o.y1,o.x2,o.y2,0,0];if(o.shape==='rotor'){const a=t*o.spd+o.phase;return[o.x-Math.cos(a)*o.len,o.y-Math.sin(a)*o.len,o.x+Math.cos(a)*o.len,o.y+Math.sin(a)*o.len,o.spd,0]}if(o.shape==='gate'){const shift=Math.sin(t*1.13+o.phase)*112;return[o.x-o.len/2+shift,o.y,o.x+o.len/2+shift,o.y,0,Math.cos(t*1.13+o.phase)*112*1.13]}return null}
-function makeGame(preview=false){const duration=getN();const course=makeCourse(duration);const all=isLearning()?students.slice():$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students.slice();const entrants=all.slice();if($('shuffle').checked)for(let i=entrants.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[entrants[i],entrants[j]]=[entrants[j],entrants[i]]};const count=Math.max(entrants.length,1);const cols=Math.min(count,22);const radius=count>80?10:count>48?12:count>28?14:count>15?17:21;const xMin=55+radius,xMax=705-radius;const spacing=(xMax-xMin)/(cols+1);const balls=entrants.map((s,i)=>{const col=i%cols,row=Math.floor(i/cols);return{s,id:s.id,x:xMin+spacing*(col+1)+(Math.random()-.5)*3,y:112+row*(radius*2+5),vx:rand(-12,12),vy:rand(0,20),r:radius,angle:0,spin:0,stuck:0,pauseUntil:0,freezeUntil:0,slowUntil:0,hazardCooldown:{},startY:112+row*(radius*2+5),tie:Math.random()}});return{course,balls,duration,time:0,camera:0,particles:[],finishers:[],winner:null,running:!preview,preview,done:false,musicScale:1,lead:0,bounceFactor:1,projectiles:[],explosions:[],shotsFired:0,blasterHits:0,stunHits:0,lastSurprise:'',surpriseUntil:0,surprises:0,lastHazardSound:-5,lastLeaderId:null,leadChanges:0,lastLeaderSwap:-5}}
+function makeGame(preview=false){const duration=getN();const course=makeCourse(duration);const all=isLearning()?students.slice():$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students.slice();const entrants=all.slice();if($('shuffle').checked)for(let i=entrants.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[entrants[i],entrants[j]]=[entrants[j],entrants[i]]};const count=Math.max(entrants.length,1);const cols=Math.min(count,22);const radius=count>80?10:count>48?12:count>28?14:count>15?17:21;const xMin=55+radius,xMax=705-radius;const spacing=(xMax-xMin)/(cols+1);const balls=entrants.map((s,i)=>{const col=i%cols,row=Math.floor(i/cols);return{s,id:s.id,x:xMin+spacing*(col+1)+(Math.random()-.5)*3,y:112+row*(radius*2+5),vx:rand(-12,12),vy:rand(0,20),r:radius,angle:0,spin:0,stuck:0,pauseUntil:0,freezeUntil:0,cannonGraceUntil:0,slowUntil:0,hazardCooldown:{},startY:112+row*(radius*2+5),tie:Math.random()}});return{course,balls,duration,time:0,camera:0,particles:[],finishers:[],winner:null,running:!preview,preview,done:false,musicScale:1,lead:0,bounceFactor:1,projectiles:[],explosions:[],shotsFired:0,blasterHits:0,stunHits:0,lastSurprise:'',surpriseUntil:0,surprises:0,lastHazardSound:-5,lastLeaderId:null,leadChanges:0,lastLeaderSwap:-5}}
 function resetPreview(){if(game?.running)return;clearTimeout(winnerTimer);game=makeGame(true);game.camera=0;$('stateText').textContent='CHỜ XUẤT PHÁT';$('timerLabel').textContent='THỜI GIAN MỤC TIÊU';updateSettings();$('pause').disabled=true;$('duration').disabled=false;$('start').disabled=false;$('start').textContent='▶ BẮT ĐẦU CUỘC ĐUA';$('statusText').textContent=`Sẵn sàng: ${students.length} học sinh • ${game.course.n} chặng`; $('learningQuickInfo').textContent=`🏁 Đã về đích ${studyFinishers.length}/${students.length} học sinh`;}
 function start(){clearTimeout(winnerTimer);if(isLearning()&&!studyQuestions.some(q=>q.bankId)){toast('Hãy chọn câu hỏi trong Ngân hàng câu hỏi trước khi bắt đầu.');$('sharedBankPanel').open=true;return}if(isLearning()&&!inspectQuestions(true)){ $('learningQuestionSection').scrollIntoView({behavior:'smooth',block:'nearest'});return}if(!students.length){toast('Vui lòng nhập danh sách học sinh trước.');return}if(game?.running)return;const available=isLearning()?students:$('exclude').checked?students.filter(s=>!chosenIds.has(s.id)):students;if(!available.length){toast('Tất cả học sinh đã được chọn! Hãy khôi phục danh sách.');return}if($('shuffle').checked){for(const s of available){s.style=Math.floor(Math.random()*5);s.color=Math.floor(Math.random()*COLORS.length);s.orb=null}renderRoster();save()}if(isLearning()){studyFinishers=[];studyAnswers.clear();$('learnRankButton').hidden=true;renderRoster()} game=makeGame(false);paused=false;currentWinner=null;document.querySelectorAll('.mode-choice').forEach(b=>b.disabled=true);$('winOverlay').hidden=true;$('stateText').textContent='ĐANG TRANH TÀI';$('timerLabel').textContent='THỜI GIAN CÒN LẠI';$('pause').disabled=false;$('pause').textContent='⏸ Tạm dừng';$('start').disabled=true;$('duration').disabled=true;$('start').textContent='● ĐANG ĐUA';$('statusText').textContent=`Đã xuất phát! ${game.balls.length} viên bi trên ${game.course.n} chặng`;if(isLearning()){ $('learningQuickInfo').textContent=`🏁 Đã về đích 0/${game.balls.length} viên bi`;prepareSpeechClips(false);warmQuizVoice() }
  lastMusic=0;musicIndex=0;playIntro()}
@@ -792,7 +853,10 @@ function drawBg(t){ctx.fillStyle='#071632';ctx.fillRect(0,0,cw,ch);const grd=ctx
 function drawSurprises(g,top,bottom){
  for(const h of g.course.hazards){
   if(h.y<top-120||h.y>bottom+120)continue;
-  if(h.kind==='bird'&&h.hiddenUntil>g.time)continue;
+  if(h.kind==='bird'){
+   for(const bird of birdMembers(h,g.time))if(!bird.hidden)drawFlyingBird(ctx,bird);
+   continue;
+  }
   const p=surprisePosition(h,g.time);
   ctx.save();ctx.textAlign='center';ctx.lineWidth=3;ctx.lineCap='round';
   if(h.kind==='blaster'){
@@ -831,9 +895,9 @@ function drawSurprises(g,top,bottom){
    ctx.strokeStyle='#c5a9ff';ctx.setLineDash([9,9]);ctx.beginPath();ctx.moveTo(p.x-67,p.y);
    ctx.lineTo(p.x+67,p.y);ctx.stroke();ctx.setLineDash([]);
   }else{
-   ctx.font='43px system-ui';ctx.fillText(h.kind==='bird'?'🐦':'🧲',p.x,p.y+14);
-   ctx.strokeStyle=h.kind==='bird'?'#a5ecff':'#ffa5c7';ctx.beginPath();
-   ctx.arc(p.x,p.y,h.kind==='bird'?30:77,0,7);ctx.stroke();
+   ctx.font='43px system-ui';ctx.fillText('🧲',p.x,p.y+14);
+   ctx.strokeStyle='#ffa5c7';ctx.beginPath();
+   ctx.arc(p.x,p.y,77,0,7);ctx.stroke();
   }
   ctx.restore();
  }
