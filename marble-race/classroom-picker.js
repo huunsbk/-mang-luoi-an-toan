@@ -8,6 +8,7 @@ const nameBlobs=new Map();
 function clearNames(){
  if(voiceAudio){voiceAudio.pause();voiceAudio.src='';voiceAudio=null}
  savedNames.clear();nameBlobs.clear();activeVoiceClass=null;loadEpoch++;
+ window.MarbleSharedBankUI?.registerNameVoices?.([]);
  $('raceNameSelect').replaceChildren(new Option('— Chọn học sinh —',''));
  $('raceNamePlay').disabled=true;
 }
@@ -41,6 +42,7 @@ async function syncNameAudio(c,classId,students){
  }
  const select=$('raceNameSelect');
  for(const student of students)if(savedNames.has(student.id))select.append(new Option(student.name,student.id));
+ window.MarbleSharedBankUI?.registerNameVoices?.([...savedNames.values()].flat());
  refreshVoiceStatus();
 }
 async function getNameBlob(studentId,voice){
@@ -101,10 +103,11 @@ async function loadClass(id){
  const data=await store.listStudents(c,id);
  if(!data.length)throw Error('Lớp học chưa có học sinh. Hãy thêm trong Quản lý lớp học.');
  await game.importRoster(id,data);
- try{await syncNameAudio(c,id,data)}catch(e){status('Đã nạp lớp; chưa tải được WAV tên đã lưu: '+(e.message||String(e)),true)}
-
+ let audioError='';
+ try{await syncNameAudio(c,id,data)}catch(e){audioError='WAV tên chưa nạp được: '+(e.message||String(e))}
  const picked=classes.find(x=>x.id===id);
- status('✅ Đã nạp '+data.length+' học sinh lớp '+(picked?.name||'đã chọn')+' cùng ảnh và WAV tên đã lưu (nếu có).');
+ status('✅ Đã nạp '+data.length+' học sinh lớp '+(picked?.name||'đã chọn')+'. '+
+  (audioError||'Đã đối chiếu '+savedNames.size+' WAV tên học sinh còn hợp lệ.'),Boolean(audioError));
 }
 async function guard(task){
  if(busy)return;busy=true;
