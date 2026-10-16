@@ -162,17 +162,41 @@ function create(ctx){
   if(!blob){
    if((Number(getItem(quotaKey()))||0)>=DAILY_CAP)
     throw Object.assign(Error('Đã ghi nhận đủ 10 lượt trên trình duyệt hôm nay. Chọn NGHI-TTS.'),{status:429});
+   const field=$('classroom20TeacherPin');
+   // Copy once for convenience. The dedicated input remains editable after a 403.
+   if(!field.value){
+    const fromBatch=$('batchTeacherPin')?.value||'';
+    const fromStudio=$('studioTeacherPin')?.value||'';
+    field.value=fromBatch||fromStudio;
+   }
+   // The teacher PIN is an exact secret: only trim to check emptiness, never
+   // alter bytes of X-Marble-Teacher-Code (the old one-click flow did).
+   const pin=field.value;
+   if(!pin.trim())throw Error('Hãy nhập mã giáo viên MARBLE_TTS_PIN vào ô ngay trên nút tạo 20 câu. Đây không phải khóa Gemini API.');
    await waitSlot();if(stop)throw Error('Đã dừng.');
-   const pin=$('batchTeacherPin').value.trim();
-   if(!pin)throw Error('Chưa nhập mã truy cập AI Studio ở phía trên.');
-   putItem(quotaKey(),(Number(getItem(quotaKey()))||0)+1);
-   putItem('motionclass:classroom20:last-request',Date.now());
+   const previousQuota=Number(getItem(quotaKey()))||0;
+   const lastKey='motionclass:classroom20:last-request';
+   const previousLast=getItem(lastKey);
+   const sentAt=Date.now();
+   putItem(quotaKey(),previousQuota+1);
+   putItem(lastKey,sentAt);
    const response=await fetch('/api/marble-tts',{method:'POST',
     headers:{'Content-Type':'application/json','X-Marble-Teacher-Code':pin},
     body:JSON.stringify({text:group.text,batch:true,classroom20:true})});
    if(!response.ok){
     const body=await response.json().catch(()=>({}));
-    throw Object.assign(Error(body.error||'Google HTTP '+response.status),{status:response.status});
+    // These status codes are rejected by our proxy before contacting Gemini.
+    // They must not consume the local daily allowance or RPM waiting slot.
+    if([400,401,403,413,422].includes(response.status)){
+     if(Number(getItem(quotaKey()))===previousQuota+1)putItem(quotaKey(),previousQuota);
+     if(getItem(lastKey)===String(sentAt))putItem(lastKey,previousLast||0);
+    }
+    const message=response.status===403
+     ?(body.code==='INVALID_ORIGIN'
+       ?'Trang gửi yêu cầu không hợp lệ. Mở đúng https://giaovien-psi.vercel.app rồi thử lại.'
+       :'Mã giáo viên AI Studio không hợp lệ. Kiểm tra MARBLE_TTS_PIN trên Vercel và nhập lại vào ô ngay trên nút tạo 20 câu; không dùng Gemini API key. Lỗi 403 không trừ lượt Google.')
+     :(body.error||'Google HTTP '+response.status);
+    throw Object.assign(Error(message),{status:response.status,code:body.code});
    }
    blob=await response.blob();
    if(blob.size<45||blob.size>10*1024*1024)throw Error('Google WAV không hợp lệ hoặc vượt 10 MB.');
@@ -202,16 +226,19 @@ function create(ctx){
   working=true;stop=false;reset();buttons();
   try{
    await analyze();
+   let failure=null;
    for(let i=0;i<groups.length;i++){
     if(stop)break;
     status('Đang gọi Google lô '+(i+1)+'/'+groups.length+'…');
     try{await createGroup(groups[i]);groups[i].done=true}
-    catch(e){groups[i].error=err(e);status('⚠ Dừng tại lô '+(i+1)+': '+err(e)+'. Những WAV đã tạo được giữ để duyệt.',true);break}
+    catch(e){groups[i].error=err(e);failure=e;break}
    }
    const count=groups.filter(g=>g.done).length;
    if(count===groups.length&&pending.length===0){await derive()}
-   status('Đã xử lý '+count+'/'+groups.length+' lượt. '+pending.length+
-    ' WAV đang chờ nghe duyệt. '+(count<groups.length?'Có thể tạo bằng NGHI cho phần còn thiếu.':'Nghe và duyệt trước khi lưu.'));
+   if(failure)status('⚠ Dừng tại lô '+(count+1)+'/'+groups.length+': '+err(failure)+
+    '. Các WAV đã tạo vẫn chờ nghe duyệt; sau khi sửa lỗi có thể thử lại.',true);
+   else status('Đã xử lý '+count+'/'+groups.length+' lượt. '+pending.length+
+    ' WAV đang chờ nghe duyệt. '+(count<groups.length?'Có thể dùng NGHI cho phần còn thiếu.':'Nghe và duyệt trước khi lưu.'));
   }catch(e){status('⚠ '+err(e),true)}
   finally{working=false;buttons()}
  }
