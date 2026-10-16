@@ -679,10 +679,10 @@ function advanceSurpriseBlasters(g,dt){
   if(Math.hypot(b.x-hitX,b.y-hitY)>b.r+p.r)continue;
   const cd=b.hazardCooldown||(b.hazardCooldown={});
   if((cd[p.source]||0)>g.time||(b.freezeUntil||0)>g.time||(b.cannonGraceUntil||0)>g.time){p.life=0;continue}
-  const held=holdBallAfterHit(g,b,3);
-  // One hit is at most three seconds. Brief recovery immunity prevents
-  // consecutive rounds from silently stacking into a longer freeze.
-  cd[p.source]=g.time+3.65;b.cannonGraceUntil=g.time+3.65;p.life=0;
+  const held=holdBallAfterHit(g,b,.3);
+  // One hit freezes the marble for only 0.3 seconds. A short immunity
+  // prevents a rapid volley from chaining multiple separate freezes.
+  cd[p.source]=g.time+.65;b.cannonGraceUntil=g.time+.65;p.life=0;
   cartoonExplosion(g,hitX,hitY,'foam');
   // The soft foam round makes a cartoon explosion and freezes the leader
   // briefly, instead of applying violent impulses or harming anything.
