@@ -51,6 +51,7 @@ const MODEL_NAMES={deepman3909:'Nam trầm',chieuthanh:'Nam',duyoryx3175:'Nam',v
 function voiceLabel(model){return (MODEL_NAMES[model]||'Giọng')+' · '+model}
 function voiceIdLabel(voice){
  if(voice.startsWith('studio:'))return '✨ Google AI Studio · '+voice.slice(7,15);
+ if(voice.startsWith('edge:'))return '🎙️ Microsoft · '+voice.slice(5);
  return '🎙️ '+voiceLabel(voice.replace(/^nghi:/,''));
 }
 function activeVoiceId(){

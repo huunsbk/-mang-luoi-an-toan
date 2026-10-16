@@ -152,17 +152,32 @@ function cleanScript(input){
  return{title,theme:norm(input.theme||'custom').slice(0,40)||'custom',slots,isActive:input.isActive!==false};
 }
 /** Mọi đoạn cần có WAV của một kịch bản (không trùng lặp). */
+/** Sắc thái đọc của từng đoạn (dùng khi tạo giọng biểu cảm, ví dụ giọng Microsoft):
+ *  câu nhận xét đúng: mở đầu "cheer" → "Chúc mừng em" "congrats" → lời khen "praise";
+ *  câu nhận xét sai: mở đầu "soft" → lời động viên "encourage". */
+const SLOT_STYLE={intro:'lively',call:'neutral',think:'neutral',fiveLeft:'alert',timeUp:'alert',streak:'lively',summary:'lively'};
+function tokenStyles(slotKey,tokens){
+ if(slotKey!=='correct'&&slotKey!=='wrong')return tokens.map(()=>SLOT_STYLE[slotKey]||'neutral');
+ const ai=tokens.findIndex(t=>t.type==='answer'),ni=tokens.findIndex((t,i)=>t.type==='name'&&i>ai);
+ return tokens.map((t,i)=>{
+  if(slotKey==='wrong')return (ai>=0?i<ai:i===tokens.findIndex(x=>x.type==='text'))?'soft':'encourage';
+  if(ai>=0?i<ai:i===tokens.findIndex(x=>x.type==='text'))return 'cheer';
+  if(ni>=0&&i<ni)return 'congrats';
+  return 'praise';
+ });
+}
 function scriptPhrases(script){
  const set=new Map(),max=script.slots?.options?.maxNumber||20;
  const add=(text,meta)=>{const t=norm(text);if(t&&!set.has(t))set.set(t,meta)};
  for(const slot of SLOTS)for(const template of script.slots?.[slot.key]||[]){
-  for(const tok of tokenize(template)){
-   if(tok.type==='text')add(tok.text,{slot:slot.key});
+  const tokens=tokenize(template),styles=tokenStyles(slot.key,tokens);
+  tokens.forEach((tok,i)=>{
+   if(tok.type==='text')add(tok.text,{slot:slot.key,style:styles[i]});
    else if(tok.type==='bound'){
     const values=tok.key==='chuỗi'?STREAK_VALUES:Array.from({length:max},(_,i)=>i+1);
-    for(const v of values)add(boundText(tok,v),{slot:slot.key,number:v});
+    for(const v of values)add(boundText(tok,v),{slot:slot.key,number:v,style:styles[i]});
    }
-  }
+  });
  }
  return [...set.entries()].map(([text,meta])=>({text,...meta}));
 }
@@ -177,7 +192,7 @@ async function hashText(value){
  const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(norm(value)));
  return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
 }
-function validateVoice(voice){if(!/^(studio:[0-9a-f]{16}|nghi:[a-z0-9]{2,45})$/.test(String(voice)))throw Error('Mã giọng đọc không hợp lệ.');return voice}
+function validateVoice(voice){if(!/^(studio:[0-9a-f]{16}|nghi:[a-z0-9]{2,45}|edge:[a-z0-9-]{2,45})$/.test(String(voice)))throw Error('Mã giọng đọc không hợp lệ.');return voice}
 const assertId=id=>{if(!/^[0-9a-f-]{36}$/i.test(String(id)))throw Error('Mã kịch bản không hợp lệ.');return id};
 function fromRow(r){return{id:r.id,title:r.title,theme:r.theme,slots:r.slots||{},isActive:r.is_active!==false,sortOrder:r.sort_order||0,updatedAt:r.updated_at}}
 
@@ -230,6 +245,6 @@ async function deletePhraseAudio(c,row){
  return true;
 }
 
-window.TeacherScriptStore={SLOTS,TEMPLATES,STREAK_VALUES,createClient:client,user,norm,numberWords,tokenize,boundText,validateTemplate,cleanScript,
+window.TeacherScriptStore={SLOTS,tokenStyles,TEMPLATES,STREAK_VALUES,createClient:client,user,norm,numberWords,tokenize,boundText,validateTemplate,cleanScript,
  scriptPhrases,hashText,listScripts,saveScript,deleteScript,listPhraseAudio,savePhraseAudio,deletePhraseAudio};
 })();

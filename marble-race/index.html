@@ -1435,7 +1435,7 @@ window.MarbleSharedBankHooks={
  linkSaved:(items,results)=>{items.forEach((q,i)=>{const result=results[i];if(!result?.id)return;const normalized={text:q.text,options:{},correct:q.correct};answerKeys.forEach((k,j)=>normalized.options[k]=q.options[j]);const key=studyQuestionSignature(normalized);sharedQuestionRefs.set(key,{id:result.id,owned:true})});inspectQuestions(false);save()},
  importQuestions:importSharedQuestions,
  questions:()=>studyQuestions.filter(q=>q.bankId).map(q=>({id:q.bankId,question:q,spoken:{full:questionSpeech(q),answer:correctAnswerSpeech(q)}})),
- voice:()=>{const id=$('raceSavedVoice')?.value||'device';return{kind:id.startsWith('studio:')?'studio':id.startsWith('nghi:')?'nghi':'device',id}},
+ voice:()=>{const id=$('raceSavedVoice')?.value||'device';return{kind:id.startsWith('studio:')?'studio':id.startsWith('nghi:')?'nghi':id.startsWith('edge:')?'edge':'device',id}},
  onSavedVoiceChange:()=>{stopStudySpeech()},
  generateClip:async text=>$('aiVoiceMode').value==='studio'?obtainGeminiClipRaw(text):getLocalPiperClip(text),
  storeClip:(text,blob,voiceId)=>aiClips.set((voiceId||$('raceSavedVoice')?.value||'device')+':'+text,blob),

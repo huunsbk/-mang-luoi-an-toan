@@ -231,7 +231,24 @@ const dev = await callWith(false);
 assert(!dev.log.some(x => x.startsWith('wav:')) && dev.log.length > 3, 'Chọn giọng thiết bị nhưng vẫn phát WAV: ' + JSON.stringify(dev.log));
 await page.evaluate(() => { document.getElementById('raceSavedVoice').value = 'studio:0123456789abcdef'; });
 
-// 10) Tắt kịch bản → trò chơi quay về cách đọc cũ.
+// 10) Chỉ dùng một giọng: WAV câu dẫn của giọng KHÁC không được dùng bù; tắt công tắc thì được dùng.
+const strictCheck = async strict => {
+  await page.evaluate(s => { const c = document.getElementById('quizStrict'); c.checked = s; c.dispatchEvent(new Event('change')); }, strict);
+  await page.evaluate(() => {
+    const S = window.TeacherScriptStore, sc = { id: 'bbbbbbbb-0009-4000-8000-000000000009', isActive: true, ...S.cleanScript(JSON.parse(JSON.stringify(S.TEMPLATES[3]))) };
+    const rows = S.scriptPhrases(sc).map((p, i) => ({ phrase: p.text, voiceId: 'nghi:calmwoman3688', url: location.origin + '/qa-media/other-' + i + '.wav' }));
+    window.MarbleQuizScript._setLibrary([sc], rows);
+  });
+  await page.selectOption('#quizScriptPick', 'rotate-race');
+  const r = await callWith(true);
+  return { phrases: r.plan.filter(p => p.kind === 'phrase').map(p => p.source), gap: await page.evaluate(() => { const n = document.getElementById('quizScriptVoiceGap'); return n && !n.hidden ? n.textContent : ''; }) };
+};
+const strictOn = await strictCheck(true), strictOff = await strictCheck(false);
+assert(strictOn.phrases.every(s => s === 'device') && /chưa có WAV giọng/.test(strictOn.gap), 'Chế độ một giọng vẫn dùng WAV giọng khác: ' + JSON.stringify(strictOn));
+assert(strictOff.phrases.every(s => s === 'saved-phrase'), 'Tắt chế độ một giọng nhưng không dùng WAV giọng khác: ' + JSON.stringify(strictOff));
+await page.evaluate(() => { const c = document.getElementById('quizStrict'); c.checked = true; c.dispatchEvent(new Event('change')); });
+
+// 11) Tắt kịch bản → trò chơi quay về cách đọc cũ.
 await page.click('#rankClose').catch(() => {});
 await page.evaluate(() => { const c = document.getElementById('quizScriptOn'); c.checked = false; c.dispatchEvent(new Event('change')); });
 assert(!(await page.evaluate(() => window.MarbleQuizScript.enabled())), 'Không tắt được kịch bản');

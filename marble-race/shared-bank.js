@@ -70,9 +70,9 @@ function refreshSavedVoiceChoices(){
  select.replaceChildren(new Option('Giọng thiết bị (khi chưa có WAV)','device'));
  const voices=new Set([...totals.keys(),...nameVoiceInventory.keys()]);
  for(const id of [...voices].sort((a,b)=>(totals.get(b)||0)-(totals.get(a)||0))){
-  if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(id))continue;
+  if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45}|edge:[a-z0-9-]{2,45})$/.test(id))continue;
   const q=totals.get(id)||0,n=nameVoiceInventory.get(id)||0;
-  select.append(new Option((id.startsWith('studio:')?'✨ Google đã lưu':'🎙️ NGHI đã lưu')+
+  select.append(new Option((id.startsWith('studio:')?'✨ Google đã lưu':id.startsWith('edge:')?'🎙️ Microsoft NamMinh đã lưu':'🎙️ NGHI đã lưu')+
    ' · '+[q?q+' WAV câu hỏi':'',n?n+' tên':''].filter(Boolean).join(' · '),id));
  }
  const preferred=[previous,[...totals.keys()][0],[...nameVoiceInventory.keys()][0],'device'].find(id=>id&&[...select.options].some(o=>o.value===id));
@@ -180,7 +180,7 @@ async function readySharedVoice(creating=false){
 async function fetchVoiceRows(items,voiceId=hooks.voice().id){
  const valid=items.filter(x=>idpattern.test(x.id));
  if(!valid.length)return [];
- if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(voiceId))return [];
+ if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45}|edge:[a-z0-9-]{2,45})$/.test(voiceId))return [];
  const out=[];
  for(let i=0;i<valid.length;i+=80){
   const data=await api('audio.list',{ids:valid.slice(i,i+80).map(x=>x.id),voice_id:voiceId});
@@ -399,11 +399,13 @@ window.MarbleSharedBankUI={loadSavedVoice,exportSelected:downloadPack,load:fetch
  * Chỉ nhận WAV còn khớp nội dung hiện tại (server kiểm tra text_hash). Ưu tiên giọng đang chọn,
  * nếu không có thì dùng giọng khác đã lưu. Không tạo âm thanh mới, không gọi Google. */
 const questionAudioCache=new Map(),QUESTION_AUDIO_TTL=45*60*1000;
-async function questionAudioUrls(ids){
+async function questionAudioUrls(ids,opts={}){
  const wanted=[...new Set((ids||[]).filter(id=>idpattern.test(String(id))))];
  const out=new Map();
  if(!wanted.length||!client)return out;
- const fresh=id=>{const c=questionAudioCache.get(id);return c&&Date.now()-c.at<QUESTION_AUDIO_TTL};
+ let wantVoice='';try{wantVoice=hooks.voice().id||''}catch(_){}
+ const strict=opts.strict===true,cacheKey=id=>(strict?wantVoice+'|':'*|')+id;
+ const fresh=id=>{const c=questionAudioCache.get(cacheKey(id));return c&&Date.now()-c.at<QUESTION_AUDIO_TTL};
  const missing=wanted.filter(id=>!fresh(id));
  if(missing.length){
   try{await authCheck()}catch(_){return out}
@@ -413,7 +415,7 @@ async function questionAudioUrls(ids){
    const overview=await api('audio.overview',{ids:chunk});
    const choice=new Map();// id -> part -> voice
    for(const item of overview.items||[]){
-    if(!item.current)continue;
+    if(!item.current||(strict&&item.voiceId!==wantVoice))continue;
     if(!choice.has(item.id))choice.set(item.id,new Map());
     const parts=choice.get(item.id),prior=parts.get(item.part);
     if(!prior||item.voiceId===preferred)parts.set(item.part,item.voiceId);
@@ -429,10 +431,10 @@ async function questionAudioUrls(ids){
      if(choice.get(item.id)?.get(item.part)===voice&&item.url)urls.get(item.id)?.set(item.part,item.url);
     }
    }
-   for(const [id,parts] of urls)questionAudioCache.set(id,{at:Date.now(),parts});
+   for(const [id,parts] of urls)questionAudioCache.set(cacheKey(id),{at:Date.now(),parts});
   }
  }
- for(const id of wanted)out.set(id,questionAudioCache.get(id)?.parts||new Map());
+ for(const id of wanted)out.set(id,questionAudioCache.get(cacheKey(id))?.parts||new Map());
  return out;
 }
 window.MarbleSharedBankAudio={urls:questionAudioUrls,clear:()=>questionAudioCache.clear()};

@@ -12,9 +12,10 @@ function clearNames(){
  $('raceNameSelect').replaceChildren(new Option('— Chọn học sinh —',''));
  $('raceNamePlay').disabled=true;
 }
-function chosenClip(studentId,requestedVoice){
+function chosenClip(studentId,requestedVoice,strict=false){
  const variants=savedNames.get(studentId)||[];
  if(!variants.length||requestedVoice==='device')return null;
+ if(strict)return variants.find(x=>x.voiceId===requestedVoice)||null;
  return variants.find(x=>x.voiceId===requestedVoice)||
   variants.find(x=>x.voiceId.startsWith('studio:'))||variants[0];
 }
@@ -47,8 +48,8 @@ async function syncNameAudio(c,classId,students){
  window.MarbleSharedBankUI?.registerNameVoices?.([...savedNames.values()].flat());
  refreshVoiceStatus();
 }
-async function getNameBlob(studentId,voice){
- const row=chosenClip(studentId,voice);
+async function getNameBlob(studentId,voice,opts={}){
+ const row=chosenClip(studentId,voice,opts.strict===true);
  if(!row)return null;
  const cacheKey=row.storagePath+':'+row.updatedAt;
  if(nameBlobs.has(cacheKey))return nameBlobs.get(cacheKey);

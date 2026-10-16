@@ -31,6 +31,23 @@ def dispatch_marble_tts(request, method):
     except Exception:
         return request._json({"error":"Dịch vụ giọng đọc AI tạm thời không khả dụng."},503)
 
+_edge_tts_module=None
+def dispatch_edge_tts(request, method):
+    """Giọng Microsoft NamMinh tạo trước (api/edge-tts.py)."""
+    global _edge_tts_module
+    try:
+        if _edge_tts_module is None:
+            import importlib.util
+            spec=importlib.util.spec_from_file_location("edge_tts_route",os.path.join(BASE_DIR,"api","edge-tts.py"))
+            if spec is None or spec.loader is None:
+                raise RuntimeError("Cannot load edge TTS module")
+            module=importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            _edge_tts_module=module
+        return getattr(_edge_tts_module.handler,"do_"+method)(request)
+    except Exception:
+        return request._json({"error":"Dịch vụ giọng Microsoft tạm thời không khả dụng."},503)
+
 def rpc(name,payload,timeout=8):
     data=json.dumps({"rpc":name,"payload":payload},ensure_ascii=False).encode("utf-8")
     req=urllib.request.Request(
@@ -93,6 +110,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed=urllib.parse.urlparse(self.path);path=parsed.path;query=urllib.parse.parse_qs(parsed.query)
         if path=="/api/marble-tts":return dispatch_marble_tts(self,"GET")
+        if path=="/api/edge-tts":return dispatch_edge_tts(self,"GET")
         if path in ("/","/index.html"):
             try:
                 with open(os.path.join(BASE_DIR,"index.html"),"rb") as f:body=f.read()
@@ -193,6 +211,10 @@ class Handler(BaseHTTPRequestHandler):
             "/scripts/index.html": ("scripts/index.html", "text/html; charset=utf-8"),
             "/scripts/script-store.js": ("scripts/script-store.js", "application/javascript; charset=utf-8"),
             "/scripts/script-manager.js": ("scripts/script-manager.js", "application/javascript; charset=utf-8"),
+            "/unified-voice": ("unified-voice/index.html", "text/html; charset=utf-8"),
+            "/unified-voice/": ("unified-voice/index.html", "text/html; charset=utf-8"),
+            "/unified-voice/index.html": ("unified-voice/index.html", "text/html; charset=utf-8"),
+            "/unified-voice/unified-voice.js": ("unified-voice/unified-voice.js", "application/javascript; charset=utf-8"),
             "/marble-race/classroom-picker.js": ("marble-race/classroom-picker.js", "application/javascript; charset=utf-8"),
             "/marble-race/quiz-voice-script.js": ("marble-race/quiz-voice-script.js", "application/javascript; charset=utf-8"),
             "/pose-quiz": ("pose-quiz/index.html", "text/html; charset=utf-8"),
@@ -311,6 +333,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed=urllib.parse.urlparse(self.path)
         if parsed.path=="/api/marble-tts":return dispatch_marble_tts(self,"POST")
+        if parsed.path=="/api/edge-tts":return dispatch_edge_tts(self,"POST")
         body=self._body_json()
         if parsed.path=="/api/room":
             room=str(body.get("room",""));token=str(body.get("host_token",""));question=str(body.get("question","")).strip()

@@ -32,11 +32,11 @@ const BUILTIN={id:'builtin',title:'Mặc định (có sẵn)',slots:{
  options:{maxNumber:20}}};
 
 /* ---------- Thiết lập ---------- */
-let settings={enabled:true,think:0,streak:true,pick:'rotate-race'};
+let settings={enabled:true,think:0,streak:true,pick:'rotate-race',strict:true};
 function loadSettings(){
  try{const raw=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
   if(raw&&typeof raw==='object')settings={enabled:raw.enabled!==false,think:[0,10,15,20,30].includes(Number(raw.think))?Number(raw.think):0,
-   streak:raw.streak!==false,pick:typeof raw.pick==='string'&&raw.pick?raw.pick:'rotate-race'};
+   streak:raw.streak!==false,pick:typeof raw.pick==='string'&&raw.pick?raw.pick:'rotate-race',strict:raw.strict!==false};
  }catch(_){}
 }
 function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}catch(_){}}
@@ -144,6 +144,7 @@ async function playPlan(plan,token){
  const resolved=await Promise.all(plan.map(resolve));
  if(token!==run)return false;
  lastPlan=resolved.map(({kind,source,text})=>({kind,source,text}));
+ reportMissing(resolved);
  for(const seg of resolved){
   if(token!==run)return false;
   let result='failed';
@@ -159,6 +160,18 @@ async function playPlan(plan,token){
  return token===run;
 }
 
+/** Chế độ một giọng: báo rõ đoạn nào chưa có WAV của giọng đang chọn. */
+function reportMissing(resolved){
+ const info=$('quizScriptVoiceGap');if(!info)return;
+ const voice=hooks()?.preferredVoice?.()||'device';
+ if(voice==='device'){info.hidden=true;return}
+ const miss=resolved.filter(s=>s.source==='device'||s.source==='nghi');
+ if(!miss.length){info.hidden=true;return}
+ const kinds={name:'tên',phrase:'câu dẫn',question:'câu hỏi'};
+ const parts=[...new Set(miss.map(s=>kinds[s.kind]||s.kind))].join(', ');
+ info.hidden=false;info.textContent='⚠ Lượt vừa rồi có '+miss.length+' đoạn ('+parts+') chưa có WAV giọng '+voice+' nên đọc bằng giọng thiết bị. ';
+ const a=document.createElement('a');a.href='/unified-voice/';a.target='_blank';a.rel='noopener';a.textContent='Tạo đủ ở trang Giọng thống nhất ↗';info.append(a);
+}
 /* ---------- Dữ liệu WAV ---------- */
 /** Giáo viên chọn "Giọng thiết bị" thì mọi đoạn đều đọc bằng thiết bị, kể cả khi đã có WAV. */
 const deviceOnly=()=>hooks()?.preferredVoice?.()==='device';
@@ -166,19 +179,20 @@ function phraseUrl(text){
  if(deviceOnly())return null;
  const store=S();const variants=library.phrases.get(store?store.norm(text):text);if(!variants)return null;
  const preferred=hooks()?.preferredVoice?.();
+ if(settings.strict)return variants.get(preferred)||null;
  return variants.get(preferred)||[...variants.values()][0]||null;
 }
 function phraseSegment(text,gap){return{kind:'phrase',text,url:phraseUrl(text),urlSource:'saved-phrase',gap}}
 function nameSegment(student){
  const voice=hooks()?.preferredVoice?.()||'device',api=window.MarbleNameAudio;
  // loadBlob kiểm tra RIFF/WAVE và dùng WAV giọng khác đã lưu khi thiếu đúng giọng.
- const loader=voice!=='device'&&api?.loadBlob?()=>api.loadBlob(student.id,voice):null;
+ const loader=voice!=='device'&&api?.loadBlob?()=>api.loadBlob(student.id,voice,{strict:settings.strict}):null;
  const url=!loader&&voice!=='device'?api?.url?.(student.id,voice)||null:null;
  return{kind:'name',text:student.name,studentId:student.id,url,loader,urlSource:'saved-name',gap:160};
 }
 async function questionAudio(question){
  if(deviceOnly()||!question?.bankId||!window.MarbleSharedBankAudio?.urls)return new Map();
- try{const map=await Promise.race([window.MarbleSharedBankAudio.urls([question.bankId]),wait(3500).then(()=>null)]);return map?.get(question.bankId)||new Map()}
+ try{const map=await Promise.race([window.MarbleSharedBankAudio.urls([question.bankId],{strict:settings.strict}),wait(3500).then(()=>null)]);return map?.get(question.bankId)||new Map()}
  catch(_){return new Map()}
 }
 function spokenParts(q){
@@ -318,10 +332,13 @@ function injectUI(){
   '<div class="sub" id="quizScriptLibrary"></div>'+
   '<div class="field"><label for="quizThink">⏱ Thời gian suy nghĩ sau khi đọc câu hỏi</label><select id="quizThink" style="width:auto"><option value="0">Tắt</option><option value="10">10 giây</option><option value="15">15 giây</option><option value="20">20 giây</option><option value="30">30 giây</option></select></div>'+
   '<div class="switchrow"><label for="quizStreak">🔥 Khen cả lớp khi nhiều bạn đúng liên tiếp</label><input class="switch" type="checkbox" id="quizStreak"></div>'+
+  '<div class="switchrow"><label for="quizStrict">🎯 Chỉ dùng một giọng (không lấy WAV giọng khác bù vào)</label><input class="switch" type="checkbox" id="quizStrict"></div>'+
+  '<div class="sub" id="quizScriptVoiceGap" hidden style="color:#ffd99a"></div>'+
   '<div class="btnrow"><button class="btn fill" id="quizScriptPreview" type="button">▶ Nghe thử (đúng)</button><button class="btn fill" id="quizScriptPreviewWrong" type="button">▶ Thử (sai)</button><button class="btn" id="quizScriptReload" type="button" title="Nạp lại kịch bản và WAV">⟳</button></div>'+
   '<div class="sub" id="quizScriptInfo">Câu dẫn phát từ WAV đã tạo ở trang Kịch bản; tên và câu hỏi từ WAV đã lưu, theo giọng đang chọn ở trên. Thiếu đoạn nào sẽ đọc bằng giọng thiết bị. Không tự gọi Google AI Studio.</div>';
  anchor.after(box);
- $('quizScriptOn').checked=settings.enabled;$('quizThink').value=String(settings.think);$('quizStreak').checked=settings.streak;
+ $('quizScriptOn').checked=settings.enabled;$('quizThink').value=String(settings.think);$('quizStreak').checked=settings.streak;$('quizStrict').checked=settings.strict;
+ $('quizStrict').onchange=()=>{settings.strict=$('quizStrict').checked;saveSettings();window.MarbleSharedBankAudio?.clear?.()};
  $('quizScriptOn').onchange=()=>{settings.enabled=$('quizScriptOn').checked;saveSettings();if(!settings.enabled)stop()};
  $('quizThink').onchange=()=>{settings.think=Number($('quizThink').value)||0;saveSettings()};
  $('quizStreak').onchange=()=>{settings.streak=$('quizStreak').checked;saveSettings()};

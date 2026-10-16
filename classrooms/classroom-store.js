@@ -134,7 +134,7 @@ async function hashText(value){
 }
 async function studentNameHash(value){return hashText(cleanName(value))}
 function validateVoiceId(voice){
- if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(String(voice)))throw Error('Mã giọng đọc không hợp lệ.');
+ if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45}|edge:[a-z0-9-]{2,45})$/.test(String(voice)))throw Error('Mã giọng đọc không hợp lệ.');
  return voice;
 }
 async function listStudentNameVoices(c,classId){
