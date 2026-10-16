@@ -499,12 +499,14 @@ function makeSurprises(n,gap,finish){
    tier:Math.min(1.3,.72+i/Math.max(1,n-1)*.55),
    phase:i*1.61+.6,nextFire:0});
  }
- // The home stretch is intentionally not empty: two distinct late surprises
+ // The home stretch is intentionally not empty: three distinct late surprises
  // can still change order just before the checkered line.
  hazards.push({id:'sprint-blaster',kind:'blaster',name:'CÚ BẮN PHÚT CHÓT',x:65,y:finish-255,
   zone:n,tier:1.05,phase:2.4,nextFire:0});
+ hazards.push({id:'sprint-boost',kind:'boost',name:'BỆ TĂNG TỐC CUỐI',x:380,y:finish-187,
+  zone:n+1,tier:1.1,phase:1.3,nextFire:0});
  hazards.push({id:'sprint-bird',kind:'bird',name:'CHIM VỀ ĐÍCH',x:380,y:finish-115,
-  zone:n+1,tier:.95,phase:1.8,nextFire:0});
+  zone:n+2,tier:.95,phase:1.8,nextFire:0});
  return hazards;
 }
 function markSurprise(g,b,h,text){
@@ -512,7 +514,7 @@ function markSurprise(g,b,h,text){
  g.surpriseUntil=g.time+1.8;
  g.surprises=(g.surprises||0)+1;
  spark(g,b.x,b.y,1.15,h.kind==='boost'?'#97ff98':'#fff3aa');
- if(!g.preview&&g.time-(g.lastHazardSound||0)>.19){
+ if(!g.preview&&g.time-(g.lastHazardSound||0)>.35){
   hitSound(.22);g.lastHazardSound=g.time;
  }
 }
@@ -740,7 +742,7 @@ function drawBg(t){ctx.fillStyle='#071632';ctx.fillRect(0,0,cw,ch);const grd=ctx
 function drawSurprises(g,top,bottom){
  for(const h of g.course.hazards){
   if(h.y<top-120||h.y>bottom+120)continue;
-  const p=surprisePosition(h,$('reducedMotion').checked?0:g.time);
+  const p=surprisePosition(h,g.time);
   ctx.save();ctx.textAlign='center';ctx.lineWidth=3;ctx.lineCap='round';
   if(h.kind==='blaster'){
    ctx.translate(p.x,p.y);ctx.fillStyle='#264b8f';ctx.strokeStyle='#8ff5ff';
