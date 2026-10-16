@@ -197,7 +197,7 @@ function reportMissing(resolved){
  const kinds={name:'tên',phrase:'câu dẫn',question:'câu hỏi'};
  const parts=[...new Set(miss.map(s=>kinds[s.kind]||s.kind))].join(', ');
  info.hidden=false;info.textContent='⚠ Lượt vừa rồi có '+miss.length+' đoạn ('+parts+') chưa có WAV giọng '+voice+' nên đọc bằng giọng thiết bị. ';
- const a=document.createElement('a');a.href='/unified-voice/';a.target='_blank';a.rel='noopener';a.textContent='Tạo đủ ở trang Giọng thống nhất ↗';info.append(a);
+ const a=document.createElement('a');a.href='/unified-voice/';a.target='_blank';a.rel='noopener';a.textContent='Tạo đủ ở trang Giọng đọc ↗';info.append(a);
 }
 /* ---------- Dữ liệu WAV ---------- */
 /** Giáo viên chọn "Giọng thiết bị" thì mọi đoạn đều đọc bằng thiết bị, kể cả khi đã có WAV. */

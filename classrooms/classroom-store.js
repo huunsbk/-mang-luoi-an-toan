@@ -188,5 +188,14 @@ async function removeStudentNameVoices(c,studentId){
  for(let i=0;i<rows.length;i+=50)await c.storage.from(VOICE_BUCKET).remove(rows.slice(i,i+50).map(r=>r.storage_path));
 }
 
-window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,hashText,studentNameHash,listStudentNameVoices,saveStudentNameVoice,removeStudentNameVoices,orbCanvas,avatarSvg,COLORS,BUCKET,VOICE_BUCKET};
+/** Xóa WAV tên của MỘT giọng cho một học sinh (trang Giọng đọc: xóa từng đoạn không ưng). */
+async function removeStudentNameVoice(c,studentId,voiceId){
+ await user(c);const id=assertId(studentId);
+ if(!/^(studio:[0-9a-f]{16}|nghi:[a-z0-9]{2,45}|edge:[a-z0-9-]{2,45})$/.test(String(voiceId)))throw Error('Mã giọng đọc không hợp lệ.');
+ const rows=err(await c.from('teacher_student_name_audio').select('storage_path').eq('student_id',id).eq('voice_id',voiceId));
+ err(await c.from('teacher_student_name_audio').delete().eq('student_id',id).eq('voice_id',voiceId));
+ if(rows.length)await c.storage.from(VOICE_BUCKET).remove(rows.map(r=>r.storage_path)).catch(()=>{});
+ return rows.length>0;
+}
+window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,hashText,studentNameHash,listStudentNameVoices,saveStudentNameVoice,removeStudentNameVoices,removeStudentNameVoice,orbCanvas,avatarSvg,COLORS,BUCKET,VOICE_BUCKET};
 })();

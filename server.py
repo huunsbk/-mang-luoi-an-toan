@@ -216,6 +216,7 @@ class Handler(BaseHTTPRequestHandler):
             "/unified-voice/index.html": ("unified-voice/index.html", "text/html; charset=utf-8"),
             "/unified-voice/unified-voice.js": ("unified-voice/unified-voice.js", "application/javascript; charset=utf-8"),
             "/unified-voice/launcher.js": ("unified-voice/launcher.js", "application/javascript; charset=utf-8"),
+            "/unified-voice/voice-profile.js": ("unified-voice/voice-profile.js", "application/javascript; charset=utf-8"),
             "/classrooms/unified-voice-button.js": ("classrooms/unified-voice-button.js", "application/javascript; charset=utf-8"),
             "/marble-race/classroom-picker.js": ("marble-race/classroom-picker.js", "application/javascript; charset=utf-8"),
             "/marble-race/quiz-voice-script.js": ("marble-race/quiz-voice-script.js", "application/javascript; charset=utf-8"),

@@ -172,8 +172,9 @@
 <div class="btnrow" hidden><button id="bankLoadVoice" class="btn fill" type="button">⬇ Nạp giọng đã lưu</button><button id="bankExport" class="btn fill" type="button">📦 Tải ZIP học liệu</button></div></div>
 <div id="bankStatus" class="sub" role="status" aria-live="polite" style="margin:8px 0">Chưa kết nối Supabase.</div>
 </details><div class="switchrow"><label for="voiceName">🔊 Phát tên học sinh, câu hỏi và đáp án đã lưu</label><input class="switch" type="checkbox" id="voiceName" checked></div><div style="padding:11px;border:1px solid #4a7ab5;border-radius:11px;background:#102a54;margin:10px 0">
- <label for="raceSavedVoice" style="display:block;margin-bottom:7px">🎙️ Chọn giọng đã lưu từ Ngân hàng câu hỏi</label>
- <select id="raceSavedVoice" class="voice-select" aria-label="Giọng WAV đã lưu"><option value="device">Giọng thiết bị (khi chưa có WAV)</option></select>
+ <div id="raceSystemVoice" style="margin-bottom:6px">🎙️ Giọng hệ thống: đang tải...</div>
+ <div class="sub" style="margin-bottom:6px">Tên, câu dẫn, câu hỏi đều đọc bằng giọng này. Đổi người đọc, nghe, tạo lại hoặc xóa từng đoạn ở <a href="/unified-voice/" target="_blank" rel="noopener" style="color:#9fd0ff">trang 🎙️ Giọng đọc ↗</a>.</div>
+ <select id="raceSavedVoice" class="voice-select" aria-label="Giọng WAV đã lưu" hidden><option value="device">Giọng thiết bị (khi chưa có WAV)</option></select>
  <div id="raceSavedAudioStatus" class="sub" role="status" aria-live="polite" style="margin:8px 0">Sau khi nạp câu hỏi, WAV hợp lệ sẽ được tải tự động. Không cần mã AI Studio.</div>
  <div class="sub">Tên học sinh được lấy từ Quản lý lớp; WAV câu hỏi và đáp án được lấy từ Ngân hàng câu hỏi. Nếu thiếu WAV, dùng giọng thiết bị, không phát sinh lượt Google.</div>
  </div>
@@ -1459,6 +1460,7 @@ load();requestAnimationFrame(tick);
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/pose-quiz/supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="/unified-voice/voice-profile.js"></script>
 <script src="/marble-race/shared-bank.js"></script>
 <script src="/classrooms/classroom-store.js"></script>
 <script src="/marble-race/classroom-picker.js"></script>

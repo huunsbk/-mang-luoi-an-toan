@@ -22,7 +22,7 @@ function open(scope='all',{onDone}={}){
  card.style.cssText='background:#f4f7fc;border-radius:18px;width:min(980px,100%);height:min(760px,100%);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px #0006';
  const bar=document.createElement('div');
  bar.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:linear-gradient(120deg,#101d46,#173f87);color:#fff;font:700 15px system-ui,sans-serif';
- bar.textContent='🎙️ Giọng thống nhất · NamMinh';
+ bar.textContent='🎙️ Giọng đọc';
  const x=document.createElement('button');x.type='button';x.textContent='✕ Đóng';x.id='uvLauncherClose';
  x.style.cssText='border:0;border-radius:9px;padding:7px 12px;font-weight:700;background:#ffffff22;color:#fff;cursor:pointer';
  x.onclick=()=>close();bar.append(x);
@@ -54,9 +54,14 @@ async function currentVoice(){
  try{const r=await fetch('/api/edge-tts',{cache:'no-store'});const j=await r.json();voiceId=j.voiceId||'edge:namminh-b1'}catch(_){voiceId='edge:namminh-b1'}
  return voiceId;
 }
+/** Giọng hệ thống của giáo viên (trang Giọng đọc); chưa nạp MotionVoice thì dùng giọng mặc định của máy chủ. */
+async function systemVoice(client){
+ if(client&&window.MotionVoice)try{return await window.MotionVoice.get(client)}catch(_){}
+ return currentVoice();
+}
 async function missingNames(client,classId,students){
  const CS=window.TeacherClassroomStore;if(!CS||!client||!classId)return null;
- const [voice,voices]=await Promise.all([currentVoice(),CS.listStudentNameVoices(client,classId)]);
+ const [voice,voices]=await Promise.all([systemVoice(client),CS.listStudentNameVoices(client,classId)]);
  let n=0;
  for(const s of students.filter(s=>s.active!==false)){
   const hash=await CS.studentNameHash(s.name);
@@ -64,5 +69,5 @@ async function missingNames(client,classId,students){
  }
  return n;
 }
-window.UnifiedVoiceLauncher={open,close,setBadge,missingNames,currentVoice,isOpen:()=>!!overlay};
+window.UnifiedVoiceLauncher={open,close,setBadge,missingNames,currentVoice,systemVoice,isOpen:()=>!!overlay};
 })();

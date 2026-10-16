@@ -137,7 +137,7 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <section id="listView" class="library-screen">
  <div class="library-heading">
   <div><span class="eyebrow">MOTIONCLASS / HỌC LIỆU SỐ</span><h2>Thư viện câu hỏi</h2><p class="muted">Gom nhóm theo khối lớp, môn học và bài/chủ đề. Chọn một câu để xem chi tiết hoặc quản lý giọng đọc.</p></div>
-  <div class="row"><button id="newQuestion" class="primary" type="button">＋ Tạo câu hỏi</button><button id="openImport" type="button">↑ Nhập hàng loạt</button><button id="openBatchAudio" type="button">🎧 Tạo giọng hàng loạt</button><button id="uvBankVoice" type="button" title="Tạo giọng thống nhất (Microsoft NamMinh) cho các câu hỏi còn thiếu">🎙️ Tạo giọng ngay</button><a class="buttonlink" href="/marble-race/">🏁 Đua bi</a></div>
+  <div class="row"><button id="newQuestion" class="primary" type="button">＋ Tạo câu hỏi</button><button id="openImport" type="button">↑ Nhập hàng loạt</button><button id="openBatchAudio" type="button" hidden>🎧 Tạo giọng hàng loạt</button><button id="uvBankVoice" type="button" title="Tạo giọng thống nhất (Microsoft NamMinh) cho các câu hỏi còn thiếu">🎙️ Tạo giọng ngay</button><a class="buttonlink" href="/marble-race/">🏁 Đua bi</a></div>
  </div>
  <div class="library-metrics" aria-label="Thống kê câu hỏi">
   <div class="metric"><span>Câu hỏi trong thư viện</span><strong id="statTotal">0</strong></div>
@@ -179,7 +179,7 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
  <h2 id="previewTitle">Chi tiết câu hỏi</h2><div id="previewMeta" class="row"></div>
  <div class="preview-question" id="previewQuestion"></div><div id="previewOptions" class="preview-options"></div>
  <div id="previewAudioStatus" class="helper"></div>
- <div class="row"><button type="button" id="previewEdit" class="primary">✏️ Chỉnh sửa câu hỏi</button><button type="button" id="previewAudio">🎙️ Xem các tệp WAV</button><button type="button" id="previewCopy">⧉ Nhân bản câu hỏi</button></div>
+ <div class="row"><button type="button" id="previewEdit" class="primary">✏️ Chỉnh sửa câu hỏi</button><button type="button" id="previewAudio">🎙️ Giọng đọc của câu này</button><button type="button" id="previewCopy">⧉ Nhân bản câu hỏi</button></div>
 </section>
 <section id="audioView" class="library-screen" hidden>
  <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">THƯ VIỆN ÂM THANH</span></div>
@@ -302,5 +302,6 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <script src="/question-bank/batch-audio.js"></script>
 <script src="/question-bank/classroom20.js"></script>
 <script src="/question-bank/manager.js"></script>
+<script src="/unified-voice/voice-profile.js"></script>
 <script src="/unified-voice/launcher.js"></script>
 </body></html>

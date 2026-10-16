@@ -250,10 +250,16 @@ async function savePhraseAudio(c,{voiceId,phrase,blob}){
  const head=new Uint8Array(await blob.slice(0,12).arrayBuffer());
  if(String.fromCharCode(...head.slice(0,4))!=='RIFF'||String.fromCharCode(...head.slice(8,12))!=='WAVE')throw Error('Tệp không phải WAV hợp lệ.');
  const textHash=await hashText(text),folder=voiceId.replace(':','-');
- const path=u.id+'/'+folder+'/'+textHash+'.wav';
+ // Tên tệp mới mỗi lần lưu: tạo lại một đoạn không bị bộ đệm trình duyệt/CDN phát nhầm WAV cũ.
+ const old=err(await c.from('teacher_phrase_audio').select('storage_path').eq('voice_id',voiceId).eq('text_hash',textHash).limit(1));
+ const path=u.id+'/'+folder+'/'+textHash+'-'+crypto.randomUUID().slice(0,8)+'.wav';
  err(await c.storage.from(PHRASE_BUCKET).upload(path,new Blob([await blob.arrayBuffer()],{type:'audio/wav'}),{contentType:'audio/wav',upsert:true,cacheControl:'3600'}));
- err(await c.from('teacher_phrase_audio').upsert({owner_id:u.id,voice_id:voiceId,text_hash:textHash,phrase:text,storage_path:path,
-  size_bytes:blob.size,updated_at:new Date().toISOString()},{onConflict:'owner_id,voice_id,text_hash'}));
+ try{
+  err(await c.from('teacher_phrase_audio').upsert({owner_id:u.id,voice_id:voiceId,text_hash:textHash,phrase:text,storage_path:path,
+   size_bytes:blob.size,updated_at:new Date().toISOString()},{onConflict:'owner_id,voice_id,text_hash'}));
+ }catch(e){await c.storage.from(PHRASE_BUCKET).remove([path]).catch(()=>{});throw e}
+ const stale=(old||[]).map(r=>r.storage_path).filter(x=>x&&x!==path);
+ if(stale.length)await c.storage.from(PHRASE_BUCKET).remove(stale).catch(()=>{});
  return{voiceId,textHash,phrase:text,storagePath:path};
 }
 async function deletePhraseAudio(c,row){

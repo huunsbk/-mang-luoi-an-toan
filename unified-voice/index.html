@@ -2,70 +2,103 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Giọng thống nhất | Cổng công cụ giáo viên số</title>
-<meta name="description" content="Tạo đủ tên học sinh, câu dẫn kịch bản và câu hỏi bằng một giọng nam miền Bắc thống nhất, không tốn lượt Google.">
+<title>Giọng đọc | Cổng công cụ giáo viên số</title>
+<meta name="description" content="Một trang quản lý giọng đọc Microsoft cho tên học sinh, câu dẫn kịch bản và câu hỏi: nghe, tạo, tạo lại, xóa từng đoạn.">
 <style>
-:root{--ink:#182744;--muted:#536881;--line:#dce6f3;--primary:#2468db;--paper:#fff;--ok:#127a52;--warn:#9a5b00}
+:root{--ink:#182744;--muted:#536881;--line:#dce6f3;--primary:#2468db;--paper:#fff;--ok:#127a52;--warn:#9a5b00;--bad:#b62332}
 *{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at top left,#e0edff,#f4f7fc 45%,#eaf0fa);min-height:100vh}
-header{background:linear-gradient(120deg,#101d46,#173f87);color:white;padding:22px 20px}header .content,main{max-width:1100px;margin:auto}
+header{background:linear-gradient(120deg,#101d46,#173f87);color:white;padding:22px 20px}header .content,main{max-width:1180px;margin:auto}
 h1{font-size:clamp(25px,4vw,36px);margin:8px 0 4px}h2{font-size:19px;margin:0 0 12px}p{line-height:1.5}header p{color:#d3e3ff;margin:0}header a{display:inline-block;margin-bottom:10px;color:#cde4ff;text-decoration:none;font-weight:700}
-main{padding:22px 16px 70px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:18px;box-shadow:0 10px 26px #1b37630a}
-.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.row>*{flex:1 1 auto}
-input,select{width:100%;padding:10px;border:1px solid #afc3dd;border-radius:10px;font:inherit;color:var(--ink);background:white}
-label{display:block;font-weight:700;margin:10px 0 5px;font-size:13px}
-button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:11px 15px;background:#edf3ff;color:#19447c;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
-.primary{background:var(--primary);color:white}.green{background:#e3f7ee;color:var(--ok)}
-.tiny{font-size:12px;color:var(--muted)}.status{color:#1559a4;white-space:pre-wrap;font-size:13px;min-height:18px;margin-top:8px}.status.error{color:#b62332}[hidden]{display:none!important}
-.split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.cover{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}.cover div{background:#f3f7fd;border:1px solid #e1e9f5;border-radius:14px;padding:12px}
-.cover strong{display:block;font-size:24px}.cover .bar{height:8px;border-radius:8px;background:#e3eaf4;overflow:hidden;margin-top:8px}.cover .bar i{display:block;height:100%;background:#1f9c6c;width:0}
-.progress{height:12px;border-radius:12px;background:#e1eaf4;overflow:hidden;margin:10px 0}.progress i{display:block;height:100%;background:#2468db;width:0;transition:width .2s}
-.list{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:12px}.item{display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #edf2f8;font-size:13px}
-.item span{flex:1}.item audio{width:210px;height:32px}.tag{font-size:11px;border-radius:6px;padding:2px 7px;background:#eef3fa;color:#47627b;white-space:nowrap}
-.tag.cheer,.tag.praise,.tag.congrats{background:#fff1d6;color:#8a5200}.tag.soft,.tag.encourage{background:#e6f4ff;color:#1c5a91}.tag.lively,.tag.alert{background:#f0e9ff;color:#5b34a8}
-.voicebox{display:flex;gap:14px;align-items:center;background:#eef5ff;border-radius:14px;padding:12px 14px}.voicebox b{font-size:16px}
-body.embed header,body.embed #logoutButton{display:none}body.embed main{padding:12px 12px 30px}body.embed .panel{padding:14px;margin-bottom:12px}
-.opts{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}.opts label{display:flex;gap:7px;align-items:center;font-weight:600;margin:0}.opts input{width:auto}
-@media(max-width:760px){.split,.cover{grid-template-columns:1fr}.item audio{width:150px}}
+main{padding:22px 16px 90px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 10px 26px #1b37630a}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+input,select{padding:9px 10px;border:1px solid #afc3dd;border-radius:10px;font:inherit;color:var(--ink);background:white}
+label{font-weight:700;font-size:13px}
+button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:9px 13px;background:#edf3ff;color:#19447c;cursor:pointer;white-space:nowrap}button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--primary);color:white}.danger{background:#fde8ea;color:var(--bad)}
+.tiny{font-size:12px;color:var(--muted)}.status{color:#1559a4;white-space:pre-wrap;font-size:13px;min-height:18px;margin-top:8px}.status.error{color:var(--bad)}[hidden]{display:none!important}
+.voice-now{display:flex;gap:14px;align-items:center;background:#eef5ff;border-radius:14px;padding:12px 14px;margin-bottom:12px}.voice-now b{font-size:17px}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}.grid2>div{display:flex;flex-direction:column;gap:7px}
+.checks{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px}.checks label{display:flex;gap:7px;align-items:center;font-weight:600}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tab{background:#f1f5fb;border:2px solid transparent;padding:10px 14px;text-align:left}.tab.active{border-color:var(--primary);background:#e7f0ff}
+.tab small{display:block;font-weight:600;color:var(--muted)}.tab .bar{display:block;height:6px;border-radius:6px;background:#dfe7f2;margin-top:6px;overflow:hidden;width:150px}.tab .bar i{display:block;height:100%;background:#1f9c6c}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.toolbar input[type=search]{flex:1 1 220px}
+.progress{height:8px;border-radius:8px;background:#e1eaf4;overflow:hidden;margin:6px 0}.progress i{display:block;height:100%;background:#2468db;width:0;transition:width .2s}
+.list{border:1px solid var(--line);border-radius:12px;max-height:62vh;overflow:auto;background:#fff}
+.group{position:sticky;top:0;background:#f6f9fd;border-bottom:1px solid var(--line);padding:6px 12px;font-size:12px;font-weight:800;color:#3d5878;z-index:1}
+.item{display:grid;grid-template-columns:26px 1fr auto auto auto;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid #edf2f8;font-size:14px}
+.item input{width:18px;height:18px}.item .text{min-width:0}.item .text b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .text span{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item.busy{opacity:.55}.item.playing{background:#fff8e1}
+.chip{font-size:12px;border-radius:999px;padding:3px 9px;font-weight:700;white-space:nowrap}
+.chip.ok{background:#e3f7ee;color:var(--ok)}.chip.missing{background:#fde8ea;color:var(--bad)}.chip.stale{background:#fff1d6;color:var(--warn)}
+.acts{display:flex;gap:6px}.acts button{padding:7px 10px}
+.bulk{position:sticky;bottom:0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#16305f;color:white;border-radius:12px;padding:10px 12px;margin-top:10px}
+.bulk select{padding:7px}
+body.embed header,body.embed #logoutButton{display:none}body.embed main{padding:10px 10px 30px}body.embed .panel{padding:12px;margin-bottom:10px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}.item{grid-template-columns:22px 1fr auto auto}.item .chip{display:none}.tabs{flex-wrap:nowrap}.tab{flex:1 1 0;padding:8px;font-size:13px;min-width:0}.tab .bar{width:auto}.bulk{position:static}.bulk span[style]{display:none}.toolbar select,.toolbar button{flex:1 1 auto}}
 </style>
 </head>
 <body>
-<header><div class="content"><a href="/">← Cổng giáo viên</a><h1>🎙️ Giọng thống nhất</h1><p>Một giọng nam miền Bắc cho tên học sinh, câu dẫn và câu hỏi — tạo trước một lần, không tốn lượt Google, Đua bi chỉ phát WAV đã lưu.</p></div></header>
+<header><div class="content"><a href="/">← Cổng giáo viên</a><h1>🎙️ Giọng đọc</h1><p>Một giọng Microsoft cho tên học sinh, câu dẫn và câu hỏi. Nghe, tạo, tạo lại hoặc xóa từng đoạn tại đây. Không tốn lượt Google; giờ học chỉ phát WAV đã lưu.</p></div></header>
 <main>
 <section class="panel" id="loginPanel">
  <h2>🔐 Đăng nhập tài khoản giáo viên</h2><p class="tiny">Dùng chung tài khoản MotionClass.</p>
- <form id="loginForm"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="email"><label for="loginPass">Mật khẩu</label><input id="loginPass" type="password" required autocomplete="current-password"><div class="row" style="margin-top:12px"><button class="primary" type="submit">Đăng nhập</button></div></form>
+ <form id="loginForm" class="row"><input id="loginEmail" type="email" required autocomplete="email" placeholder="Email" style="flex:1 1 220px"><input id="loginPass" type="password" required autocomplete="current-password" placeholder="Mật khẩu" style="flex:1 1 180px"><button class="primary" type="submit">Đăng nhập</button></form>
  <div id="loginStatus" class="status" role="status"></div>
 </section>
 
 <div id="appPanel" hidden>
-<section class="panel">
- <div class="row" style="justify-content:space-between"><div><strong>Đang đăng nhập: <span id="userEmail"></span></strong></div><button id="logoutButton" style="flex:0 0 auto">Đăng xuất</button></div>
- <div class="voicebox" style="margin-top:12px"><span style="font-size:30px">🧑‍🏫</span><div><b>NamMinh · nam miền Bắc, trẻ, tự tin</b><div class="tiny">Mã giọng <code id="voiceId">edge:namminh-b1</code>. Phần nhận xét được đọc có biểu cảm: “Chính xác!” vui, lời khen sáng, lời động viên ấm.</div></div></div>
- <div class="split">
-  <div><label for="classPick">Lớp học (tên học sinh)</label><select id="classPick"><option value="">— Đang tải lớp —</option></select></div>
-  <div><label for="pin">Mã giáo viên (MARBLE_TTS_PIN)</label><input id="pin" type="password" autocomplete="off" placeholder="Cùng mã dùng cho AI Studio"></div>
+<section class="panel" id="voicePanel">
+ <div class="row" style="justify-content:space-between;margin-bottom:10px"><strong>Đang đăng nhập: <span id="userEmail"></span></strong><button id="logoutButton" type="button">Đăng xuất</button></div>
+ <div class="voice-now"><span style="font-size:30px" id="voiceIcon">🧑‍🏫</span><div><div class="tiny">Giọng hệ thống đang dùng cho mọi trò chơi</div><b id="voiceNow">—</b> <code class="tiny" id="voiceId"></code></div></div>
+ <div class="grid2">
+  <div>
+   <label for="profilePick">Đổi người đọc / chất giọng (Microsoft)</label>
+   <div class="row"><select id="profilePick" style="flex:1 1 220px"></select><button id="profilePreview" type="button">▶ Nghe thử</button><button id="profileApply" class="primary" type="button" disabled>Dùng giọng này</button></div>
+   <span class="tiny">Đổi giọng thì các đoạn cần tạo lại bằng giọng mới (miễn phí). WAV giọng trước vẫn được giữ.</span>
+  </div>
+  <div>
+   <label for="pin">Mã giáo viên (MARBLE_TTS_PIN)</label>
+   <input id="pin" type="password" autocomplete="off" placeholder="Cần khi tạo hoặc nghe thử giọng">
+   <div class="checks" style="margin-top:2px">
+    <label><input id="rememberPin" type="checkbox"> Nhớ mã trong thẻ trình duyệt này</label>
+    <label><input id="consent" type="checkbox"> Đồng ý gửi họ tên học sinh và nội dung tới Microsoft để tạo giọng</label>
+   </div>
+  </div>
  </div>
- <div class="opts">
-  <label><input id="rememberPin" type="checkbox"> Nhớ mã trong thẻ trình duyệt này (tự quên khi đóng thẻ)</label>
-  <label><input id="autoSave" type="checkbox" checked> Tạo xong tự lưu (giọng Microsoft, bỏ qua bước nghe)</label>
- </div>
- <div class="cover">
-  <div id="cardNames"><span class="tiny">👦 Tên học sinh</span><strong id="cNames">–</strong><div class="bar"><i id="bNames"></i></div></div>
-  <div><span class="tiny">🎬 Câu dẫn (mọi kịch bản + mặc định)</span><strong id="cPhrases">–</strong><div class="bar"><i id="bPhrases"></i></div></div>
-  <div id="cardQuestions"><span class="tiny">📚 Câu hỏi (7 phần mỗi câu)</span><strong id="cQuestions">–</strong><div class="bar"><i id="bQuestions"></i></div></div>
- </div>
- <p class="tiny">Tên học sinh và nội dung được gửi tới dịch vụ đọc của Microsoft để tạo giọng; dịch vụ không chính thức nên chỉ dùng khi tạo trước. Giờ học chỉ phát WAV đã lưu trên MotionClass.</p>
- <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input id="consent" type="checkbox" style="width:auto"> Tôi đồng ý gửi họ tên học sinh và nội dung câu hỏi tới Microsoft để tạo giọng đọc.</label>
- <div class="row" style="margin-top:12px"><button id="genStart" class="primary" type="button" disabled>⚡ Tạo đủ phần còn thiếu</button><button id="genStop" type="button" disabled>⏹ Dừng</button><button id="refresh" type="button">⟳ Kiểm tra lại</button></div>
- <div class="progress"><i id="prog"></i></div>
- <div id="status" class="status" role="status" aria-live="polite"></div>
+ <div id="voiceStatus" class="status" role="status" aria-live="polite"></div>
 </section>
 
-<section class="panel" id="reviewPanel" hidden>
- <div class="row" style="justify-content:space-between"><h2>🎧 Nghe nhanh rồi lưu</h2><div class="row" style="flex:0 0 auto"><button id="playAll" type="button">▶ Nghe lần lượt</button><button id="saveAll" class="primary" type="button">☁ Lưu các đoạn đã chọn</button></div></div>
- <p class="tiny">Mỗi đoạn được tạo riêng nên không cần cắt. Bỏ chọn đoạn nào chưa ưng để không lưu.</p>
- <div id="reviewList" class="list"></div>
+<section class="panel" id="listPanel">
+ <div class="tabs" role="tablist">
+  <button class="tab active" data-tab="name" role="tab" type="button">👦 Tên học sinh<small id="tName">–</small><span class="bar"><i id="bName"></i></span></button>
+  <button class="tab" data-tab="phrase" role="tab" type="button">🎬 Câu dẫn kịch bản<small id="tPhrase">–</small><span class="bar"><i id="bPhrase"></i></span></button>
+  <button class="tab" data-tab="question" role="tab" type="button">📚 Câu hỏi<small id="tQuestion">–</small><span class="bar"><i id="bQuestion"></i></span></button>
+ </div>
+ <div class="toolbar">
+  <input id="search" type="search" placeholder="🔍 Tìm tên, câu dẫn, câu hỏi..." aria-label="Tìm đoạn">
+  <select id="groupFilter" aria-label="Lọc nhóm"><option value="">Tất cả nhóm</option></select>
+  <select id="statusFilter" aria-label="Lọc trạng thái"><option value="">Mọi trạng thái</option><option value="missing">⛔ Thiếu giọng</option><option value="stale">↻ Nội dung đã sửa</option><option value="ok">✅ Đã có giọng</option></select>
+  <button id="genMissing" class="primary" type="button" disabled>⚡ Tạo tất cả phần thiếu</button><button id="genStop" type="button" hidden>⏹ Dừng</button><button id="refresh" type="button" title="Tải lại">⟳</button>
+ </div>
+ <div class="progress"><i id="prog"></i></div>
+ <div id="status" class="status" role="status" aria-live="polite"></div>
+ <div id="list" class="list" aria-label="Danh sách đoạn đọc"></div>
+ <div class="bulk" id="bulk">
+  <label style="display:flex;gap:6px;align-items:center;font-weight:700"><input id="checkAll" type="checkbox"> Chọn tất cả đang hiện</label>
+  <span id="selCount">0 đoạn đã chọn</span>
+  <span style="flex:1"></span>
+  <label for="styleOverride" style="font-weight:600">Sắc thái khi tạo lại</label>
+  <select id="styleOverride"><option value="">Như mặc định</option><option value="neutral">Trung tính, rõ ràng</option><option value="cheer">Vui mừng</option><option value="praise">Khen ngợi</option><option value="soft">Nhẹ nhàng</option><option value="encourage">Ấm áp, động viên</option><option value="lively">Sôi nổi</option></select>
+  <button id="bulkPlay" type="button">▶ Nghe lần lượt</button><button id="bulkRegen" type="button">↻ Tạo lại</button><button id="bulkDelete" class="danger" type="button">🗑 Xóa giọng</button>
+ </div>
+ <p class="tiny">Không ưng đoạn nào: bấm ↻ để tạo lại, hoặc 🗑 để xóa (đoạn đó sẽ thành ⛔ thiếu). Microsoft đọc cùng một câu với cùng sắc thái luôn giống nhau, nên muốn nghe khác thì đổi “Sắc thái khi tạo lại”.</p>
+</section>
+
+<section class="panel" id="oldPanel" hidden>
+ <h2>🗄️ Giọng cũ đang được giữ</h2>
+ <p class="tiny">Các WAV dưới đây không còn được trò chơi dùng (trò chơi chỉ phát giọng hệ thống). Chúng vẫn được giữ nguyên, không tự xóa.</p>
+ <div id="oldList" class="tiny"></div>
 </section>
 </div>
 </main>
@@ -74,6 +107,7 @@ body.embed header,body.embed #logoutButton{display:none}body.embed main{padding:
 <script src="/question-bank/batch-audio.js"></script>
 <script src="/classrooms/classroom-store.js"></script>
 <script src="/scripts/script-store.js"></script>
+<script src="/unified-voice/voice-profile.js"></script>
 <script src="/unified-voice/unified-voice.js"></script>
 </body>
 </html>

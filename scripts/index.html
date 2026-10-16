@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kịch bản lời dẫn | Cổng công cụ giáo viên số</title>
-<meta name="description" content="Soạn nhiều kịch bản lời dẫn, tạo giọng Google AI Studio gom lô tiết kiệm lượt gọi, nghe duyệt và dùng chung cho Đua bi.">
+<meta name="description" content="Soạn nhiều kịch bản lời dẫn, dùng chung cho Đua bi; giọng đọc quản lý ở trang Giọng đọc.">
 <style>
 :root{--ink:#182744;--muted:#536881;--line:#dce6f3;--primary:#2468db;--paper:#fff;--ok:#127a52;--warn:#9a5b00}
 *{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at top left,#e0edff,#f4f7fc 45%,#eaf0fa);min-height:100vh}
@@ -31,7 +31,7 @@ button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:10px 14p
 </style>
 </head>
 <body>
-<header><div class="content"><a href="/">← Cổng giáo viên</a><h1>🎬 Kịch bản lời dẫn</h1><p>Soạn nhiều kịch bản, tạo giọng một lần bằng Google AI Studio với ít lượt gọi nhất, rồi Đua bi tự ghép với tên học sinh, câu hỏi và đáp án.</p></div></header>
+<header><div class="content"><a href="/">← Cổng giáo viên</a><h1>🎬 Kịch bản lời dẫn</h1><p>Soạn nhiều kịch bản lời dẫn; Đua bi tự ghép với tên học sinh, câu hỏi và đáp án. Giọng đọc của các câu dẫn được tạo ở trang 🎙️ Giọng đọc.</p></div></header>
 <main>
 <section class="panel" id="loginPanel">
  <h2>🔐 Đăng nhập tài khoản giáo viên</h2><p class="tiny">Dùng chung tài khoản MotionClass với Quản lý lớp học và Ngân hàng câu hỏi.</p>
@@ -51,7 +51,7 @@ button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:10px 14p
   <div class="row" style="margin-top:8px"><button id="newFromTemplate" class="primary" type="button">＋ Tạo từ mẫu</button><button id="newBlank" type="button">＋ Trống</button></div>
   <div id="listStatus" class="status" role="status" aria-live="polite"></div>
   <div id="scriptList"></div>
-  <p class="tiny">Thanh xanh là tỉ lệ đoạn đã có giọng với giọng Google đang chọn. Đua bi chỉ luân phiên các kịch bản đang bật.</p>
+  <p class="tiny">Thanh xanh là tỉ lệ đoạn đã có giọng hệ thống (trang Giọng đọc). Đua bi chỉ luân phiên các kịch bản đang bật.</p>
  </section>
 </aside>
 
@@ -63,11 +63,15 @@ button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:10px 14p
   <div class="split"><div><label for="scriptTitle">Tên kịch bản</label><input id="scriptTitle" maxlength="80"></div>
    <div class="split"><div><label for="maxNumber">Số câu hỏi tối đa đọc bằng WAV</label><input id="maxNumber" type="number" min="1" max="60" value="20"></div><div><label for="scriptActive">Dùng trong Đua bi</label><select id="scriptActive"><option value="1">Đang bật</option><option value="0">Tạm tắt</option></select></div></div></div>
   <p class="tiny">Chỗ trống: <span class="chip">{tên}</span> tên học sinh (WAV đã lưu) · <span class="chip">{số}</span> số câu hỏi · <span class="chip">{đáp án}</span> WAV công bố đáp án · <span class="chip">{chuỗi}</span> số bạn đúng liên tiếp · <span class="chip">{đúng}</span>/<span class="chip">{tổng}</span> chỉ đọc bằng giọng dự phòng. Mỗi dòng là một cách nói.</p>
-  <p class="tiny">💡 Tiết kiệm lượt Google: giữ nguyên cụm “Câu hỏi số {số}.” và các câu ngắn giống nhau giữa các kịch bản — đoạn trùng nhau chỉ tạo giọng một lần và dùng chung.</p>
+  <p class="tiny">💡 Đoạn giống nhau giữa các kịch bản (ví dụ “Câu hỏi số {số}.”) chỉ tạo giọng một lần và dùng chung.</p>
   <div id="slotEditor"></div>
   <div id="editorStatus" class="status"></div>
  </section>
 
+ <section class="panel" id="voiceHubLink" hidden style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+  <div><h2 style="margin:0 0 4px">🎙️ Giọng đọc của câu dẫn</h2><p class="tiny" style="margin:0">Lưu kịch bản xong, mở trang Giọng đọc để tạo giọng cho các câu mới, nghe, tạo lại hoặc xóa từng câu.</p></div>
+  <a href="/unified-voice/" style="background:#2468db;color:#fff;border-radius:10px;padding:11px 15px;font-weight:750;text-decoration:none">Mở trang Giọng đọc →</a>
+ </section>
  <section class="panel" id="voicePanel" hidden>
   <h2>🎙️ Tạo giọng câu dẫn – gom lô tiết kiệm lượt Google</h2>
   <div class="quota">
@@ -107,6 +111,7 @@ button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:10px 14p
 <script src="/pose-quiz/supabase-config.js"></script>
 <script src="/question-bank/batch-audio.js"></script>
 <script src="/scripts/script-store.js"></script>
+<script src="/unified-voice/voice-profile.js"></script>
 <script src="/scripts/script-manager.js"></script>
 </body>
 </html>

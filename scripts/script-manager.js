@@ -110,7 +110,8 @@ async function checkStudio(){
 }
 async function refreshAll(){
  try{
-  [scripts]=await Promise.all([S.listScripts(c),checkStudio()]);
+  // Giọng của câu dẫn được quản lý ở trang Giọng đọc (giọng hệ thống Microsoft); trang này chỉ soạn nội dung.
+  [scripts]=await Promise.all([S.listScripts(c),window.MotionVoice?window.MotionVoice.get(c).then(v=>{voice=v}):checkStudio()]);
   setLibrary(voice?await S.listPhraseAudio(c,{voiceId:voice}):[]);
   if(currentId&&!scripts.some(s=>s.id===currentId))currentId=null;
   if(!genSelected.size&&scripts.length)genSelected=new Set(scripts.filter(s=>s.isActive).slice(0,1).map(s=>s.id));
@@ -174,7 +175,7 @@ function previewLine(template){
 function renderEditor(){
  const s=current();
  $('emptyState').hidden=!!s;$('editor').hidden=!s;
- $('voicePanel').hidden=!scripts.length;$('libraryPanel').hidden=!scripts.length;
+ $('voicePanel').hidden=true;$('libraryPanel').hidden=true;$('voiceHubLink').hidden=!scripts.length;
  if(!s)return;
  $('editorTitle').textContent='✏️ '+s.title;$('scriptTitle').value=s.title;
  $('maxNumber').value=s.slots?.options?.maxNumber||20;$('scriptActive').value=s.isActive?'1':'0';
@@ -196,7 +197,7 @@ function renderEditor(){
 $('saveScript').onclick=async()=>{
  const s=current();if(!s)return;
  tell('editorStatus','⏳ Đang lưu...');
- await busyButton('saveScript','⏳ Đang lưu...',async()=>{try{S.cleanScript(draft());const saved=await S.saveScript(c,draft(),s.id);dirty=false;currentId=saved.id;await refreshAll();tell('editorStatus','✅ Đã lưu kịch bản. Các đoạn mới sẽ hiện trong kế hoạch tạo giọng.')}
+ await busyButton('saveScript','⏳ Đang lưu...',async()=>{try{S.cleanScript(draft());const saved=await S.saveScript(c,draft(),s.id);dirty=false;currentId=saved.id;await refreshAll();tell('editorStatus','✅ Đã lưu kịch bản. Câu mới sẽ hiện ⛔ ở trang Giọng đọc để tạo giọng.')}
  catch(e){tell('editorStatus','⚠ '+message(e),true)}});
 };
 $('deleteScript').onclick=async()=>{

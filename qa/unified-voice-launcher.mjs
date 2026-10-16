@@ -87,10 +87,10 @@ await page.waitForFunction(() => /thiếu 2 tên/.test(document.getElementById('
 const t0 = Date.now();
 await page.click('#uvClassVoice');
 const frame = page.frameLocator('#uvLauncherFrame');
-await frame.locator('#status').filter({ hasText: /✅ Đã lưu \d+ đoạn/ }).waitFor({ timeout: 300000 });
+await frame.locator('#status').filter({ hasText: /Đã tạo và lưu \d+ đoạn/ }).waitFor({ timeout: 300000 });
 const classSeconds = ((Date.now() - t0) / 1000).toFixed(1);
-const inner = await page.frame({ url: /unified-voice/ }).evaluate(() => ({ ...window.__unifiedVoiceTest.state(), header: getComputedStyle(document.querySelector('header')).display, picked: classPick.value, locked: classPick.disabled }));
-assert(inner.embed && inner.header === 'none' && inner.locked && inner.picked === 'cccccccc-1111-4111-8111-cccccccccccc', 'Cửa sổ nhúng chưa khóa đúng lớp: ' + JSON.stringify(inner));
+const inner = await page.frame({ url: /unified-voice/ }).evaluate(() => ({ ...window.__unifiedVoiceTest.state(), header: getComputedStyle(document.querySelector('header')).display, picked: groupFilter.value }));
+assert(inner.embed && inner.header === 'none' && inner.tab === 'name' && inner.picked === 'cccccccc-1111-4111-8111-cccccccccccc' && inner.counts.name.total === 3, 'Cửa sổ nhúng chưa đúng lớp: ' + JSON.stringify(inner));
 let db = JSON.parse(await page.evaluate(() => localStorage.getItem('__fakeSupabaseDB')));
 const edgeNames = db.tables.teacher_student_name_audio.filter(r => r.voice_id === 'edge:namminh-b1');
 assert(edgeNames.length === 3 && edgeNames.every(r => r.class_id === C5A), 'Phải lưu đúng 2 tên còn thiếu của lớp 5A (không đụng 5B): ' + edgeNames.length);
@@ -103,7 +103,7 @@ assert(!(await page.$('#uvLauncherFrame')), 'Cửa sổ chưa đóng');
 await page.goto(BASE + '/question-bank/');
 await page.waitForFunction(() => /thiếu 2 câu/.test(document.getElementById('uvBankVoice')?.textContent || ''), null, { timeout: 20000 });
 await page.click('#uvBankVoice');
-await frame.locator('#status').filter({ hasText: /✅ Đã lưu \d+ đoạn/ }).waitFor({ timeout: 300000 });
+await frame.locator('#status').filter({ hasText: /Đã tạo và lưu \d+ đoạn/ }).waitFor({ timeout: 300000 });
 const qInner = await page.frame({ url: /unified-voice/ }).evaluate(() => window.__unifiedVoiceTest.state());
 assert(qInner.scope === 'questions', 'Sai phạm vi: ' + qInner.scope);
 assert(puts.length === 13 && puts.every(p => p.voice_id === 'edge:namminh-b1'), 'Phải lưu đúng 13 phần câu hỏi còn thiếu: ' + puts.length);
@@ -115,7 +115,7 @@ await page.waitForFunction(() => /Đủ giọng/.test(document.getElementById('u
 // Không nhớ mã → cửa sổ chờ giáo viên nhập, không tự chạy.
 await page.evaluate(() => sessionStorage.removeItem('motionclass:uv-pin'));
 await page.click('#uvBankVoice');
-await frame.locator('#status').filter({ hasText: /đều đã có giọng|Còn thiếu/ }).waitFor({ timeout: 20000 });
+await frame.locator('#status').filter({ hasText: /đều đã có giọng|Còn \d+ đoạn/ }).waitFor({ timeout: 20000 });
 assert(await frame.locator('#pin').inputValue() === '', 'Mã không được tự điền khi chưa nhớ');
 await page.click('#uvLauncherClose');
 

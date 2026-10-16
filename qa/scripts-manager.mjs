@@ -1,4 +1,4 @@
-// QA: trang Quản lý kịch bản — gom lô, dùng chung WAV, cắt lại từ WAV gốc, nghe duyệt, lưu, dừng khi 429.
+// QA: trang Kịch bản lời dẫn — chỉ soạn nội dung (giọng quản lý ở trang Giọng đọc), không gọi Google, báo lỗi rõ khi thiếu bảng.
 //   python3 qa/serve_portal.py 4174 &  node qa/scripts-manager.mjs
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
@@ -31,7 +31,7 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext();
 const page = await context.newPage();
 const errors = [], batchPosts = [];
-let mode429 = false;
+let mode429 = false, googlePosts = 0;
 page.on('pageerror', e => errors.push(String(e)));
 page.on('dialog', d => d.accept());
 await context.route('**/*', async route => {
@@ -40,6 +40,7 @@ await context.route('**/*', async route => {
   if (url.includes('/qa-media/')) return route.fulfill({ contentType: 'audio/wav', body: speechLikeWav('x') });
   if (url.endsWith('/api/marble-tts') && req.method() === 'GET') return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ configured: true, voiceVersion: '0123456789abcdef', voiceType: 'default' }) });
   if (url.endsWith('/api/marble-tts') && req.method() === 'POST') {
+    googlePosts++;
     const body = JSON.parse(req.postData() || '{}');
     if (req.headers()['x-marble-teacher-code'] !== 'ma-giao-vien-dung-12') return route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"sai mã"}' });
     if (body.verifyOnly) return route.fulfill({ contentType: 'application/json', body: '{"ok":true,"verified":true}' });
@@ -82,80 +83,34 @@ await page.evaluate(() => localStorage.removeItem('__fakeMissingTables'));
 await page.reload(); await page.waitForSelector('#appPanel:not([hidden])');
 await page.waitForFunction(() => /Chưa có kịch bản/.test(document.getElementById('listStatus').textContent), null, { timeout: 8000 });
 
-const num = async id => Number(await page.textContent('#' + id));
-const quota = () => page.evaluate(() => { const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); return Number(localStorage.getItem('motionclass:classroom20:requests:' + d)) || 0; });
-async function approveAndSave(expected) {
-  await page.waitForFunction(n => document.querySelectorAll('#reviewList .review').length === n, expected, { timeout: 20000 });
-  await page.evaluate(() => document.querySelectorAll('#reviewList audio').forEach(a => a.dispatchEvent(new Event('ended'))));
-  await page.click('#approveListened');
-  await page.click('#saveApproved');
-  await page.waitForFunction(() => /Đã lưu \d+ WAV câu dẫn/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
-}
-
-// 1) Kịch bản mẫu đầu tiên: số đoạn và số lượt dự kiến.
+// 1) Trang Kịch bản chỉ soạn nội dung: không còn khung tạo giọng Google; có liên kết sang trang Giọng đọc.
+//    Thanh "có giọng" tính theo GIỌNG HỆ THỐNG (Microsoft) — seed sẵn WAV "Mời em" của edge:namminh-b1.
+await page.evaluate(async () => {
+  const db = JSON.parse(localStorage.getItem('__fakeSupabaseDB'));
+  const S = window.TeacherScriptStore, owner = db.session.user.id;
+  db.tables.teacher_phrase_audio = [{ id: crypto.randomUUID(), owner_id: owner, voice_id: 'edge:namminh-b1', text_hash: await S.hashText('Mời em'), phrase: 'Mời em', storage_path: owner + '/edge-namminh-b1/a.wav', size_bytes: 100 },
+    { id: crypto.randomUUID(), owner_id: owner, voice_id: 'studio:0123456789abcdef', text_hash: await S.hashText('Câu hỏi số một.'), phrase: 'Câu hỏi số một.', storage_path: owner + '/studio/b.wav', size_bytes: 100 }];
+  localStorage.setItem('__fakeSupabaseDB', JSON.stringify(db));
+});
+await page.reload(); await page.waitForSelector('#appPanel:not([hidden])');
 await page.selectOption('#templatePick', 'am-ap'); await page.click('#newFromTemplate');
 await page.waitForSelector('#editor:not([hidden])');
 await page.waitForFunction(() => /✅ Đã tạo/.test(document.getElementById('listStatus').textContent));
 assert(await page.isVisible('#slot-call') && (await page.inputValue('#scriptTitle')) === 'Ấm áp – nhẹ nhàng', 'Tạo xong nhưng không mở trình soạn kịch bản');
-const need1 = await num('qNeeded'), calls1 = await num('qCalls');
-assert(need1 === 43 && calls1 >= 2 && calls1 <= 4, `Kế hoạch kịch bản 1 bất thường: ${need1} đoạn / ${calls1} lượt`);
-const segText = await page.textContent('#qSegments');
+assert(await page.isHidden('#voicePanel') && await page.isHidden('#libraryPanel') && await page.isHidden('#reviewPanel'), 'Trang Kịch bản vẫn còn khung tạo giọng Google');
+assert(await page.isVisible('#voiceHubLink') && (await page.getAttribute('#voiceHubLink a', 'href')) === '/unified-voice/', 'Thiếu liên kết sang trang Giọng đọc');
+const cov = await page.textContent('#scriptList .script-item span');
+assert(/^1\/\d+ đoạn có giọng$/.test(cov), 'Độ phủ phải tính theo giọng hệ thống Microsoft (chỉ “Mời em”), không tính WAV Google: ' + cov);
 
-// 2) Tạo giọng: đúng số lượt, đủ đoạn để nghe duyệt, bộ đếm tăng đúng.
-await page.fill('#studioPin', 'ma-giao-vien-dung-12');
-await page.click('#genStart');
-await page.waitForFunction(() => /✅ Đã tạo/.test(document.getElementById('genStatus').textContent), null, { timeout: 30000 });
-assert(batchPosts.length === calls1, `Đã gọi ${batchPosts.length} lượt, kế hoạch ${calls1}`);
-assert(await quota() === calls1, 'Bộ đếm lượt/ngày không khớp');
-const needsReview = await page.evaluate(() => [...document.querySelectorAll('#reviewList .review .tiny')].filter(n => n.textContent.startsWith('⚠')).length);
-await approveAndSave(need1);
-assert(await num('qNeeded') === 0, 'Sau khi lưu vẫn còn đoạn thiếu');
-const lib1 = await page.evaluate(() => (window.__fakeDB().tables.teacher_phrase_audio || []).length);
-assert(lib1 === need1, 'Kho WAV không đủ: ' + lib1);
-
-// 3) Kịch bản thứ hai dùng chung đoạn đã có (bộ “Câu hỏi số …”), chỉ tạo phần mới.
-await page.selectOption('#templatePick', 'duong-dua'); await page.click('#newFromTemplate');
-await page.waitForFunction(() => document.querySelectorAll('#genScripts input:checked').length === 2);
-const need2 = await num('qNeeded'), calls2 = await num('qCalls'), reuse2 = await page.textContent('#qReuse');
-assert(need2 > 0 && need2 <= 39 - 20, `Kịch bản 2 không dùng chung đoạn số: còn ${need2} đoạn`);
-
-// 4) Tạo kịch bản 2, rồi tải lại trang trước khi lưu → cắt lại từ WAV gốc, KHÔNG tốn thêm lượt Google.
-const before = batchPosts.length;
-await page.click('#genStart');
-await page.waitForFunction(() => /✅ Đã tạo/.test(document.getElementById('genStatus').textContent), null, { timeout: 30000 });
-assert(batchPosts.length - before === calls2, 'Số lượt kịch bản 2 không khớp kế hoạch');
-await page.reload(); await page.waitForSelector('#appPanel:not([hidden])');
-await page.evaluate(() => { const box = document.getElementById('genScripts'); });
-await page.fill('#studioPin', 'ma-giao-vien-dung-12');
-const before2 = batchPosts.length;
-// Chọn lại 2 kịch bản để tạo (sau tải lại trang chỉ chọn mặc định 1 kịch bản đang bật).
-await page.evaluate(() => document.querySelectorAll('#genScripts input').forEach(cb => { if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); } }));
-assert(await num('qNeeded') === need2, 'Kế hoạch sau tải lại không khớp');
-await page.click('#genStart');
-await page.waitForFunction(() => /lấy lại từ WAV gốc/.test(document.getElementById('genStatus').textContent), null, { timeout: 30000 });
-assert(batchPosts.length === before2, 'Cắt lại từ WAV gốc nhưng vẫn gọi Google');
-await approveAndSave(need2);
-assert(await num('qNeeded') === 0, 'Kịch bản 2 vẫn thiếu đoạn');
-
-// 5) Google trả 429 → dừng ngay, không gửi tiếp.
-await page.selectOption('#templatePick', 'phieu-luu'); await page.click('#newFromTemplate');
-await page.waitForFunction(() => Number(document.getElementById('qNeeded').textContent) > 0);
-const calls3 = await num('qCalls'); mode429 = true; const before3 = batchPosts.length;
-await page.click('#genStart');
-await page.waitForFunction(() => /429/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
-assert(batchPosts.length - before3 === 1, `Gặp 429 nhưng vẫn gửi ${batchPosts.length - before3} yêu cầu (kế hoạch ${calls3})`);
-mode429 = false;
-
-// 6) Hết hạn mức trên trình duyệt → nút tạo bị khóa.
-await page.evaluate(() => { const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); localStorage.setItem('motionclass:classroom20:requests:' + d, '10'); });
-await page.fill('#limitSegments', '19'); await page.dispatchEvent('#limitSegments', 'change');
-assert(await page.isDisabled('#genStart'), 'Đã hết 10 lượt nhưng nút tạo vẫn bật');
-
-// 7) Kiểm tra mẫu: {tên} bắt buộc ở câu gọi; lưu chỉnh sửa.
+// 2) Kiểm tra mẫu: {tên} bắt buộc ở câu gọi; lưu chỉnh sửa hợp lệ.
 await page.fill('#slot-call', 'Mời bạn trả lời');
 await page.click('#saveScript');
 assert((await page.textContent('#editorStatus')).includes('{tên}'), 'Không chặn câu gọi thiếu {tên}');
+await page.fill('#slot-call', 'Mời em {tên} lên bảng. Câu hỏi số {số}.');
+await page.click('#saveScript');
+await page.waitForFunction(() => /Đã lưu/.test(document.getElementById('editorStatus').textContent), null, { timeout: 8000 });
 
+assert(googlePosts === 0, 'Trang Kịch bản không được gọi Google: ' + googlePosts);
 assert(errors.length === 0, 'Lỗi trang: ' + errors.join(' | '));
-console.log('SCRIPTS_MANAGER_OK', JSON.stringify({ missingTableMessage: missingMsg.slice(0, 90), script1: { phrases: need1, calls: calls1, avg: segText, cutWarnings: needsReview }, script2: { newPhrases: need2, calls: calls2, reuse: reuse2 }, totalGoogleCalls: batchPosts.length }));
+console.log('SCRIPTS_MANAGER_OK', JSON.stringify({ missingTableMessage: missingMsg.slice(0, 90), coverage: cov, googleCalls: googlePosts }));
 await browser.close();

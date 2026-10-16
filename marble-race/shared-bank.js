@@ -72,15 +72,31 @@ function refreshSavedVoiceChoices(){
  for(const id of [...voices].sort((a,b)=>(totals.get(b)||0)-(totals.get(a)||0))){
   if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45}|edge:[a-z0-9-]{2,45})$/.test(id))continue;
   const q=totals.get(id)||0,n=nameVoiceInventory.get(id)||0;
-  select.append(new Option((id.startsWith('studio:')?'✨ Google đã lưu':id.startsWith('edge:')?'🎙️ Microsoft NamMinh đã lưu':'🎙️ NGHI đã lưu')+
+  select.append(new Option((id.startsWith('studio:')?'✨ Google đã lưu':id.startsWith('edge:')?'🎙️ '+(window.MotionVoice?window.MotionVoice.label(id):'Microsoft đã lưu'):'🎙️ NGHI đã lưu')+
    ' · '+[q?q+' WAV câu hỏi':'',n?n+' tên':''].filter(Boolean).join(' · '),id));
  }
  const preferred=[previous,[...totals.keys()][0],[...nameVoiceInventory.keys()][0],'device'].find(id=>id&&[...select.options].some(o=>o.value===id));
  select.value=preferred||'device';
+ applySystemVoice();
  $('raceSavedAudioStatus').textContent=totals.size||nameVoiceInventory.size
   ?'Đã tìm thấy '+[...totals.values()].reduce((a,b)=>a+b,0)+' WAV câu hỏi/đáp án và '+
    [...nameVoiceInventory.values()].reduce((a,b)=>a+b,0)+' WAV tên học sinh. Nạp giọng đã lưu, không gọi API tạo mới.'
   :'Chưa có WAV hợp lệ trong bộ lọc. Dùng giọng thiết bị hoặc tạo tại Ngân hàng câu hỏi / Quản lý lớp.';
+}
+/** Đua bi luôn dùng GIỌNG HỆ THỐNG (chọn ở trang Giọng đọc), không còn ô chọn giọng. Chưa đăng nhập → giọng thiết bị. */
+let systemVoiceRun=0;
+async function applySystemVoice(){
+ const run=++systemVoiceRun,select=$('raceSavedVoice'),info=$('raceSystemVoice');if(!select)return;
+ if(!window.MotionVoice||!client||!session){if(info)info.textContent='🔈 Chưa đăng nhập MotionClass: đọc bằng giọng của thiết bị.';return}
+ let id;try{id=await window.MotionVoice.get(client)}catch(_){return}
+ if(run!==systemVoiceRun)return;
+ if(![...select.options].some(o=>o.value===id))select.append(new Option('🎙️ '+window.MotionVoice.label(id),id));
+ if(info){info.replaceChildren('🎙️ Giọng hệ thống: ');const b=document.createElement('b');b.textContent=window.MotionVoice.label(id);info.append(b)}
+ if(select.value!==id){
+  select.value=id;sessionStorage.setItem('marble.saved.voice',id);
+  hooks.onSavedVoiceChange?.();window.MarbleNameAudio?.refreshVoiceStatus?.();
+  try{await loadSavedVoice()}catch(_){}
+ }
 }
 function render(rowsToShow=rows){
  const box=$('bankList');
@@ -136,6 +152,7 @@ function updateSessionUI(user){
  $('bankUserSection').hidden=!user;
  $('bankWho').textContent=user?'Đăng nhập: '+(user.email||'Tài khoản giáo viên'):'';
  if(!user){rows=[];selected.clear();$('bankList').replaceChildren();status('Chưa đăng nhập MotionClass.')}
+ applySystemVoice();
 }
 async function refreshLogin(){
  const {data:{session:s},error}=await client.auth.getSession();

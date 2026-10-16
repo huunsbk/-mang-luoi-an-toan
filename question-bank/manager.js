@@ -130,7 +130,7 @@ function showInventoryStats(){
 /* Nút "🎙️ Tạo giọng ngay": đếm câu hỏi CỦA MÌNH còn thiếu phần nào ở giọng thống nhất (Microsoft). */
 async function showUnifiedVoiceBadge(){
  const L=window.UnifiedVoiceLauncher,btn=$('uvBankVoice');if(!L||!btn)return;
- const voice=await L.currentVoice(),parts=['question','option_a','option_b','option_c','option_d','answer','full'];
+ const voice=await L.systemVoice(supabase),parts=['question','option_a','option_b','option_c','option_d','answer','full'];
  const missing=rows.filter(r=>r.owned&&r.spoken).filter(r=>{const have=new Set(inventoryFor(r.id).filter(x=>x.current&&x.voiceId===voice).map(x=>x.part));return parts.some(p=>r.spoken[p]&&!have.has(p))}).length;
  L.setBadge(btn,missing,'câu');
 }
@@ -370,7 +370,7 @@ function renderList(){
   const tdAction=document.createElement('td'),actions=document.createElement('div');actions.className='actions-inline';
   actions.append(action('👁 Xem',()=>openScreen('preview',item)));
   const edit=action('✏️ Sửa',()=>openScreen('edit',item));edit.disabled=!item.owned;actions.append(edit);
-  actions.append(action('🎙 WAV',()=>openScreen('audio',item)));
+  actions.append(action('🎙 Giọng',()=>window.UnifiedVoiceLauncher?window.UnifiedVoiceLauncher.open('question:'+item.id,{onDone:()=>run(()=>loadAudioInventory())}):openScreen('audio',item)));
   const extra=action('⋯',()=>{if(!item.owned){openScreen('preview',item);return}if(confirm('Xóa câu hỏi này? Âm thanh liên quan cũng sẽ bị xóa.')){void run(async()=>{await api('bank.delete',{id:item.id});selected.delete(item.id);await reload(false);setListMessage('Đã xóa câu hỏi.')})}});
   extra.className='more';extra.title=item.owned?'Xóa câu hỏi':'Xem câu hỏi';actions.append(extra);
   tdAction.append(actions);tr.append(tdAction);body.append(tr);
@@ -745,7 +745,7 @@ async function init(){
  $('groupBy').onchange=renderList;$('filterGrade').onchange=renderList;
  $('checkVisible').onchange=e=>{for(const r of getFilteredRows()){if(e.target.checked)selected.add(r.id);else selected.delete(r.id)}renderList()};
  $('previewEdit').onclick=()=>{if(editing?.owned)openScreen('edit',editing)};
- $('previewAudio').onclick=()=>{if(editing)openScreen('audio',editing)};
+ $('previewAudio').onclick=()=>{if(!editing)return;if(window.UnifiedVoiceLauncher)window.UnifiedVoiceLauncher.open('question:'+editing.id,{onDone:()=>run(()=>loadAudioInventory())});else openScreen('audio',editing)};
  $('previewCopy').onclick=cloneCurrent;
  $('audioToPreview').onclick=()=>{if(editing)openScreen('preview',editing)};
  $('audioToEdit').onclick=()=>{if(editing?.owned)openScreen('edit',editing)};
