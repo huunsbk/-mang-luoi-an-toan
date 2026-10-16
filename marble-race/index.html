@@ -1031,7 +1031,7 @@ function questionSpeech(question){
   ' Em hãy suy nghĩ và lựa chọn một đáp án.';
 }
 function correctAnswerSpeech(question){return question.bankSpoken?.answer||'Đáp án đúng là phương án '+question.correct+'. '+question.options[question.correct]+'.'}
-function speechKey(content){return ($('aiVoiceMode').value==='nghi'?'nghi:'+getSelectedNghiVoice():(geminiInfo.voiceVersion||'initial'))+':'+content}
+function speechKey(content){return ($('raceSavedVoice')?.value||'device')+':'+content}
 function speechCached(content){return aiClips.has(speechKey(content))}
 let speechPrepQueue=[],speechPrepQueued=new Set(),speechPrepActive=0,speechPrepGoal=[],speechPrepFailed=0,speechPrepPaused=false;
 let speechPrepLastError='',speechPrepQuotaCount=0,speechPrepNextAt=0,speechPrepWaitUntil=0,speechPrepTimer=null,speechPrepEpoch=0;
@@ -1131,6 +1131,8 @@ function runSpeechPrepWorkers(){
  })();
 }
 function prepareSpeechClips(fromTeacher=false){
+ // This game never generates new audio; use Ngân hàng câu hỏi and Quản lý lớp.
+ if($('raceSavedVoice')){showSpeechPrepStatus();return}
  if(!isLearning()||!$('voiceName').checked){if(fromTeacher)toast('Hãy bật chế độ Học tập và giọng đọc.');return}
  if($('aiVoiceMode').value==='nghi'&&!localPiperReady){
   $('aiPrepStatus').textContent='⏳ Đang nạp mô hình giọng NGHI-TTS (~64 MB) trên thiết bị...';
@@ -1175,46 +1177,40 @@ async function decodePreparedClip(content,blob){
  if(decodedAiClips.size>48)decodedAiClips.delete(decodedAiClips.keys().next().value);
  try{return await task}catch(e){decodedAiClips.delete(key);throw e}
 }
+/* Marble playback: ONLY prerecorded question/name WAVs. Missing parts use device TTS.
+   No Google/NGHI synthesis, PIN or network AI calls are triggered by play. */
 async function playPreparedSpeech(parts,force=false){
  soundReady();
- if(!force&&!$('voiceName').checked){stopStudySpeech();return}
- if(!parts.length)return;
- // A missing clip must never block the next pupil or an answer.
- if(!isAiLessonReady()||parts.some(t=>!speechCached(t))){
-  for(const t of parts)if(!speechCached(t))prioritizeSpeech(t);
-  speakLocalSequence(parts,force);
-  return;
- }
- stopStudySpeech();const token=studySpeechRun;
- try{
-  const blobs=parts.map(t=>aiClips.get(speechKey(t)));
-  if(audioCtx&&audioCtx.state==='running'){
-   const decoded=await Promise.all(parts.map((t,i)=>decodePreparedClip(t,blobs[i])));
-   if(token!==studySpeechRun)return;
-   let cursor=0;
-   const next=()=>{
-    if(token!==studySpeechRun||cursor>=decoded.length)return;
-    const source=audioCtx.createBufferSource(),gain=audioCtx.createGain();
-    source.buffer=decoded[cursor++];gain.gain.value=clamp(Number($('winVol').value)/100,.1,1);
-    source.connect(gain);gain.connect(audioCtx.destination);currentAiSource=source;
-    source.onended=()=>{if(token===studySpeechRun)next()};
-    source.start(0);
-   };
-   next();
-  }else{
-   let index=0;
-   const next=async()=>{
-    if(token!==studySpeechRun||index>=blobs.length)return;
-    const url=URL.createObjectURL(blobs[index++]);
-    const audio=new Audio(url);audio.volume=clamp(Number($('winVol').value)/100,.1,1);
-    currentAiAudio=audio;currentAiUrl=url;
-    audio.onended=()=>{URL.revokeObjectURL(url);if(currentAiUrl===url)currentAiUrl=null;next()};
-    await audio.play();
-   };
-   await next();
+ stopStudySpeech();
+ if((!force&&!$('voiceName').checked)||!parts.length)return;
+ const token=studySpeechRun,voice=chosenTeacherVoice(),volume=clamp(Number($('winVol').value)/100,.1,1);
+ async function playPiece(text){
+  if(token!==studySpeechRun||!text)return;
+  const blob=aiClips.get(speechKey(text));
+  if(blob){
+   const url=URL.createObjectURL(blob),audio=new Audio(url);
+   currentAiAudio=audio;currentAiUrl=url;audio.volume=volume;
+   await new Promise(resolve=>{
+    let settled=false;
+    const finish=()=>{if(settled)return;settled=true;if(currentAiUrl===url){currentAiUrl=null;currentAiAudio=null}URL.revokeObjectURL(url);resolve()};
+    audio.onended=finish;audio.onerror=finish;
+    audio.play().catch(finish);
+   });
+   return;
   }
- }catch(e){
-  if(token===studySpeechRun)speakLocalSequence(parts,force);
+  if(!hasStudySpeech())return;
+  await new Promise(resolve=>{
+   if(token!==studySpeechRun)return resolve();
+   const speech=new SpeechSynthesisUtterance(text);
+   speech.lang='vi-VN';if(voice)speech.voice=voice;
+   speech.rate=.92;speech.pitch=.94;speech.volume=volume;
+   speech.onend=resolve;speech.onerror=resolve;
+   try{speechSynthesis.speak(speech)}catch(_){resolve()}
+  });
+ }
+ for(const part of parts){
+  if(token!==studySpeechRun)break;
+  await playPiece(part);
  }
 }
 async function speakStudySequence(parts,force=false){
@@ -1253,9 +1249,21 @@ async function speakStudySequence(parts,force=false){
   speakLocalSequence(parts,force);
  }
 }
-function speakStudent(name,question){
- const segments=[studentSpeech(name),'Câu số '+question.num+'.',questionSpeech(question)];
- playPreparedSpeech(segments);
+async function speakStudent(name,question,studentId=null){
+ if(!$('voiceName').checked)return;
+ // The saved student WAV contains ONLY the name, not a synthesized invitation.
+ // A missing or stale name clip is spoken by the device instead.
+ stopStudySpeech();const token=studySpeechRun;
+ const id=studentId||students.find(s=>s.name===name)?.id;
+ const voice=$('raceSavedVoice')?.value||'device';
+ if(id && voice!=='device'){
+  try{
+   const wav=await window.MarbleNameAudio?.loadBlob(id,voice);
+   if(token!==studySpeechRun)return;
+   if(wav)aiClips.set(speechKey(name),wav);
+  }catch(_){/* device fallback */ }
+ }
+ if(token===studySpeechRun)void playPreparedSpeech([name,questionSpeech(question)]);
 }
 function renderQuiz(){
  const f=studyFinishers[studyIndex],s=students.find(st=>st.id===f?.id);
@@ -1276,7 +1284,7 @@ function renderQuiz(){
  $('quizFeedback').className='quiz-feedback';$('quizFeedback').firstElementChild.textContent='🎯';
  $('quizFeedbackText').textContent='Giáo viên nhấn vào phương án học sinh vừa trả lời để chấm điểm.';
  $('quizNext').disabled=true;$('quizNext').textContent=studyIndex===studyFinishers.length-1?'🏆 XEM TỔNG KẾT':'HỌC SINH TIẾP THEO ➜';
- $('quizCelebration').replaceChildren();renderQuizScoreboard();speakStudent(s.name,question);
+ $('quizCelebration').replaceChildren();renderQuizScoreboard();void speakStudent(s.name,question,s.id);
 }
 function renderQuizScoreboard(){
  const root=$('quizScoreList');root.replaceChildren();let correct=0;
@@ -1311,7 +1319,7 @@ function exportStudyResults(){
 function setupLearningUI(){
  setupNghiVoiceList();
  document.querySelectorAll('.mode-choice').forEach(b=>b.addEventListener('click',()=>setStudyMode(b.dataset.mode)));
- $('checkQuestions').onclick=()=>{if(inspectQuestions(true))prepareSpeechClips(false);save()};
+ $('checkQuestions').onclick=()=>{inspectQuestions(true);save()};
  $('aiVoicePrepare').onclick=()=>{soundReady();prepareSpeechClips(true)};
  $('voiceName').onchange=()=>{if(!$('voiceName').checked)stopStudySpeech();save()};
  $('voiceSelect').onchange=()=>{$('voiceSelect').dataset.preferred=$('voiceSelect').value;stopStudySpeech();save()};
@@ -1334,8 +1342,8 @@ function setupLearningUI(){
   if(speechPrepTimer){clearTimeout(speechPrepTimer);speechPrepTimer=null}
   speechPrepGoal=[];save();refreshTeacherSource();
  };
- $('aiVoicePin').value=sessionStorage.getItem('marble_ai_teacher_code')||'';
- $('aiVoicePin').onchange=()=>{sessionStorage.setItem('marble_ai_teacher_code',$('aiVoicePin').value);checkGeminiVoice()};
+ $('aiVoicePin').value='';
+ $('aiVoicePin').onchange=()=>{};
  $('aiVoiceRefresh').onclick=()=>{
   if($('aiVoiceMode').value==='nghi')initializeLocalPiper().catch(()=>{});
   else refreshTeacherSource();
@@ -1366,7 +1374,7 @@ function setupLearningUI(){
  $('quizReadAloud').onclick=()=>{
   const f=studyFinishers[studyIndex],student=students.find(s=>s.id===f?.id);
   const question=studyQuestions[studyIndex%studyQuestions.length];
-  if(student&&question)speakStudent(student.name,question);
+  if(student&&question)void speakStudent(student.name,question,student.id);
  };
  $('quizNext').onclick=()=>{if(!studyAnswers.has(studyFinishers[studyIndex]?.id))return;const following=studyFinishers.findIndex((f,i)=>i>studyIndex&&!studyAnswers.has(f.id));
  if(following>=0){studyIndex=following;renderQuiz()}else{const any=studyFinishers.findIndex(f=>!studyAnswers.has(f.id));if(any>=0){studyIndex=any;renderQuiz()}else{showRankings(true)}}};
@@ -1391,16 +1399,17 @@ window.MarbleClassroomHooks={
  currentClassId:()=>cloudClassId,
  isRunning:()=>Boolean(game?.running),
  currentCount:()=>students.length,
- preferredVoice:()=> $('aiVoiceMode').value==='nghi'?'nghi:'+getSelectedNghiVoice():$('aiVoiceMode').value==='studio'?'studio:'+(geminiInfo.voiceVersion||''):null
+ preferredVoice:()=> $('raceSavedVoice')?.value||'device'
 };
 window.MarbleSharedBankHooks={
  currentQuestions:()=>{if(!inspectQuestions(false))throw Error('Hãy sửa các lỗi câu hỏi trước khi lưu.');return studyQuestions.map(q=>({num:q.num,text:q.text,options:answerKeys.map(k=>q.options[k]),correct:q.correct,id:q.bankId||null}))},
  linkSaved:(items,results)=>{items.forEach((q,i)=>{const result=results[i];if(!result?.id)return;const normalized={text:q.text,options:{},correct:q.correct};answerKeys.forEach((k,j)=>normalized.options[k]=q.options[j]);const key=studyQuestionSignature(normalized);sharedQuestionRefs.set(key,{id:result.id,owned:true})});inspectQuestions(false);save()},
  importQuestions:importSharedQuestions,
  questions:()=>studyQuestions.filter(q=>q.bankId).map(q=>({id:q.bankId,question:q,spoken:{full:questionSpeech(q),answer:correctAnswerSpeech(q)}})),
- voice:()=>({kind:$('aiVoiceMode').value,id:$('aiVoiceMode').value==='studio'?'studio:'+geminiInfo.voiceVersion:'nghi:'+getSelectedNghiVoice()}),
+ voice:()=>{const id=$('raceSavedVoice')?.value||'device';return{kind:id.startsWith('studio:')?'studio':id.startsWith('nghi:')?'nghi':'device',id}},
+ onSavedVoiceChange:()=>{stopStudySpeech()},
  generateClip:async text=>$('aiVoiceMode').value==='studio'?obtainGeminiClipRaw(text):getLocalPiperClip(text),
- storeClip:(text,blob)=>aiClips.set(speechKey(text),blob),
+ storeClip:(text,blob,voiceId)=>aiClips.set((voiceId||$('raceSavedVoice')?.value||'device')+':'+text,blob),
  isNghi:()=>$('aiVoiceMode').value==='nghi',
  checkStudio:checkGeminiVoice,
  isStudioConfigured:()=>geminiInfo.configured===true,
