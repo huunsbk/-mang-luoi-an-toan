@@ -55,12 +55,19 @@ async function addMany(c,classId,names,existingCount=0){
 }
 async function deleteStudent(c,classId,student){
  await user(c);
+ await removeStudentNameVoices(c,student.id);
  err(await c.from('teacher_classroom_students').delete().eq('id',assertId(student.id)).eq('class_id',assertId(classId)));
  if(student.photoPath)await c.storage.from(BUCKET).remove([student.photoPath]);
 }
 async function deleteClass(c,classId){
  await user(c);
  const students=await listStudents(c,classId);
+ // Remove audio files first; FK cascade handles the associated audio metadata.
+ const audio=err(await c.from('teacher_student_name_audio').select('storage_path').eq('class_id',assertId(classId)).limit(500));
+ for(let i=0;i<audio.length;i+=50){
+  const result=await c.storage.from(VOICE_BUCKET).remove(audio.slice(i,i+50).map(r=>r.storage_path));
+  if(result.error)throw Error('Không xóa được WAV tên học sinh: '+result.error.message);
+ }
  err(await c.from('teacher_classrooms').delete().eq('id',assertId(classId)));
  const paths=students.map(s=>s.photoPath).filter(Boolean);
  for(let i=0;i<paths.length;i+=50)await c.storage.from(BUCKET).remove(paths.slice(i,i+50));
