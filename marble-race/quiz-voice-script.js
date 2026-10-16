@@ -20,7 +20,7 @@ const STREAK_MARKS=new Set([3,5,10,15,20]);
 const LINK_TTL=45*60*1000;
 
 /* Kịch bản dựng sẵn — dùng khi chưa đăng nhập hoặc chưa có kịch bản nào. */
-const BUILTIN={id:'builtin',title:'Mặc định (có sẵn)',slots:{
+const BUILTIN=window.TeacherScriptStore?.BUILTIN||{id:'builtin',title:'Mặc định (có sẵn)',slots:{
  intro:['Tất cả các bạn đã về đích. Bây giờ, chúng ta cùng bước vào phần trả lời câu hỏi nhé!'],
  call:['Mời em {tên} trả lời. Câu hỏi số {số}.'],
  think:['Em hãy suy nghĩ thật kỹ trước khi trả lời nhé!'],

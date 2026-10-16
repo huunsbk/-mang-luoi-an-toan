@@ -70,6 +70,18 @@ const TEMPLATES=[
   summary:['Chuyến phiêu lưu hôm nay đã kết thúc. Cảm ơn các nhà thám hiểm!']}}
 ];
 
+/* Kịch bản dựng sẵn — Đua bi dùng khi chưa có kịch bản, và lấy mục còn trống của kịch bản giáo viên từ đây. */
+const BUILTIN={id:'builtin',title:'Mặc định (có sẵn)',slots:{
+ intro:['Tất cả các bạn đã về đích. Bây giờ, chúng ta cùng bước vào phần trả lời câu hỏi nhé!'],
+ call:['Mời em {tên} trả lời. Câu hỏi số {số}.'],
+ think:['Em hãy suy nghĩ thật kỹ trước khi trả lời nhé!'],
+ correct:['Chính xác! {đáp án} Chúc mừng em {tên}! Em làm rất tốt!','Đúng rồi! {đáp án} Chúc mừng em {tên}! Em thật xuất sắc!','Rất chính xác! {đáp án} Chúc mừng em {tên}! Cả lớp cho bạn một tràng pháo tay nào!'],
+ wrong:['Chưa chính xác rồi. {đáp án} Em cần cố gắng hơn nhé!','Rất tiếc, chưa đúng rồi. {đáp án} Không sao cả, lần sau em sẽ làm tốt hơn!','Chưa chính xác rồi. {đáp án} Em hãy ghi nhớ đáp án này nhé!'],
+ fiveLeft:['Còn năm giây!'],timeUp:['Hết giờ! Mời em chọn đáp án.'],
+ streak:['Đã có {chuỗi} bạn liên tiếp trả lời đúng. Cả lớp thật tuyệt vời!'],
+ summary:['Cả lớp đã trả lời đúng {đúng} trên {tổng} câu hỏi. Cảm ơn các em đã tham gia, chúc các em học thật tốt!'],
+ options:{maxNumber:20}}};
+
 const norm=s=>String(s||'').normalize('NFC').replace(/\s+/g,' ').trim();
 const DIGITS=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
 function numberWords(n){
@@ -166,8 +178,10 @@ function tokenStyles(slotKey,tokens){
   return 'praise';
  });
 }
-function scriptPhrases(script){
- const set=new Map(),max=script.slots?.options?.maxNumber||20;
+/** opts.maxNumber ghi đè số lớn nhất cần đọc ({số}, {đúng}, {tổng}) — trang Giọng thống nhất dùng
+ *  số câu hỏi/học sinh thực tế để không thiếu "Câu hỏi số hai mươi mốt" hay "ba mươi tư". */
+function scriptPhrases(script,opts={}){
+ const set=new Map(),max=Math.max(1,Math.min(99,Math.floor(Number(opts.maxNumber||script.slots?.options?.maxNumber||20))));
  const add=(text,meta)=>{const t=norm(text);if(t&&!set.has(t))set.set(t,meta)};
  for(const slot of SLOTS)for(const template of script.slots?.[slot.key]||[]){
   const tokens=tokenize(template),styles=tokenStyles(slot.key,tokens);
@@ -176,6 +190,10 @@ function scriptPhrases(script){
    else if(tok.type==='bound'){
     const values=tok.key==='chuỗi'?STREAK_VALUES:Array.from({length:max},(_,i)=>i+1);
     for(const v of values)add(boundText(tok,v),{slot:slot.key,number:v,style:styles[i]});
+   }else if(tok.type==='number'&&opts.scoreNumbers){
+    // {đúng}/{tổng} cuối giờ: đọc số đứng riêng, từ "không" đến số lớn nhất. Chỉ khi yêu cầu
+    // (giọng Microsoft miễn phí); trang Kịch bản/Google không tạo để tiết kiệm lượt gọi.
+    for(let v=0;v<=max;v++)add(numberWords(v),{slot:slot.key,number:v,style:styles[i]});
    }
   });
  }
@@ -245,6 +263,6 @@ async function deletePhraseAudio(c,row){
  return true;
 }
 
-window.TeacherScriptStore={SLOTS,tokenStyles,TEMPLATES,STREAK_VALUES,createClient:client,user,norm,numberWords,tokenize,boundText,validateTemplate,cleanScript,
+window.TeacherScriptStore={SLOTS,BUILTIN,tokenStyles,TEMPLATES,STREAK_VALUES,createClient:client,user,norm,numberWords,tokenize,boundText,validateTemplate,cleanScript,
  scriptPhrases,hashText,listScripts,saveScript,deleteScript,listPhraseAudio,savePhraseAudio,deletePhraseAudio};
 })();

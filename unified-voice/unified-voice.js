@@ -13,7 +13,7 @@ const message=e=>{const m=String(e?.message||e||'Không rõ lỗi');return /Fail
 function tell(text,bad=false){const n=$('status');n.textContent=text;n.classList.toggle('error',bad)}
 const el=(t,x,c)=>{const n=document.createElement(t);if(x!==undefined)n.textContent=x;if(c)n.className=c;return n};
 
-let c=null,VOICE='edge:namminh-b1',classes=[],plan={names:[],phrases:[],questions:[],totals:{}},reviews=[],running=false,stopping=false,verified='';
+let maxStudents=0,c=null,VOICE='edge:namminh-b1',classes=[],plan={names:[],phrases:[],questions:[],totals:{}},reviews=[],running=false,stopping=false,verified='';
 
 /* ---------- Kết nối ---------- */
 async function edgeInfo(){
@@ -38,20 +38,27 @@ async function sha256Raw(text){
 
 /* ---------- Đếm phần còn thiếu ---------- */
 async function loadNames(){
- const classId=$('classPick').value;if(!classId)return{need:[],total:0};
- const [students,voices]=await Promise.all([CS.listStudents(c,classId),CS.listStudentNameVoices(c,classId)]);
- const active=students.filter(s=>s.active!==false),need=[];
- for(const s of active){
-  const hash=await CS.studentNameHash(s.name);
-  if(!voices.some(v=>v.studentId===s.id&&v.voiceId===VOICE&&v.nameHash===hash))
-   need.push({kind:'name',classId,studentId:s.id,nameHash:hash,text:S.norm(s.name),style:'neutral',label:'Tên · '+s.name});
+ const pick=$('classPick').value;
+ const ids=pick==='*'?classes.map(x=>x.id):pick?[pick]:[];
+ const need=[];let total=0;
+ for(const classId of ids){
+  const cls=classes.find(x=>x.id===classId);
+  const [students,voices]=await Promise.all([CS.listStudents(c,classId),CS.listStudentNameVoices(c,classId)]);
+  const active=students.filter(s=>s.active!==false);total+=active.length;
+  for(const s of active){
+   const hash=await CS.studentNameHash(s.name);
+   if(!voices.some(v=>v.studentId===s.id&&v.voiceId===VOICE&&v.nameHash===hash))
+    need.push({kind:'name',classId,studentId:s.id,nameHash:hash,text:S.norm(s.name),style:'neutral',label:'Tên · '+(ids.length>1&&cls?cls.name+' · ':'')+s.name});
+  }
  }
- return{need,total:active.length};
+ return{need,total,students:total};
 }
-async function loadPhrases(){
- const scripts=(await S.listScripts(c)).filter(s=>s.isActive!==false);
+/** Mọi kịch bản (kể cả đang tắt, để bật lên là có giọng ngay) + kịch bản dựng sẵn
+ *  (Đua bi dùng khi chưa có kịch bản và lấy mục còn trống từ đây). Số đọc đến số câu hỏi/học sinh thực tế. */
+async function loadPhrases(maxNumber){
+ const scripts=[...(await S.listScripts(c)),...(S.BUILTIN?[S.BUILTIN]:[])];
  const all=new Map();
- for(const sc of scripts)for(const p of S.scriptPhrases(sc))if(!all.has(p.text))all.set(p.text,p);
+ for(const sc of scripts)for(const p of S.scriptPhrases(sc,{maxNumber:Math.max(maxNumber,sc.slots?.options?.maxNumber||20),scoreNumbers:true}))if(!all.has(p.text))all.set(p.text,p);
  const have=new Set((await S.listPhraseAudio(c,{voiceId:VOICE,sign:false})).map(r=>S.norm(r.phrase)));
  const need=[...all.values()].filter(p=>!have.has(p.text)).map(p=>({kind:'phrase',text:p.text,style:p.style||'neutral',label:'Câu dẫn · '+p.text}));
  return{need,total:all.size,scripts:scripts.length};
@@ -70,7 +77,7 @@ async function loadQuestions(){
   const text=q.spoken?.[part];if(!text||current.has(q.id+'/'+part))continue;
   need.push({kind:'question',questionId:q.id,part,text,style:'neutral',label:'Câu hỏi · '+q.text.slice(0,60)+' · '+part});
  }
- return{need,total:own.length*PARTS.length,questions:own.length,others:items.length-own.length};
+ return{need,total:own.length*PARTS.length,questions:own.length,others:items.length-own.length,bankSize:items.length};
 }
 function showCover(key,have,total){
  $('c'+key).textContent=total?have+'/'+total:'0';
@@ -80,7 +87,9 @@ async function refresh(){
  if(running)return;
  tell('⏳ Đang kiểm tra những phần còn thiếu với giọng '+VOICE+'...');
  try{
-  const [n,p,q]=await Promise.all([loadNames(),loadPhrases(),loadQuestions()]);
+  const [n,q]=await Promise.all([loadNames(),loadQuestions()]);
+  // Số thứ tự câu hỏi và điểm cuối giờ: đủ tới số câu trong ngân hàng / số học sinh lớn nhất.
+  const p=await loadPhrases(Math.min(99,Math.max(20,q.bankSize,n.students,maxStudents)));
   plan={names:n.need,phrases:p.need,questions:q.need,totals:{n,p,q}};
   showCover('Names',n.total-n.need.length,n.total);
   showCover('Phrases',p.total-p.need.length,p.total);
@@ -88,7 +97,7 @@ async function refresh(){
   const missing=n.need.length+p.need.length+q.need.length;
   $('genStart').disabled=!missing;
   $('genStart').textContent=missing?'⚡ Tạo đủ '+missing+' đoạn còn thiếu':'✅ Đã đủ giọng thống nhất';
-  tell(missing?'Còn thiếu: '+n.need.length+' tên · '+p.need.length+' câu dẫn ('+p.scripts+' kịch bản đang bật) · '+q.need.length+' phần câu hỏi ('+q.questions+' câu của bạn).'+(q.others?' '+q.others+' câu của người khác không thể lưu giọng.':'')
+  tell(missing?'Còn thiếu: '+n.need.length+' tên · '+p.need.length+' câu dẫn ('+(p.scripts-(S.BUILTIN?1:0))+' kịch bản + mặc định) · '+q.need.length+' phần câu hỏi ('+q.questions+' câu của bạn).'+(q.others?' '+q.others+' câu của người khác không thể lưu giọng.':'')
    :'✅ Tên học sinh, câu dẫn và câu hỏi đều đã có giọng '+VOICE+'.');
  }catch(e){tell('⚠ '+message(e),true)}
 }
@@ -197,8 +206,9 @@ async function enter(user){
  try{
   await edgeInfo();
   classes=await CS.listClasses(c);
-  const sel=$('classPick');sel.replaceChildren(...(classes.length?classes.map(x=>new Option(x.name+(x.school_year?' · '+x.school_year:''),x.id)):[new Option('— Chưa có lớp —','')]));
-  try{const last=localStorage.getItem('motionclass:unified-voice-class');if(classes.some(x=>x.id===last))sel.value=last}catch(_){}
+  const sel=$('classPick');sel.replaceChildren(...(classes.length?[new Option('Tất cả lớp ('+classes.length+')','*'),...classes.map(x=>new Option(x.name+(x.school_year?' · '+x.school_year:''),x.id))]:[new Option('— Chưa có lớp —','')]));
+  try{const last=localStorage.getItem('motionclass:unified-voice-class');if(last==='*'||classes.some(x=>x.id===last))sel.value=last}catch(_){}
+  maxStudents=0;for(const x of classes){try{maxStudents=Math.max(maxStudents,(await CS.listStudents(c,x.id)).filter(s=>s.active!==false).length)}catch(_){}}
   await refresh();
  }catch(e){tell('⚠ '+message(e),true)}
 }
