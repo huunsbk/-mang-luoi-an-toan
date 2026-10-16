@@ -29,6 +29,10 @@ await page.addInitScript(() => {
   window.__log = [];
   const blobNames = new Map(), origCreate = URL.createObjectURL.bind(URL);
   URL.createObjectURL = b => { const u = origCreate(b); if (b && b.__qaName) blobNames.set(u, b.__qaName); return u; };
+  // WAV nay được tải trước vào bộ nhớ (Blob): gắn tên tệp cho Blob tải từ /qa-media/ để nhật ký vẫn ghi đúng đoạn.
+  const of = window.fetch.bind(window);
+  window.fetch = async (...args) => { const r = await of(...args); const u = String(args[0]?.url || args[0]); if (!u.includes('/qa-media/') || !r.ok) return r;
+    const b = await r.blob(); b.__qaName = u.split('/').pop(); return { ok: true, status: r.status, blob: async () => b }; };
   HTMLMediaElement.prototype.play = function () {
     let src = this.currentSrc || this.src || '';
     if (blobNames.has(src)) src = blobNames.get(src);

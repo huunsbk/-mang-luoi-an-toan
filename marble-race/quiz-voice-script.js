@@ -91,6 +91,23 @@ function variant(script,key){
  if(i===lastPick.get(tag))i=(i+1)%list.length;lastPick.set(tag,i);return list[i];
 }
 
+/* ---------- Bộ đệm WAV trong bộ nhớ ----------
+ * Tải trước (trong lúc bi đang chạy) và tải song song mọi đoạn của một lượt; phát từ Blob nên bắt đầu ngay,
+ * không phải chờ mạng giữa các đoạn. Giới hạn số mục để không phình bộ nhớ. */
+const MEDIA_MAX=260,media=new Map();
+function fetchMedia(url){
+ if(!url||typeof url!=='string')return Promise.resolve(null);
+ if(media.has(url)){const t=media.get(url);media.delete(url);media.set(url,t);return t}
+ const task=fetch(url).then(async res=>{
+  if(!res.ok)throw Error('WAV chưa tải được');
+  const blob=await res.blob();if(blob.size<45)throw Error('WAV rỗng');return blob;
+ }).catch(e=>{media.delete(url);throw e});
+ media.set(url,task);
+ while(media.size>MEDIA_MAX)media.delete(media.keys().next().value);
+ return task;
+}
+const quiet=p=>{p?.catch?.(()=>{});return p};
+
 /* ---------- Trình phát tuần tự ---------- */
 let run=0,currentAudio=null,currentUrl=null,thinkTimer=null,lastPlan=[];
 const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
@@ -136,16 +153,25 @@ async function resolvePrepared(text){
  return{source:'device',media:null};
 }
 async function resolve(seg){
- if(seg.url)return{...seg,source:seg.urlSource||'saved',media:seg.url};
+ if(seg.url){
+  try{const blob=await Promise.race([fetchMedia(seg.url),wait(5000).then(()=>null)]);if(blob)return{...seg,source:seg.urlSource||'saved',media:blob}}catch(_){}
+  return{...seg,source:seg.urlSource||'saved',media:seg.url};
+ }
  if(seg.loader){try{const blob=await Promise.race([seg.loader(),wait(4000).then(()=>null)]);if(blob)return{...seg,source:seg.urlSource||'saved',media:blob,fromLoader:true}}catch(_){}}
  return{...seg,...await resolvePrepared(seg.text)};
 }
 async function playPlan(plan,token){
- const resolved=await Promise.all(plan.map(resolve));
- if(token!==run)return false;
- lastPlan=resolved.map(({kind,source,text})=>({kind,source,text}));
- reportMissing(resolved);
- for(const seg of resolved){
+ // Bắt đầu tải mọi đoạn cùng lúc, nhưng phát đoạn 1 ngay khi đoạn 1 sẵn sàng (không chờ cả lượt).
+ const tasks=[];
+ const push=seg=>tasks.push(resolve(seg).catch(()=>({...seg,source:'device',media:null})));
+ const lazy=plan.filter(seg=>seg.lazy);
+ for(const seg of plan)if(!seg.lazy)push(seg);
+ // Đoạn "lazy" (câu hỏi): danh sách đoạn đến sau, nối vào cuối rồi tải song song.
+ const lazyReady=Promise.all(lazy.map(l=>l.lazy.then(list=>{for(const seg of list)push(seg)}).catch(()=>{})));
+ lazyReady.then(()=>Promise.all(tasks)).then(resolved=>{if(token===run){lastPlan=resolved.map(({kind,source,text})=>({kind,source,text}));reportMissing(resolved)}});
+ for(let i=0;;i++){
+  if(i>=tasks.length){await lazyReady;if(i>=tasks.length)break}
+  const seg=await tasks[i];
   if(token!==run)return false;
   let result='failed';
   if(seg.media)result=await playSource(seg.media,token);
@@ -157,6 +183,7 @@ async function playPlan(plan,token){
   if(token!==run)return false;
   await wait(seg.gap??120);
  }
+ if(token===run){const resolved=await Promise.all(tasks);lastPlan=resolved.map(({kind,source,text})=>({kind,source,text}))}
  return token===run;
 }
 
@@ -192,7 +219,7 @@ function nameSegment(student){
 }
 async function questionAudio(question){
  if(deviceOnly()||!question?.bankId||!window.MarbleSharedBankAudio?.urls)return new Map();
- try{const map=await Promise.race([window.MarbleSharedBankAudio.urls([question.bankId],{strict:settings.strict}),wait(3500).then(()=>null)]);return map?.get(question.bankId)||new Map()}
+ try{const map=await Promise.race([window.MarbleSharedBankAudio.urls([question.bankId],{strict:settings.strict}),wait(2500).then(()=>null)]);return map?.get(question.bankId)||new Map()}
  catch(_){return new Map()}
 }
 function spokenParts(q){
@@ -246,25 +273,85 @@ function startThinkTimer(token,script){
  },1000);
 }
 
+/* ---------- Tải trước (trong lúc bi đang chạy) ----------
+ * warm({questions,students}): nạp kho kịch bản, link WAV của mọi câu hỏi (1 lượt gọi), WAV tên mọi học sinh,
+ * WAV câu dẫn của kịch bản có thể dùng, và WAV các phần của 2 câu hỏi đầu. Khi đọc câu n thì tải tiếp câu n+1, n+2. */
+let warmState={questions:[],at:0};
+async function pool(items,limit,fn){
+ let i=0;const next=async()=>{while(i<items.length){const it=items[i++];try{await fn(it)}catch(_){}}};
+ await Promise.all(Array.from({length:Math.min(limit,items.length)},next));
+}
+async function warmQuestions(list){
+ const h=hooks();if(!h||deviceOnly())return;
+ const ids=[...new Set(list.map(q=>q?.bankId).filter(Boolean))];if(!ids.length||!window.MarbleSharedBankAudio?.urls)return;
+ let map;try{map=await window.MarbleSharedBankAudio.urls(ids,{strict:settings.strict})}catch(_){return}
+ const urls=[];for(const id of ids)for(const u of(map?.get(id)||new Map()).values())urls.push(u);
+ await pool(urls,4,u=>fetchMedia(u));
+}
+function scriptsInPlay(){
+ const list=activeScripts();
+ if(!list.length||settings.pick==='builtin')return[BUILTIN];
+ if(settings.pick.startsWith('id:'))return[list.find(s=>'id:'+s.id===settings.pick)||list[0]];
+ if(settings.pick==='random-turn')return list;
+ // rotate-race: kịch bản của cuộc đua sắp tới (chưa đổi lượt luân phiên).
+ let i=0;try{i=(Number(localStorage.getItem(ROTATE_KEY))||0)%list.length}catch(_){}
+ return[list[i]];
+}
+async function warm({questions=[],students=[]}={}){
+ const h=hooks(),store=S();if(!h||!settings.enabled)return{ok:false};
+ warmState={questions:questions.slice(),at:Date.now()};
+ if(deviceOnly())return{ok:true,device:true};
+ const voice=h.preferredVoice?.();
+ await Promise.race([loadLibrary(),wait(8000)]).catch(()=>{});
+ const jobs=[];
+ // Tên học sinh (nhỏ, ~50 KB mỗi em).
+ if(voice&&voice!=='device'&&window.MarbleNameAudio?.loadBlob)
+  jobs.push(pool(students,4,st=>window.MarbleNameAudio.loadBlob(st.id,voice,{strict:settings.strict})));
+ // Câu dẫn: bỏ số thứ tự không dùng tới; giữ số của các câu sẽ hỏi và số chuỗi đúng.
+ if(store){
+  const nums=new Set(questions.map(q=>q?.num).filter(Boolean));
+  const urls=new Set();
+  for(const sc of scriptsInPlay())for(const p of store.scriptPhrases(sc)){
+   if(p.number!==undefined&&p.slot!=='streak'&&!nums.has(p.number))continue;
+   const u=phraseUrl(p.text);if(u)urls.add(u);
+  }
+  jobs.push(pool([...urls],4,u=>fetchMedia(u)));
+ }
+ // Link WAV mọi câu hỏi (một lượt gọi) + tải trước 2 câu đầu.
+ jobs.push((async()=>{
+  const ids=[...new Set(questions.map(q=>q?.bankId).filter(Boolean))];
+  if(ids.length&&window.MarbleSharedBankAudio?.urls)try{await window.MarbleSharedBankAudio.urls(ids,{strict:settings.strict})}catch(_){}
+  await warmQuestions(questions.slice(0,2));
+ })());
+ await Promise.all(jobs);
+ return{ok:true,cached:media.size};
+}
+function warmAfter(question){
+ const list=warmState.questions;if(!list.length)return;
+ const i=list.indexOf(question);if(i<0)return;
+ quiet(warmQuestions([list[(i+1)%list.length],list[(i+2)%list.length]]));
+}
+
 /* ---------- Kịch bản công khai ---------- */
 async function call(student,question,{intro=false,force=false}={}){
  const h=hooks();if(!h||!student||!question)return false;
  h.stopGame();const token=++run;h.soundReady();
- await Promise.race([loadLibrary(),wait(2500)]).catch(()=>{});
+ // Kho kịch bản đã nạp sẵn (warm) thì không chờ; quá hạn thì làm mới ở nền. Chỉ lần đầu mới chờ tối đa 1,2 giây.
+ if(library.loadedAt)quiet(loadLibrary());else await Promise.race([loadLibrary(),wait(1200)]).catch(()=>{});
  if(token!==run)return false;
  const script=intro?chooseFor(student.id,{newLesson:true}):(settings.pick==='random-turn'?chooseFor(student.id):scriptFor(student.id));
  renderPicker();
  if(!force&&!h.voiceOn()){startThinkTimer(token,script);return false}
- try{await Promise.race([window.MarbleNameAudio?.refreshIfStale?.(),wait(3000)])}catch(_){}
- if(token!==run)return false;
+ try{quiet(window.MarbleNameAudio?.refreshIfStale?.())}catch(_){}// làm mới ở nền, không chặn lượt gọi
  const plan=[];
  if(intro)plan.push(...templateSegments(variant(script,'intro'),{}));
  if(plan.length)plan[plan.length-1].gap=380;
  plan.push(...templateSegments(variant(script,'call'),{student,number:question.num}));
  if(plan.length)plan[plan.length-1].gap=320;
- plan.push(...await questionSegments(question,script));
- if(token!==run)return false;
- const finished=await playPlan(plan,token);
+ // Lời dẫn + tên phát ngay; phần câu hỏi được lấy song song và nối vào khi sẵn sàng.
+ const qTask=questionSegments(question,script);
+ warmAfter(question);
+ const finished=await playPlan([...plan,{kind:'lazy',lazy:qTask}],token);
  if(finished&&!force)startThinkTimer(token,script);
  return finished;
 }
@@ -273,9 +360,10 @@ async function result(student,question,correct,{force=false}={}){
  h.stopGame();const token=++run;
  if(!force&&!h.voiceOn())return;
  const script=scriptFor(student.id);
- await wait(correct?650:520);// để tiếng chuông đúng/sai vang trước
+ const answerTask=answerSegment(question);// lấy WAV đáp án song song với tiếng chuông
+ await wait(correct?380:320);// để tiếng chuông đúng/sai kịp vang
  if(token!==run)return;
- const answer=await answerSegment(question);
+ const answer=await answerTask;
  const plan=templateSegments(variant(script,correct?'correct':'wrong'),{student,answer});
  if(settings.streak&&correct){
   const answers=h.answers?.()||[];let streak=0;
@@ -368,7 +456,7 @@ window.addEventListener('focus',()=>{if(Date.now()-library.loadedAt>LINK_TTL)loa
 setTimeout(()=>loadLibrary(),300);
 window.MarbleQuizScript={
  enabled:()=>settings.enabled,call,result,summary,stop,prepTexts,reload:()=>loadLibrary(true),
- settings:()=>({...settings}),builtin:BUILTIN,
+ settings:()=>({...settings}),builtin:BUILTIN,warm,_mediaCache:()=>media.size,
  _lastPlan:()=>lastPlan.slice(),_library:()=>({scripts:library.scripts.map(s=>s.title),phrases:library.phrases.size,status:library.status}),
  _current:()=>lessonScript?.title||null,_setLibrary:(scripts,rows)=>{const store=S(),phrases=new Map();for(const r of rows){const k=store.norm(r.phrase);if(!phrases.has(k))phrases.set(k,new Map());phrases.get(k).set(r.voiceId,r.url)}library={scripts,phrases,loadedAt:Date.now()+864e5,status:'test'};renderPicker()}
 };
