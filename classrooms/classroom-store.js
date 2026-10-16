@@ -128,11 +128,11 @@ function orbCanvas(student,img=null){return makeOrb({...student,image:img,orb:nu
 
 const VOICE_BUCKET='teacher-student-voices';
 const hex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-async function studentNameHash(value){
- const normalized=cleanName(value);
- if(!globalThis.crypto?.subtle)throw Error('Trình duyệt cần HTTPS để tạo mã xác minh tên.');
- return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(normalized))));
+async function hashText(value){
+ if(!globalThis.crypto?.subtle)throw Error('Trình duyệt cần HTTPS để tạo mã SHA-256.');
+ return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(value)))));
 }
+async function studentNameHash(value){return hashText(cleanName(value))}
 function validateVoiceId(voice){
  if(!/^(studio:[a-f0-9]{16}|nghi:[a-z0-9]{2,45})$/.test(String(voice)))throw Error('Mã giọng đọc không hợp lệ.');
  return voice;
@@ -188,5 +188,5 @@ async function removeStudentNameVoices(c,studentId){
  for(let i=0;i<rows.length;i+=50)await c.storage.from(VOICE_BUCKET).remove(rows.slice(i,i+50).map(r=>r.storage_path));
 }
 
-window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,studentNameHash,listStudentNameVoices,saveStudentNameVoice,removeStudentNameVoices,orbCanvas,avatarSvg,COLORS,BUCKET,VOICE_BUCKET};
+window.TeacherClassroomStore={createClient:client,user,listClasses,createClass,updateClass,deleteClass,listStudents,saveStudent,addMany,deleteStudent,savePhoto,removePhoto,signPhoto,hashText,studentNameHash,listStudentNameVoices,saveStudentNameVoice,removeStudentNameVoices,orbCanvas,avatarSvg,COLORS,BUCKET,VOICE_BUCKET};
 })();
