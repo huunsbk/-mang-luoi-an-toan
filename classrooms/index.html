@@ -27,6 +27,7 @@ main{padding:22px 16px 65px}.panel{background:var(--paper);border:1px solid var(
 .batch-error{color:#b62332}.batch-done{color:#136c4d}
 @media(max-width:800px){.batch-panel{padding:12px}.batch-layout{grid-template-columns:1fr}.batch-photo-canvas{height:41vh;min-height:250px}.batch-list{max-height:210px}.batch-tools input[type=range]{width:70px}}.sectionNote{padding:10px 12px;background:#eef6ff;border-radius:11px;font-size:13px;color:#47627b}
 @media(max-width:780px){.layout{grid-template-columns:1fr}.panel{padding:15px}.student-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.row button{flex:auto}}
+.name-audio-review{margin:14px 0;padding:13px;border:1px solid #bdd4f3;background:#f6faff;border-radius:13px}.name-audio-review canvas{display:block;margin:9px 0;border-radius:8px}.name-audio-review input[type=range]{padding:0}.name-audio-review audio{width:min(100%,500px)}
 </style>
 </head>
 <body>
@@ -51,6 +52,25 @@ main{padding:22px 16px 65px}.panel{background:var(--paper);border:1px solid var(
 <div class="row"><button id="newStudent" class="primary">＋ Thêm học sinh</button><button id="showBulk">☷ Nhập danh sách</button><button id="batchPhotoOpen" class="primary" type="button">📸 Ảnh chung · Gán nhiều học sinh</button><a id="openRace" href="/marble-race/" style="border:1px solid #d7e3f8;border-radius:10px;padding:10px;font-weight:750;text-decoration:none">🏁 Mở Đua bi</a></div>
 <div id="bulkPanel" hidden><label for="bulkNames">Dán danh sách học sinh — một tên mỗi dòng</label><textarea id="bulkNames" rows="5" placeholder="Nguyễn Văn An&#10;Trần Thị Bình"></textarea><button id="bulkAdd" class="primary" type="button">Nhập học sinh vào lớp</button></div>
 </section>
+<section class="panel" id="studentTtsPanel" hidden>
+ <h2>🔊 Tạo giọng đọc tên học sinh – Gom lô thông minh</h2>
+ <p class="tiny">Tự lấy tên học sinh trong lớp. Giới hạn lô theo ký tự, token <strong>ước tính</strong> và thời lượng. Tiết kiệm lượt gọi Google; không gửi ảnh hoặc mã học sinh. WAV dài được giữ tạm trong trình duyệt để sửa điểm cắt mà không gọi lại AI.</p>
+ <div class="row"><strong id="studentTtsTotal">0 học sinh</strong><span class="tiny">Ngưỡng máy chủ Google hiện tại: tối đa 1.800 ký tự/lượt, WAV trả về 10 MB</span></div>
+ <div class="split">
+  <div><label for="studentTtsPin">Mã giáo viên AI Studio (MARBLE_TTS_PIN)</label><input id="studentTtsPin" type="password" maxlength="256" autocomplete="off" placeholder="Mã giáo viên, không phải Gemini API key"></div>
+  <div><label for="studentTtsMaxChars">Tối đa ký tự/lô</label><input id="studentTtsMaxChars" type="number" min="120" max="1800" step="50" value="1600"></div>
+  <div><label for="studentTtsMaxTokens">Token ước tính tối đa/lô</label><input id="studentTtsMaxTokens" type="number" min="100" max="8192" step="100" value="6000"></div>
+  <div><label for="studentTtsMaxSeconds">Thời lượng dự kiến tối đa (giây)</label><input id="studentTtsMaxSeconds" type="number" min="10" max="70" step="5" value="55"></div>
+ </div>
+ <label style="display:flex;gap:9px;align-items:flex-start"><input id="studentTtsConsent" type="checkbox" style="width:auto;margin-top:2px">
+ Tôi xác nhận được phép gửi họ và tên học sinh trong lớp đến Google AI Studio để tạo giọng đọc. Không gửi ảnh hoặc mã học sinh.</label>
+ <div class="row"><button id="studentTtsStart" type="button" class="primary">⚡ Tạo giọng tên cho lớp (gom tối đa)</button><button id="studentTtsStop" type="button" disabled>■ Dừng sau lô hiện tại</button><button id="studentTtsSave" type="button" disabled>✓ Lưu WAV đã nghe duyệt</button></div>
+ <p id="studentTtsStatus" class="status" role="status" aria-live="polite">Chọn lớp để tạo giọng đọc tên học sinh.</p>
+ <div id="studentTtsPlan" class="batch-hint"></div>
+ <div id="studentTtsReviews"></div>
+ <div id="studentTtsSaved"><p class="tiny">Các WAV đã lưu sẽ hiển thị khi nạp lớp.</p></div>
+ </section>
+ 
 <section class="panel"><div class="row" style="justify-content:space-between"><h2>👥 Học sinh <span class="pill" id="studentsCount">0 em</span></h2></div>
 <div id="studentsGrid" class="student-grid"></div></section>
 </div>
@@ -110,4 +130,7 @@ main{padding:22px 16px 65px}.panel{background:var(--paper);border:1px solid var(
 <script src="/classrooms/classroom-store.js"></script>
 <script src="/classrooms/classroom-manager.js"></script>
 <script src="/classrooms/class-photo-batch.js"></script>
+<script src="/question-bank/batch-audio.js"></script>
+<script src="/classrooms/student-name-tts.js"></script>
+<script>window.studentNameApp=window.StudentNameBatch.create({context:()=>window.ClassroomManagerBridge.context(),client:()=>window.ClassroomManagerBridge.getClient()});</script>
 </body></html>
