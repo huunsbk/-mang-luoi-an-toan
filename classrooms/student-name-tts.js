@@ -99,7 +99,9 @@ function create({context,client}){
   panel.hidden=false;
   const recorded=await getStored(cls);
   if(context().classId!==cls)return;
-  existing=recorded;renderExisting();
+  existing=recorded;
+  if(!voice)try{voice=await checkStudio()}catch(_){voice=existing.find(x=>x.voiceId.startsWith('studio:'))?.voiceId||null}
+  await renderExisting();
   $('studentTtsTotal').textContent=ctx.students.filter(s=>s.active!==false).length+' học sinh';
   buttons();
  }
@@ -235,7 +237,7 @@ function create({context,client}){
    }
    if(!missing.length){tell('✅ Tất cả '+all.length+' học sinh đã có WAV hợp lệ với giọng Google đang chọn.');await renderExisting();return}
    if(!$('studentTtsConsent').checked||!confirm('Gửi '+missing.length+' họ tên học sinh tới Google AI Studio để tạo giọng đọc? Chỉ gửi tên; không gửi ảnh hoặc mã học sinh. Giáo viên phải bảo đảm có cơ sở phù hợp để xử lý dữ liệu này.'))throw Error('Chưa xác nhận quyền gửi tên học sinh lên Google.');
-   const p=pack(missing);
+   const p=pack(missing,{maxChars:Number($('studentTtsMaxChars').value),maxTokens:Number($('studentTtsMaxTokens').value),maxSeconds:Number($('studentTtsMaxSeconds').value)});
    if(p.rejected.length)throw Error('Có '+p.rejected.length+' tên quá dài, cần chỉnh lại.');
    selection={classId:ctx.classId,voice,missing};
    const node=makeEl('p','Lớp '+ctx.className+': '+all.length+' em, '+(all.length-missing.length)+' WAV dùng lại, '+missing.length+' tên cần đọc; '+p.batches.length+' lượt AI dự kiến. Ngưỡng '+p.maxChars+' ký tự, '+p.maxTokens+' token ƯỚC TÍNH, '+p.maxSeconds+' giây/lô.');
