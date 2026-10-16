@@ -27,8 +27,10 @@ function refreshVoiceStatus(){
   ?'Đang chọn giọng thiết bị; WAV tên đã lưu sẽ không phát.'
   :'Tên học sinh: '+matching+' WAV đúng giọng đã chọn, '+(usable-matching)+' WAV bằng giọng đã lưu khác (được sử dụng khi thiếu đúng giọng).';
 }
+let nameSync=null;// để làm mới đường dẫn ký (hết hạn sau 1 giờ)
 async function syncNameAudio(c,classId,students){
  clearNames();const epoch=loadEpoch;
+ nameSync={c,classId,students,at:Date.now()};
  const items=await store.listStudentNameVoices(c,classId);
  const hashes=await Promise.all(students.map(async st=>[st.id,await store.studentNameHash(st.name)]));
  if(epoch!==loadEpoch||game.currentClassId()!==classId)return;
@@ -75,7 +77,12 @@ async function playSavedName(studentId){
 }
 window.MarbleNameAudio={
  has:id=>savedNames.has(id),play:playSavedName,loadBlob:getNameBlob,
- refreshVoiceStatus,clear:clearNames
+ refreshVoiceStatus,clear:clearNames,
+ async refreshIfStale(){
+  if(!nameSync||Date.now()-nameSync.at<45*60*1000)return;
+  const {c,classId,students}=nameSync;
+  if(classId===game.currentClassId())await syncNameAudio(c,classId,students);
+ }
 };
 
 function status(text,error=false){const box=$('raceClassStatus');box.textContent=text;box.style.color=error?'#ffbdc4':'#a4d5f4'}

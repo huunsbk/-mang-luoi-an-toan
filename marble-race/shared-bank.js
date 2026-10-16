@@ -394,4 +394,47 @@ window.MarbleSharedBankUI={loadSavedVoice,exportSelected:downloadPack,load:fetch
   for(const item of items||[])if(item.url)nameVoiceInventory.set(item.voiceId,(nameVoiceInventory.get(item.voiceId)||0)+1);
   refreshSavedVoiceChoices();
  }};
+
+/* Kịch bản lời dẫn: đường dẫn WAV câu hỏi đã lưu, theo từng phần (full, answer, question, option_a..d).
+ * Chỉ nhận WAV còn khớp nội dung hiện tại (server kiểm tra text_hash). Ưu tiên giọng đang chọn,
+ * nếu không có thì dùng giọng khác đã lưu. Không tạo âm thanh mới, không gọi Google. */
+const questionAudioCache=new Map(),QUESTION_AUDIO_TTL=45*60*1000;
+async function questionAudioUrls(ids){
+ const wanted=[...new Set((ids||[]).filter(id=>idpattern.test(String(id))))];
+ const out=new Map();
+ if(!wanted.length||!client)return out;
+ const fresh=id=>{const c=questionAudioCache.get(id);return c&&Date.now()-c.at<QUESTION_AUDIO_TTL};
+ const missing=wanted.filter(id=>!fresh(id));
+ if(missing.length){
+  try{await authCheck()}catch(_){return out}
+  let preferred='';try{preferred=hooks.voice().id||''}catch(_){}
+  for(let i=0;i<missing.length;i+=100){
+   const chunk=missing.slice(i,i+100);
+   const overview=await api('audio.overview',{ids:chunk});
+   const choice=new Map();// id -> part -> voice
+   for(const item of overview.items||[]){
+    if(!item.current)continue;
+    if(!choice.has(item.id))choice.set(item.id,new Map());
+    const parts=choice.get(item.id),prior=parts.get(item.part);
+    if(!prior||item.voiceId===preferred)parts.set(item.part,item.voiceId);
+   }
+   const byVoice=new Map();
+   for(const [id,parts] of choice)for(const voice of parts.values()){
+    if(!byVoice.has(voice))byVoice.set(voice,new Set());byVoice.get(voice).add(id);
+   }
+   const urls=new Map(chunk.map(id=>[id,new Map()]));
+   for(const [voice,set] of byVoice){
+    const listed=await api('audio.list',{ids:[...set],voice_id:voice});
+    for(const item of listed.items||[]){
+     if(choice.get(item.id)?.get(item.part)===voice&&item.url)urls.get(item.id)?.set(item.part,item.url);
+    }
+   }
+   for(const [id,parts] of urls)questionAudioCache.set(id,{at:Date.now(),parts});
+  }
+ }
+ for(const id of wanted)out.set(id,questionAudioCache.get(id)?.parts||new Map());
+ return out;
+}
+window.MarbleSharedBankAudio={urls:questionAudioUrls,clear:()=>questionAudioCache.clear()};
+window.addEventListener('storage',e=>{if(e.key==='motionclass:shared-bank-sync')questionAudioCache.clear()});
 })();

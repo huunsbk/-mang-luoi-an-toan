@@ -744,6 +744,7 @@ function showRankings(final=false){
  $('rankStart').textContent=studyAnswers.size===studyFinishers.length?'✓ ĐÃ HOÀN THÀNH':'🎓 '+(studyAnswers.size?'TIẾP TỤC TRẢ LỜI':'BẮT ĐẦU TRẢ LỜI');
  $('rankStart').disabled=studyAnswers.size===studyFinishers.length;
  $('rankOverlay').hidden=false;
+ if(final&&studyAnswers.size&&scriptOn())window.MarbleQuizScript.summary(right,studyAnswers.size);
 }
 function quizAnswerAudio(correct){soundReady();const v=Number($('sfx').value)/100;
  if(correct){[523,659,784,1046].forEach((f,i)=>tone(f,.23,v*.095,'triangle',i*.095));tone(1046,.65,v*.05,'sine',.4)}
@@ -806,6 +807,7 @@ function stopStudySpeech(){
  if(currentAiAudio){currentAiAudio.pause();currentAiAudio.src='';currentAiAudio=null}
  if(currentAiUrl){URL.revokeObjectURL(currentAiUrl);currentAiUrl=null}
  if(hasStudySpeech())try{speechSynthesis.cancel()}catch(e){console.warn('Không thể dừng giọng đọc:',e)}
+ window.MarbleQuizScript?.stop?.();
 }
 function splitSpeechSentence(value){
  const t=String(value||'').replace(/\s+/g,' ').trim();if(!t)return [];
@@ -1256,6 +1258,7 @@ async function speakStudySequence(parts,force=false){
   speakLocalSequence(parts,force);
  }
 }
+function scriptOn(){return Boolean(window.MarbleQuizScript?.enabled?.())}
 async function speakStudent(name,question,studentId=null){
  if(!$('voiceName').checked)return;
  // The saved student WAV contains ONLY the name, not a synthesized invitation.
@@ -1291,7 +1294,8 @@ function renderQuiz(){
  $('quizFeedback').className='quiz-feedback';$('quizFeedback').firstElementChild.textContent='🎯';
  $('quizFeedbackText').textContent='Giáo viên nhấn vào phương án học sinh vừa trả lời để chấm điểm.';
  $('quizNext').disabled=true;$('quizNext').textContent=studyIndex===studyFinishers.length-1?'🏆 XEM TỔNG KẾT':'HỌC SINH TIẾP THEO ➜';
- $('quizCelebration').replaceChildren();renderQuizScoreboard();void speakStudent(s.name,question,s.id);
+ $('quizCelebration').replaceChildren();renderQuizScoreboard();
+ if(scriptOn())window.MarbleQuizScript.call(s,question,{intro:studyAnswers.size===0});else void speakStudent(s.name,question,s.id);
 }
 function renderQuizScoreboard(){
  const root=$('quizScoreList');root.replaceChildren();let correct=0;
@@ -1314,7 +1318,9 @@ function respondQuiz(key){
  $('quizFeedbackText').textContent=correct?'CHÍNH XÁC! EM RẤT XUẤT SẮC! 🌟':`CHƯA CHÍNH XÁC! ĐÁP ÁN ĐÚNG LÀ ${question.correct}. CỐ GẮNG LÊN NHÉ!`;
  $('quizNext').disabled=false;
  quizAnswerAudio(correct);if(correct)quizConfetti();
- playPreparedSpeech([correct?goodSpeech:badSpeech,correctAnswerSpeech(question)]);
+ const answered=students.find(st=>st.id===f.id);
+ if(scriptOn()&&answered)window.MarbleQuizScript.result(answered,question,correct);
+ else playPreparedSpeech([correct?goodSpeech:badSpeech,correctAnswerSpeech(question)]);
  renderQuizScoreboard();renderRoster();save();
 }
 function exportStudyResults(){
@@ -1381,7 +1387,7 @@ function setupLearningUI(){
  $('quizReadAloud').onclick=()=>{
   const f=studyFinishers[studyIndex],student=students.find(s=>s.id===f?.id);
   const question=studyQuestions[studyIndex%studyQuestions.length];
-  if(student&&question)void speakStudent(student.name,question,student.id);
+  if(student&&question){if(scriptOn())window.MarbleQuizScript.call(student,question);else void speakStudent(student.name,question,student.id)}
  };
  $('quizNext').onclick=()=>{if(!studyAnswers.has(studyFinishers[studyIndex]?.id))return;const following=studyFinishers.findIndex((f,i)=>i>studyIndex&&!studyAnswers.has(f.id));
  if(following>=0){studyIndex=following;renderQuiz()}else{const any=studyFinishers.findIndex(f=>!studyAnswers.has(f.id));if(any>=0){studyIndex=any;renderQuiz()}else{showRankings(true)}}};
@@ -1407,6 +1413,22 @@ window.MarbleClassroomHooks={
  isRunning:()=>Boolean(game?.running),
  currentCount:()=>students.length,
  preferredVoice:()=> $('raceSavedVoice')?.value||'device'
+};
+window.MarbleQuizHooks={
+ voiceOn:()=>$('voiceName').checked,
+ mode:()=>'saved',
+ preferredVoice:()=>window.MarbleClassroomHooks.preferredVoice(),
+ cachedClip:text=>text?aiClips.get(speechKey(text))||null:null,
+ nghiReady:()=>false,
+ nghiClip:async()=>null,
+ deviceVoice:()=>chosenTeacherVoice(),
+ volume:()=>clamp(Number($('winVol').value)/100,.1,1),
+ stopGame:()=>stopStudySpeech(),
+ soundReady:()=>soundReady(),
+ questionText:q=>questionSpeech(q),
+ answerText:q=>correctAnswerSpeech(q),
+ answers:()=>[...studyAnswers.values()],
+ sample:()=>{inspectQuestions(false);const student=students[0],question=studyQuestions[0];return student&&question?{student,question}:null}
 };
 window.MarbleSharedBankHooks={
  currentQuestions:()=>{if(!inspectQuestions(false))throw Error('Hãy sửa các lỗi câu hỏi trước khi lưu.');return studyQuestions.map(q=>({num:q.num,text:q.text,options:answerKeys.map(k=>q.options[k]),correct:q.correct,id:q.bankId||null}))},
@@ -1434,4 +1456,6 @@ load();requestAnimationFrame(tick);
 <script src="/marble-race/shared-bank.js"></script>
 <script src="/classrooms/classroom-store.js"></script>
 <script src="/marble-race/classroom-picker.js"></script>
+<script src="/scripts/script-store.js"></script>
+<script src="/marble-race/quiz-voice-script.js"></script>
 </body></html>
