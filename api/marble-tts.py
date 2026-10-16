@@ -75,12 +75,25 @@ class handler(BaseHTTPRequestHandler):
             return _json(self, 503, {"error": "Gemini AI chưa được cấu hình trên Vercel. Đang sử dụng giọng thiết bị."})
         origin = self.headers.get("Origin", "")
         host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host", "")
-        if origin and origin not in ("https://" + host, "http://localhost:3000", "http://127.0.0.1:3000"):
-            return _json(self, 403, {"error": "Nguồn yêu cầu không hợp lệ."})
+        # Vercel may forward the deployment host while the browser Origin is the
+        # public production alias. Allow that exact owned alias, never wildcards.
+        allowed_origins = {
+            "https://" + host, "https://giaovien-psi.vercel.app",
+            "http://localhost:3000", "http://127.0.0.1:3000"
+        }
+        if origin and origin not in allowed_origins:
+            return _json(self, 403, {
+                "code": "INVALID_ORIGIN",
+                "error": "Nguồn yêu cầu không hợp lệ. Hãy mở đúng trang giaovien-psi.vercel.app."
+            })
         request_pin = self.headers.get("X-Marble-Teacher-Code", "")
         expected_pin = os.environ.get("MARBLE_TTS_PIN", "")
         if not hmac.compare_digest(request_pin.encode("utf-8"), expected_pin.encode("utf-8")):
-            return _json(self, 403, {"error": "Mã truy cập giọng AI không đúng."})
+            return _json(self, 403, {
+                "code": "INVALID_TEACHER_CODE",
+                "error": "Mã giáo viên AI Studio không khớp MARBLE_TTS_PIN trên Vercel. "
+                         "Không nhập khóa Gemini API. Kiểm tra đúng ký tự, kể cả khoảng trắng."
+            })
         ip = (self.headers.get("X-Forwarded-For", "").split(",")[0].strip() or "unknown")[:90]
         now = time.monotonic()
         _hits[ip] = [t for t in _hits[ip] if now - t < _WINDOW]
