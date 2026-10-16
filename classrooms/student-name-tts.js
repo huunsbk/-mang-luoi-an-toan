@@ -183,7 +183,7 @@ function create({context,client}){
   }
  }
  async function generate(group,code){
-  const cacheKey='class-names:'+await store.studentNameHash(voice+'|'+group.entries.map(e=>e.id+':'+e.name).join('|'));
+  const cacheKey='class-names:'+await store.hashText(voice+'|'+group.entries.map(e=>e.id+':'+e.name).join('|'));
   let blob=await cached(cacheKey);
   if(!blob){
    if((Number(get(quotaKey()))||0)>=DAY_CAP)throw Error('Đã đạt 10 lượt Google ghi nhận trên trình duyệt. Hạn mức Google thực tế có thể khác.');
