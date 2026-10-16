@@ -104,6 +104,13 @@ class handler(BaseHTTPRequestHandler):
             return _json(self, 413, {"error": "Yêu cầu giọng đọc quá dài."})
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            # Preflight validates the existing teacher PIN and same-origin policy
+            # without calling Google or spending RPM/RPD. No PIN is returned.
+            verify_only = payload.get("verifyOnly", False)
+            if not isinstance(verify_only, bool):
+                return _json(self, 422, {"error": "Kiểm tra mã giáo viên không hợp lệ."})
+            if verify_only:
+                return _json(self, 200, {"ok": True, "verified": True})
             text = payload.get("text", "")
             batch = payload.get("batch", False)
             classroom20 = payload.get("classroom20", False)
