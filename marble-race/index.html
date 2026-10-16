@@ -671,6 +671,13 @@ function physics(g,dt){
  for(const b of g.balls){
   if(b.finished)continue;
   const previousY=b.y;
+  if(b.freezeUntil>g.time&&g.duration-g.time>.65){
+   // A real temporary hold: zero displacement, zero gravity and no collision
+   // until the cartoon explosion stun ends. The global deadline still wins.
+   b.vx=0;b.vy=0;
+   lead=Math.max(lead,b.y);
+   continue;
+  }
   if(g.time<g.duration){
    // Global bounce reduction applies to walls, obstacles, moving rotors and collisions between balls.
    let factor=clamp(.8+(raceRatio-ahead)*1.65,.7,2.65);
@@ -730,7 +737,7 @@ function physics(g,dt){
   advanceSurpriseBlasters(g,activeDt);
   // Ball-to-ball collisions: restitution fades to zero with the same global factor.
   for(let i=0;i<g.balls.length;i++)for(let j=i+1;j<g.balls.length;j++){
-   const a=g.balls[i],b=g.balls[j];if(a.finished||b.finished||a.y>=maxY||b.y>=maxY)continue;
+   const a=g.balls[i],b=g.balls[j];if(a.finished||b.finished||a.y>=maxY||b.y>=maxY||a.freezeUntil>g.time||b.freezeUntil>g.time)continue;
    const dx=b.x-a.x,dy=b.y-a.y,min=a.r+b.r;
    if(Math.abs(dx)>min||Math.abs(dy)>min)continue;
    const dist=Math.hypot(dx,dy);if(dist>=min||dist<.0001)continue;
@@ -748,6 +755,8 @@ function physics(g,dt){
   if(isLearning())learningFinishedBall(g,f.ball);
   else if(!g.winner){g.winner=f.ball;finishRace(g,f.ball)}
  }
+ for(const boom of g.explosions)boom.life-=activeDt;
+ g.explosions=g.explosions.filter(boom=>boom.life>0);
  for(const p of g.particles){p.x+=p.vx*activeDt;p.y+=p.vy*activeDt;p.vy+=160*activeDt;p.life-=activeDt}
  g.particles=g.particles.filter(p=>p.life>0);g.lead=lead;
  const leaders=g.balls.filter(b=>!b.finished);
@@ -1675,7 +1684,7 @@ window.MarbleSharedBankHooks={
  prepare:()=>prepareSpeechClips(false)
 };
 // Test harness: inspect pure UI state and advance the game without waiting real time.
-window.__marbleTest={getState:()=>({studentCount:students.length,zoneCount:game?.course?.n,courseHeight:game?.course?.height,elapsed:game?.time,running:!!game?.running,done:!!game?.done,selected:chosenIds.size,winner:game?.winner?.s?.name,ballCount:game?.balls?.length,modalOpen:!$('winOverlay').hidden,mode:studyMode,finishCount:game?.finishers?.length,leadChanges:game?.leadChanges,surprises:game?.surprises,lastSurprise:game?.lastSurprise,hazardKinds:game?.course?.hazards.map(h=>h.kind),projectiles:game?.projectiles?.length,studyFinishers:studyFinishers.map(f=>f.id),answered:studyAnswers.size,correct:[...studyAnswers.values()].filter(a=>a.correct).length,rankingOpen:!$('rankOverlay').hidden,quizOpen:!$('quizOverlay').hidden,questionCount:studyQuestions.length,bounceFactor:game?.bounceFactor,unfinished:game?.balls?.filter(b=>!b.finished).length,timerText:$('timer').textContent}),advance:(seconds)=>{if(!game?.running)return;const n=Math.floor(seconds*60);for(let i=0;i<n&&game.running;i++)physics(game,1/60);draw()},preview:()=>{resetPreview();draw()}};
+window.__marbleTest={getState:()=>({studentCount:students.length,zoneCount:game?.course?.n,courseHeight:game?.course?.height,elapsed:game?.time,running:!!game?.running,done:!!game?.done,selected:chosenIds.size,winner:game?.winner?.s?.name,ballCount:game?.balls?.length,modalOpen:!$('winOverlay').hidden,mode:studyMode,finishCount:game?.finishers?.length,blasterHits:game?.blasterHits,shotsFired:game?.shotsFired,stunHits:game?.stunHits,activeExplosions:game?.explosions?.length,frozen:game?.balls?.filter(b=>b.freezeUntil>game.time).length,leadChanges:game?.leadChanges,surprises:game?.surprises,lastSurprise:game?.lastSurprise,hazardKinds:game?.course?.hazards.map(h=>h.kind),projectiles:game?.projectiles?.length,studyFinishers:studyFinishers.map(f=>f.id),answered:studyAnswers.size,correct:[...studyAnswers.values()].filter(a=>a.correct).length,rankingOpen:!$('rankOverlay').hidden,quizOpen:!$('quizOverlay').hidden,questionCount:studyQuestions.length,bounceFactor:game?.bounceFactor,unfinished:game?.balls?.filter(b=>!b.finished).length,timerText:$('timer').textContent}),advance:(seconds)=>{if(!game?.running)return;const n=Math.floor(seconds*60);for(let i=0;i<n&&game.running;i++)physics(game,1/60);draw()},preview:()=>{resetPreview();draw()}};
 load();requestAnimationFrame(tick);
 })();
 </script>
