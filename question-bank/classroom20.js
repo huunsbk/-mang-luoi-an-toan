@@ -79,6 +79,7 @@ function create(ctx){
   $('classroom20Stop').disabled=!working;
   $('classroom20Save').disabled=working||!pending.some(x=>x.approved&&x.listened);
   $('classroom20Fallback').disabled=working||!rows.length;
+  $('classroom20ResetQuota').disabled=working;
  }
  function reset(){
   urls.forEach(u=>URL.revokeObjectURL(u));urls=[];
@@ -365,6 +366,13 @@ function create(ctx){
   }catch(e){status('⚠ NGHI lưu được '+count+' WAV trước khi dừng: '+err(e),true)}
   finally{working=false;buttons()}
  }
+ $('classroom20ResetQuota').onclick=()=>{
+  if(working)return;
+  if(!confirm('Chỉ xóa bộ đếm lượt của trình duyệt, KHÔNG đặt lại hạn mức Google AI Studio. Chỉ tiếp tục nếu các lượt cũ bị HTTP 403 trước khi đến Google và bạn đã đối chiếu số lượt thực tế trên trang Rate limits của Google. Đồng ý đặt lại bộ đếm cục bộ?'))return;
+  putItem(quotaKey(),0);
+  putItem('motionclass:classroom20:last-request',0);
+  status('Đã đặt lại bộ đếm cục bộ. Hạn mức thực tế trên Google không thay đổi. Hãy chọn câu và nhấn tạo để lập kế hoạch mới.');
+ };
  $('classroom20Start').onclick=()=>void start();
  $('classroom20Stop').onclick=()=>{stop=true;status('Sẽ dừng sau khi hoàn thành thao tác hiện tại.')};
  $('classroom20Save').onclick=()=>void save();
