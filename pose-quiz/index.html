@@ -1310,15 +1310,11 @@
                 setVoiceGameVolume(0);
             }, []);
 
-            const skipNarration = useCallback((reason = 'manual') => {
+            const skipNarration = useCallback(() => {
                 voiceRunIdRef.current += 1;
                 voiceRuntimeRef.current?.stop?.();
                 setVoiceBusy(false);
-                if (reason === 'watchdog') {
-                    setVoiceStatus('⚠ Lời đọc bị gián đoạn — hệ thống đã mở khóa trả lời.');
-                } else {
-                    setVoiceStatus('⏭ Đã bỏ qua lời đọc — học sinh có thể trả lời.');
-                }
+                setVoiceStatus('⏭ Đã bỏ qua lời đọc — học sinh có thể trả lời.');
             }, []);
 
             const getPoseVisual = (poseId) => {
@@ -1603,21 +1599,10 @@
             }, [feedbackGameVolume]);
 
             useEffect(() => {
+                // Chỉ thay âm lượng của giọng đang phát. Tuyệt đối không đổi runId,
+                // không stop narration và không thay voiceBusy khi kéo thanh âm lượng.
                 voiceRuntimeRef.current?.setVolume?.(voiceGameVolume);
             }, [voiceGameVolume]);
-
-            useEffect(() => {
-                if (!voiceBusy || isPaused || !currentQuestion) return;
-                const answerChars = (currentQuestion.answers || []).reduce((sum, answer) => sum + String(answer?.text || '').length, 0);
-                const textChars = String(currentQuestion.text || '').length + answerChars;
-                const timeoutMs = Math.max(15000, Math.min(60000, 12000 + textChars * 120));
-                const runId = voiceRunIdRef.current;
-                const timer = setTimeout(() => {
-                    if (voiceRunIdRef.current !== runId || isPausedRef.current) return;
-                    skipNarration('watchdog');
-                }, timeoutMs);
-                return () => clearTimeout(timer);
-            }, [voiceBusy, isPaused, qIndex, currentQuestion?.id, skipNarration]);
 
             useEffect(() => () => {
                 voiceRuntimeRef.current?.stop?.();
@@ -2056,7 +2041,7 @@
                             {voiceBusy && (
                                 <button
                                     type="button"
-                                    onClick={() => skipNarration('manual')}
+                                    onClick={skipNarration}
                                     className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-300 text-[10px] font-black"
                                     title="Dừng lời đọc hiện tại và cho phép học sinh trả lời ngay"
                                 >
