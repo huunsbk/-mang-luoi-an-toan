@@ -1232,6 +1232,7 @@
             const [checkTimer, setCheckTimer] = useState(settings.checkInterval || 20);
             const [detectedPose, setDetectedPose] = useState('NONE');
             const [feedback, setFeedback] = useState(null);
+            const [answerScanStarted, setAnswerScanStarted] = useState(false);
             const [correctCount, setCorrectCount] = useState(0);
             const [bgmGameVolume, setBgmGameVolume] = useState(() => Math.min(1, Math.max(0, Number(settings.audio?.bgmVolume ?? 0.3))));
             const [feedbackGameVolume, setFeedbackGameVolume] = useState(() => Math.min(1, Math.max(0, Number(settings.audio?.feedbackVolume ?? 0.9))));
@@ -1277,6 +1278,12 @@
             const lastVideoTimestampRef = useRef(0);
 
             const currentQuestion = settings.questions[qIndex];
+            const answerPoseIds = useMemo(() => new Set(
+                (currentQuestion?.answers || [])
+                    .slice(0, settings.numAnswers)
+                    .map(answer => answer?.pose)
+                    .filter(pose => pose && pose !== 'NONE')
+            ), [currentQuestion, settings.numAnswers]);
             const recognitionBlocked = selectionMode || targetStatus !== 'LOCKED' || !targetQuality.ok || !!poseError || voiceBusy;
             const lessonBackground = mediaSrc(settings.theme?.background);
             const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
@@ -1359,6 +1366,7 @@
                     setQIndex(result.next_index);
                     setTimeLeft(settings.timeLimit);
                     setCheckTimer(settings.checkInterval || 20);
+                    setAnswerScanStarted(false);
                     setFeedback(null);
                     checkInFlightRef.current = false;
                 }
@@ -1375,7 +1383,7 @@
             }, [applyCheckedResult]);
 
             const checkAnswer = useCallback(async () => {
-                if (feedback || !gameReady || !gameToken || checkInFlightRef.current || recognitionBlocked) return;
+                if (feedback || !gameReady || !gameToken || checkInFlightRef.current || recognitionBlocked || !answerScanStarted) return;
                 checkInFlightRef.current = true;
                 try {
                     const result = await backendRequest('game.check', {
@@ -1425,11 +1433,11 @@
                     checkInFlightRef.current = false;
                     alert('Backend không chấm được câu hỏi: ' + err.message);
                 }
-            }, [feedback, gameReady, gameToken, detectedPose, feedbackGameVolume, settings, scheduleCheckedResult, recognitionBlocked, currentQuestion]);
+            }, [feedback, gameReady, gameToken, detectedPose, feedbackGameVolume, settings, scheduleCheckedResult, recognitionBlocked, currentQuestion, answerScanStarted]);
 
             // Hàm xử lý khi nhấn nút Kiểm tra
             const handleManualCheck = () => {
-                if (isPaused || feedback || !gameReady || checkInFlightRef.current || recognitionBlocked) return;
+                if (isPaused || feedback || !gameReady || checkInFlightRef.current || recognitionBlocked || !answerScanStarted) return;
                 setTimeLeft(0);
             };
 
@@ -1902,8 +1910,40 @@
                 };
             }, [gameReady, resetTargetSelection]);
 
+            // Giai đoạn đọc câu hỏi: chưa đếm thời gian/chưa quét.
+            // Chỉ khi học sinh thực hiện một trong các tư thế đáp án thì mới bắt đầu quét.
             useEffect(() => {
-                if (!gameReady || gameError || feedback || isPaused || voiceBusy || recognitionBlocked) return;
+                if (
+                    answerScanStarted ||
+                    !gameReady ||
+                    gameError ||
+                    feedback ||
+                    isPaused ||
+                    voiceBusy ||
+                    recognitionBlocked
+                ) return;
+
+                if (answerPoseIds.has(detectedPose)) {
+                    setAnswerScanStarted(true);
+                    setCheckTimer(settings.checkInterval || 20);
+                    setTimeLeft(settings.timeLimit);
+                }
+            }, [
+                answerScanStarted,
+                gameReady,
+                gameError,
+                feedback,
+                isPaused,
+                voiceBusy,
+                recognitionBlocked,
+                detectedPose,
+                answerPoseIds,
+                settings.checkInterval,
+                settings.timeLimit
+            ]);
+
+            useEffect(() => {
+                if (!answerScanStarted || !gameReady || gameError || feedback || isPaused || voiceBusy || recognitionBlocked) return;
                 if (timeLeft <= 0) { checkAnswer(); return; }
                 const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
                 const intervalTimer = setInterval(() => {
@@ -1913,7 +1953,7 @@
                     });
                 }, 1000);
                 return () => { clearInterval(timer); clearInterval(intervalTimer); };
-            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused, voiceBusy, recognitionBlocked]);
+            }, [answerScanStarted, timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused, voiceBusy, recognitionBlocked]);
 
             if (!gameReady) {
                 return (
@@ -2004,11 +2044,11 @@
                         <div className="pose-game-header-right flex items-center gap-6">
                             <div className="pose-game-timer flex flex-col items-center border-r border-white/20 pr-6">
                                 <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Quét sau</span>
-                                <span className="pose-game-timer-value text-3xl font-black text-yellow-400 leading-none">{checkTimer}s</span>
+                                <span className="pose-game-timer-value text-3xl font-black text-yellow-400 leading-none">{answerScanStarted ? `${checkTimer}s` : 'CHỜ'}</span>
                             </div>
                             <div className="flex flex-col items-center">
                                 <span className="pose-game-timer-label text-[10px] font-bold opacity-70 uppercase tracking-widest text-indigo-200">Thời gian còn</span>
-                                <span className={`pose-game-timer-value text-4xl font-black leading-none ${timeLeft < 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</span>
+                                <span className={`pose-game-timer-value text-4xl font-black leading-none ${answerScanStarted && timeLeft < 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{answerScanStarted ? `${timeLeft}s` : '—'}</span>
                             </div>
                             <button
                                 onClick={backToEditor}
@@ -2024,13 +2064,18 @@
                             >
                                 {isPaused ? '▶ TIẾP TỤC' : '⏸ TẠM DỪNG'}
                             </button>
-                            <button onClick={handleManualCheck} disabled={isPaused || recognitionBlocked} className="pose-game-check bg-yellow-400 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
+                            <button onClick={handleManualCheck} disabled={isPaused || recognitionBlocked || !answerScanStarted} className="pose-game-check bg-yellow-400 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed text-indigo-900 px-10 py-2 rounded-2xl font-black text-2xl shadow-xl hover:bg-yellow-300 transform active:scale-95 transition-all">KIỂM TRA</button>
                         </div>
                     </div>
 
                     {isPaused && (
                         <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[80] bg-amber-400 text-amber-950 px-5 py-2 rounded-full font-black shadow-xl border-2 border-white">
                             ⏸ ĐANG TẠM DỪNG — giáo viên có thể sửa, giải thích đáp án
+                        </div>
+                    )}
+                    {!isPaused && !voiceBusy && !answerScanStarted && !feedback && !selectionMode && targetStatus === 'LOCKED' && (
+                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[74] max-w-[78vw] bg-sky-600/95 text-white px-4 py-2 rounded-2xl font-black shadow-xl border border-white/20 text-center">
+                            📖 ĐỌC CÂU HỎI — thực hiện một tư thế đáp án để bắt đầu quét
                         </div>
                     )}
                     {settings.voiceNarration?.enabled && !isPaused && (voiceBusy || calledStudent || voiceStatus) && (
