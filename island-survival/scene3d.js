@@ -1,11 +1,12 @@
 /* True WebGL 3D island world. Uses Three.js ES module, degrades to 2D canvas when unavailable. */
 (function(global){
 'use strict';
+// Shared limit function: WebGL and 2D controllers both need it.
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 function createFallback(canvas,teams,options={}){
  global.__ISLAND_3D_MODE='canvas-fallback';
  const ctx=canvas.getContext('2d');let raf=0,active=0,event=null,running=true;
  const view={yaw:0,pitch:.62,distance:50,targetX:0,targetZ:0,focusIndex:-1,mode:'canvas-fallback'};
- const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
  const pointers=new Map();let distanceMoved=0;
  function update(){global.__ISLAND_VIEW={...view};options.onViewChange?.({...view})}
  function rotate(dx=0,dy=0){view.yaw-=Number(dx||0)*.008;view.pitch=clamp(view.pitch+Number(dy||0)*.006,.27,1.34);update()}
