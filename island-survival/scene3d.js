@@ -1,9 +1,24 @@
 /* True WebGL 3D island world. Uses Three.js ES module, degrades to 2D canvas when unavailable. */
 (function(global){
 'use strict';
-function createFallback(canvas,teams){
+function createFallback(canvas,teams,options={}){
  global.__ISLAND_3D_MODE='canvas-fallback';
  const ctx=canvas.getContext('2d');let raf=0,active=0,event=null,running=true;
+ const view={yaw:0,pitch:.62,distance:50,targetX:0,targetZ:0,focusIndex:-1,mode:'canvas-fallback'};
+ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+ const pointers=new Map();let distanceMoved=0;
+ function update(){global.__ISLAND_VIEW={...view};options.onViewChange?.({...view})}
+ function rotate(dx=0,dy=0){view.yaw-=Number(dx||0)*.008;view.pitch=clamp(view.pitch+Number(dy||0)*.006,.27,1.34);update()}
+ function zoom(factor=1){if(factor>0&&Number.isFinite(factor)){view.distance=clamp(view.distance*factor,13,95);update()}}
+ function resetView(){Object.assign(view,{yaw:0,pitch:.62,distance:50,targetX:0,targetZ:0,focusIndex:-1});update()}
+ function focusIsland(index){const i=Number(index);if(!Number.isInteger(i)||i<0||i>=teams.length)return false;view.focusIndex=i;view.distance=25;update();return true}
+ function layout(w,h,i){
+  const a=(i/teams.length)*Math.PI*2-Math.PI/2+view.yaw;
+  const z=50/view.distance;
+  const center=view.focusIndex<0?null:((view.focusIndex/teams.length)*Math.PI*2-Math.PI/2+view.yaw);
+  const ox=center?Math.cos(center)*w*.31*z:0,oy=center?Math.sin(center)*h*.26*z:0;
+  return{x:w/2+Math.cos(a)*w*.31*z-ox,y:h*.49+Math.sin(a)*h*.26*z-oy,r:clamp(Math.min(w/teams.length*.64,85)*z,14,150)};
+ }
  function draw(){
   if(!running)return;
   const w=canvas.clientWidth||800,h=canvas.clientHeight||420,d=global.devicePixelRatio||1;
@@ -12,9 +27,7 @@ function createFallback(canvas,teams){
   const bg=ctx.createLinearGradient(0,0,0,h);bg.addColorStop(0,'#80ddf2');bg.addColorStop(1,'#087b9a');
   ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);const t=performance.now()*.0008;
   for(let i=0;i<teams.length;i++){
-   const a=(i/teams.length)*Math.PI*2-Math.PI/2;
-   const x=w/2+Math.cos(a)*w*.31,y=h*.49+Math.sin(a)*h*.26;
-   const r=Math.min(w/teams.length*.64,85);ctx.save();ctx.translate(x,y+Math.sin(t+i)*2);
+   const {x,y,r}=layout(w,h,i);ctx.save();ctx.translate(x,y+Math.sin(t+i)*2);
    ctx.fillStyle='#1a5b49';ctx.beginPath();ctx.ellipse(0,15,r*.9,r*.45,0,0,Math.PI*2);ctx.fill();
    ctx.fillStyle='#e6cf8a';ctx.beginPath();ctx.ellipse(0,2,r,r*.5,0,0,Math.PI*2);ctx.fill();
    ctx.fillStyle='#55ba68';ctx.beginPath();ctx.ellipse(0,-3,r*.88,r*.42,0,0,Math.PI*2);ctx.fill();
@@ -25,18 +38,37 @@ function createFallback(canvas,teams){
   }
   if(event){ctx.fillStyle='rgba(5,22,53,.18)';ctx.fillRect(0,0,w,h);ctx.font='72px sans-serif';ctx.textAlign='center';ctx.fillText(event==='wave'?'🌊':event==='storm'?'🌪️':'💥',w/2,h*.3)}
   raf=requestAnimationFrame(draw);
- }draw();
- return{setActive(i){active=i},setEvent(kind){event=kind||null},setTeams(){},setHealth(){},destroy(){running=false;cancelAnimationFrame(raf)},fallback:true};
+ }
+ function down(e){if(e.pointerType==='mouse'&&e.button!==0)return;canvas.focus({preventScroll:true});try{canvas.setPointerCapture(e.pointerId)}catch(_){}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY});if(pointers.size===1)distanceMoved=0}
+ function move(e){const p=pointers.get(e.pointerId);if(!p)return;const before=new Map(pointers);pointers.set(e.pointerId,{...p,x:e.clientX,y:e.clientY});
+  if(pointers.size===1){const dx=e.clientX-p.x,dy=e.clientY-p.y;distanceMoved+=Math.hypot(dx,dy);rotate(dx,dy)}
+  else if(pointers.size===2){const ids=[...pointers.keys()],a=before.get(ids[0]),b=before.get(ids[1]),c=pointers.get(ids[0]),d=pointers.get(ids[1]);const was=Math.hypot(a.x-b.x,a.y-b.y),now=Math.hypot(c.x-d.x,c.y-d.y);if(was>15&&now>15)zoom(was/now);distanceMoved+=Math.abs(now-was)}
+  e.preventDefault();
+ }
+ function up(e){const p=pointers.get(e.pointerId),single=pointers.size===1;pointers.delete(e.pointerId);if(p&&single&&distanceMoved<7&&Math.hypot(e.clientX-p.sx,e.clientY-p.sy)<7){const rect=canvas.getBoundingClientRect();let best=-1,dist=Infinity;for(let i=0;i<teams.length;i++){const point=layout(rect.width,rect.height,i),dd=Math.hypot(e.clientX-rect.left-point.x,e.clientY-rect.top-point.y);if(dd<point.r&&dd<dist){dist=dd;best=i}}if(best>=0)focusIsland(best)}
+  try{if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId)}catch(_){}
+ }
+ function cancel(e){pointers.delete(e.pointerId)}
+ function wheel(e){e.preventDefault();zoom(Math.exp(Math.sign(e.deltaY)*.13))}
+ function dbl(e){e.preventDefault();resetView()}
+ canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);canvas.addEventListener('wheel',wheel,{passive:false});canvas.addEventListener('dblclick',dbl);
+ canvas.style.touchAction='none';update();draw();
+ return{
+  setActive(i){active=i},setEvent(kind){event=kind||null},setTeams(){},setHealth(){},
+  rotate,zoom,resetView,focusIsland,getView(){return {...view}},
+  destroy(){running=false;cancelAnimationFrame(raf);pointers.clear();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);canvas.removeEventListener('wheel',wheel);canvas.removeEventListener('dblclick',dbl)},
+  fallback:true
+ };
 }
 async function create(canvas,teams,options={}){
  let T;
- try{T=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js')}catch(err){console.warn('Three.js unavailable, showing canvas fallback',err);return createFallback(canvas,teams)}
- if(!canvas||!global.WebGLRenderingContext)return createFallback(canvas,teams);
+ try{T=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js')}catch(err){console.warn('Three.js unavailable, showing canvas fallback',err);return createFallback(canvas,teams,options)}
+ if(!canvas||!global.WebGLRenderingContext)return createFallback(canvas,teams,options);
  const {Scene,Color,FogExp2,PerspectiveCamera,WebGLRenderer,AmbientLight,HemisphereLight,DirectionalLight,
   Mesh,MeshStandardMaterial,MeshBasicMaterial,SphereGeometry,CylinderGeometry,ConeGeometry,BoxGeometry,
   TorusGeometry,Group,Vector3,BufferGeometry,Float32BufferAttribute,Points,PointsMaterial,DoubleSide,MathUtils}=T;
  let renderer;
- try{renderer=new WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'})}catch(err){return createFallback(canvas,teams)}
+ try{renderer=new WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'})}catch(err){return createFallback(canvas,teams,options)}
  global.__ISLAND_3D_MODE='webgl-three';
  const scene=new Scene();scene.background=new Color('#98e8f8');scene.fog=new FogExp2('#98e8f8',.011);
  const camera=new PerspectiveCamera(43,1,.1,250);camera.position.set(0,31,48);camera.lookAt(0,0,0);
