@@ -137,7 +137,58 @@ async function create(canvas,teams,options={}){
   for(let j=0;j<4;j++)mesh(new SphereGeometry(1.6+j*.15,9,6),cloudMat,c,j*1.1-1.9,Math.sin(j)*.35,0);
   clouds.push(c);
  }
- const rainy=[];let active=0,event=null,hasRendered=false,running=true,pointer=null,rot=0;
+ // Quần đảo sử dụng camera quỹ đạo độc lập với đội đang thi đấu.
+ // Giáo viên luôn có quyền quan sát bất kỳ đảo nào mà không thay đổi lượt chơi.
+ const DEFAULT_YAW=-Math.PI*.49,DEFAULT_PITCH=.62,DEFAULT_DISTANCE=count>4?59:50;
+ const view={yaw:DEFAULT_YAW,pitch:DEFAULT_PITCH,distance:DEFAULT_DISTANCE,targetX:0,targetZ:0,focusIndex:-1,mode:'webgl-three'};
+ const controlsChanged=()=>{
+   global.__ISLAND_VIEW={...view};
+   options.onViewChange?.({...view});
+ };
+ const activePointers=new Map();
+ let dragDistance=0,active=0,event=null,hasRendered=false,running=true;
+ const raycaster=new T.Raycaster(),screenPoint=new T.Vector2();
+ function rotate(dx=0,dy=0){
+   view.yaw-=Number(dx||0)*.009;
+   view.pitch=clamp(view.pitch+Number(dy||0)*.008,.27,1.34);
+   controlsChanged();
+ }
+ function zoom(factor=1){
+   const k=Number(factor);
+   if(!Number.isFinite(k)||k<=0)return;
+   view.distance=clamp(view.distance*k,13,95);
+   controlsChanged();
+ }
+ function resetView(){
+   Object.assign(view,{yaw:DEFAULT_YAW,pitch:DEFAULT_PITCH,distance:DEFAULT_DISTANCE,targetX:0,targetZ:0,focusIndex:-1});
+   controlsChanged();
+ }
+ function focusIsland(index){
+   const i=Number(index);
+   if(!Number.isInteger(i)||i<0||i>=positions.length)return false;
+   const [x,z]=positions[i];
+   view.targetX=x;
+   view.targetZ=z;
+   view.distance=25;
+   view.focusIndex=i;
+   controlsChanged();
+   return true;
+ }
+ function selectAt(clientX,clientY){
+   const rect=canvas.getBoundingClientRect();
+   if(rect.width<=0||rect.height<=0)return false;
+   screenPoint.set((clientX-rect.left)/rect.width*2-1,-((clientY-rect.top)/rect.height*2-1));
+   raycaster.setFromCamera(screenPoint,camera);
+   for(const hit of raycaster.intersectObjects(islands.map(item=>item.g),true)){
+     let parent=hit.object;
+     while(parent){
+       const index=islands.findIndex(item=>item.g===parent);
+       if(index>=0)return focusIsland(index);
+       parent=parent.parent;
+     }
+   }
+   return false;
+ }
  let animateId=0;
  const rayBg=new Color('#98e8f8');
  let lastW=0,lastH=0,t0=performance.now();
@@ -148,7 +199,7 @@ async function create(canvas,teams,options={}){
  function render(now){
   if(!running)return;
   resize();
-  const time=(now-t0)*.001;let focus=active/count*Math.PI*2;
+  const time=(now-t0)*.001;
   for(let i=0;i<islands.length;i++){
    const it=islands[i];it.figure.rotation.y=Math.sin(time*1.5+i)*.1;
    it.figure.position.y=1.1+Math.sin(time*2+i*.7)*.12;
@@ -168,16 +219,63 @@ async function create(canvas,teams,options={}){
    scene.background.copy(rayBg);scene.fog.color.copy(rayBg);sun.intensity=2.7;
    bridges.forEach(b=>{b.group.rotation.z=0});islands.forEach(isle=>{isle.g.rotation.z=0});
   }
-  const angle=-Math.PI*.49+rot,cameraR=count>4?57:49;
-  camera.position.set(Math.sin(angle)*cameraR,cameraR*.68,Math.cos(angle)*cameraR);
-  camera.lookAt(0,0,0);
+  // Orbit camera: 360° ngang, góc nghiêng có giới hạn, zoom giữ tâm quan sát.
+  const h=view.distance*Math.sin(view.pitch);
+  const planar=view.distance*Math.cos(view.pitch);
+  camera.position.set(view.targetX+Math.sin(view.yaw)*planar,h,view.targetZ+Math.cos(view.yaw)*planar);
+  camera.lookAt(view.targetX,0,view.targetZ);
   renderer.render(scene,camera);hasRendered=true;
   animateId=requestAnimationFrame(render);
  }
- const down=e=>{pointer={x:e.clientX,rot};};const move=e=>{if(pointer)rot=clamp(pointer.rot+(e.clientX-pointer.x)*.004,-.45,.45)};
- const up=()=>pointer=null;
- canvas.addEventListener('pointerdown',down);global.addEventListener('pointermove',move);global.addEventListener('pointerup',up);
- canvas.style.touchAction='pan-y';
+ function pointerDown(e){
+   if(e.pointerType==='mouse'&&e.button!==0)return;
+   canvas.focus({preventScroll:true});
+   try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+   activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
+   if(activePointers.size===1)dragDistance=0;
+ }
+ function pointerMove(e){
+   const current=activePointers.get(e.pointerId);
+   if(!current)return;
+   const old=new Map(activePointers);
+   activePointers.set(e.pointerId,{...current,x:e.clientX,y:e.clientY});
+   if(activePointers.size===1){
+     const dx=e.clientX-current.x,dy=e.clientY-current.y;
+     dragDistance+=Math.hypot(dx,dy);
+     rotate(dx,dy);
+   }else if(activePointers.size===2){
+     const keys=[...activePointers.keys()];
+     const a=old.get(keys[0]),b=old.get(keys[1]);
+     const c=activePointers.get(keys[0]),d=activePointers.get(keys[1]);
+     const before=Math.hypot(a.x-b.x,a.y-b.y),after=Math.hypot(c.x-d.x,c.y-d.y);
+     if(before>15&&after>15)zoom(before/after);
+     dragDistance+=Math.abs(after-before);
+   }
+   e.preventDefault();
+ }
+ function pointerUp(e){
+   const start=activePointers.get(e.pointerId);
+   const wasSingle=activePointers.size===1;
+   activePointers.delete(e.pointerId);
+   if(wasSingle&&start&&dragDistance<7&&Math.hypot(e.clientX-start.startX,e.clientY-start.startY)<7)selectAt(e.clientX,e.clientY);
+   try{if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId)}catch(_){}
+ }
+ function pointerCancel(e){activePointers.delete(e.pointerId)}
+ function wheel(e){
+   e.preventDefault();
+   zoom(Math.exp(Math.sign(e.deltaY)*.13));
+ }
+ function doubleClick(e){e.preventDefault();resetView()}
+ canvas.addEventListener('pointerdown',pointerDown);
+ canvas.addEventListener('pointermove',pointerMove);
+ canvas.addEventListener('pointerup',pointerUp);
+ canvas.addEventListener('pointercancel',pointerCancel);
+ canvas.addEventListener('lostpointercapture',pointerCancel);
+ canvas.addEventListener('wheel',wheel,{passive:false});
+ canvas.addEventListener('dblclick',doubleClick);
+ canvas.style.touchAction='none';
+ canvas.style.cursor='grab';
+ controlsChanged();
  const resizeObserver=typeof ResizeObserver!=='undefined'?new ResizeObserver(resize):null;
  if(resizeObserver)resizeObserver.observe(canvas);
  animateId=requestAnimationFrame(render);
@@ -186,10 +284,22 @@ async function create(canvas,teams,options={}){
   setEvent(kind){event=kind||null;},
   setHealth(teamIndex,value){const item=islands[teamIndex];if(item){item.grass.material.color.set(value<=0?'#ef725f':teams[teamIndex].color)}},
   setTeams(){},
+  rotate,zoom,resetView,focusIsland,
+  getView(){return {...view}},
   get ready(){return hasRendered},
-  destroy(){running=false;cancelAnimationFrame(animateId);resizeObserver?.disconnect();canvas.removeEventListener('pointerdown',down);global.removeEventListener('pointermove',move);global.removeEventListener('pointerup',up);
+  destroy(){
+   running=false;cancelAnimationFrame(animateId);resizeObserver?.disconnect();
+   canvas.removeEventListener('pointerdown',pointerDown);
+   canvas.removeEventListener('pointermove',pointerMove);
+   canvas.removeEventListener('pointerup',pointerUp);
+   canvas.removeEventListener('pointercancel',pointerCancel);
+   canvas.removeEventListener('lostpointercapture',pointerCancel);
+   canvas.removeEventListener('wheel',wheel);
+   canvas.removeEventListener('dblclick',doubleClick);
+   activePointers.clear();
    scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose()}});
-   renderer.dispose();}
+   renderer.dispose();
+  }
  };
 }
 global.IslandScene3D={create};
