@@ -78,10 +78,26 @@ jobs:
             console.log('ISLAND_3D_CAMERA_CONTROLS_PASS');
             await page.getByRole('button',{name:/Bắt đầu khám phá/}).click();
             await page.getByText('ĐỌC CÂU HỎI').first().waitFor({timeout:20000});
+            const cockpit=await page.evaluate(()=>{
+              const stage=document.querySelector('section.stage'),world=document.querySelector('#world-wrap'),popup=document.querySelector('#question-panel');
+              const toolbar=document.querySelector('.stage .toolbar'),scores=document.querySelector('#team-board');
+              const screen={width:innerWidth,height:innerHeight,scrollY:scrollY};
+              const rect=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom,right:r.right}};
+              return{isFull:document.body.classList.contains('island-gameplay'),screen,stage:rect(stage),
+                world:rect(world),popup:rect(popup),toolbar:rect(toolbar),scores:rect(scores),
+                popupInsideWorld:world.contains(popup),toolbarInsideWorld:world.contains(toolbar),scoresInsideWorld:world.contains(scores)};
+            });
+            if(!cockpit.isFull||!cockpit.popupInsideWorld||!cockpit.toolbarInsideWorld||!cockpit.scoresInsideWorld)
+              throw Error('Quiz, construction and controls must live within one island stage '+JSON.stringify(cockpit));
+            if(Math.abs(cockpit.stage.height-cockpit.screen.height)>3||cockpit.popup.bottom>cockpit.screen.height||cockpit.popup.y<0||cockpit.toolbar.bottom>cockpit.screen.height)
+              throw Error('Game cockpit extends beyond viewport '+JSON.stringify(cockpit));
+            console.log('ISLAND_SINGLE_SCREEN_COCKPIT_PASS');
             await page.getByRole('button',{name:/Đã đọc xong/}).click();
             await page.getByRole('button',{name:/Bắt đầu trả lời/}).click();
             await page.locator('[data-answer="A"]').click();
             await page.getByRole('button',{name:/Chọn công trình/}).click();
+            if(!(await page.evaluate(()=>document.querySelector('#world-wrap').contains(document.querySelector('[data-build="shield"]')))))
+              throw Error('Construction actions are outside 3D island cockpit.');
             await page.locator('[data-build="save"]').click();
             await page.getByRole('button',{name:/Tiếp lượt/}).click();
             await page.getByRole('button',{name:/Tạm dừng/}).click();
@@ -117,6 +133,26 @@ jobs:
             if(pinched.distance>=dist0)throw Error('Pinch zoom does not enlarge islands.');
             await mobile.getByRole('button',{name:'Về toàn cảnh'}).tap();
             if((await mobileView()).focusIndex!==-1)throw Error('Mobile camera reset failed.');
+            await mobile.getByRole('button',{name:/Bắt đầu khám phá/}).tap();
+            await mobile.getByRole('button',{name:/Đã đọc xong/}).waitFor({timeout:30000});
+            const mobileCockpit=await mobile.evaluate(()=>{
+              const popup=document.getElementById('question-panel').getBoundingClientRect(),
+               stage=document.querySelector('.stage').getBoundingClientRect(),
+               toolbar=document.querySelector('.stage .toolbar').getBoundingClientRect();
+              return{vh:innerHeight,vw:innerWidth,stageHeight:stage.height,popupTop:popup.top,popupBottom:popup.bottom,
+                toolbarBottom:toolbar.bottom,windowScroll:scrollY,htmlOverflow:getComputedStyle(document.body).overflow};
+            });
+            if(mobileCockpit.htmlOverflow!=='hidden'||mobileCockpit.popupTop<0||
+               mobileCockpit.popupBottom>mobileCockpit.vh+1||mobileCockpit.toolbarBottom>mobileCockpit.vh+1||
+               Math.abs(mobileCockpit.stageHeight-mobileCockpit.vh)>3)
+              throw Error('Mobile question popup is not visible on the island '+JSON.stringify(mobileCockpit));
+            await mobile.getByRole('button',{name:/Đã đọc xong/}).tap();
+            await mobile.getByRole('button',{name:/Bắt đầu trả lời/}).tap();
+            await mobile.locator('[data-answer="A"]').tap({timeout:10000});
+            await mobile.getByRole('button',{name:/Chọn công trình/}).tap();
+            if(!(await mobile.evaluate(()=>document.querySelector('#world-wrap').contains(document.querySelector('[data-build="save"]')))))
+              throw Error('Mobile construction choices are not inside the island cockpit.');
+            console.log('ISLAND_MOBILE_QUIZ_POPUP_PASS');
             if(mobileErrors.length)throw Error('Mobile JS errors: '+mobileErrors.join(' / '));
             console.log('ISLAND_MOBILE_TOUCH_PINCH_PASS');
             await touchContext.close();
