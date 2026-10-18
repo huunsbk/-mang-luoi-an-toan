@@ -54,6 +54,7 @@
   .pose-game-timer-label{font-size:7px!important;letter-spacing:.06em!important}
   .pose-game-timer-value{font-size:20px!important}
   .pose-game-check,.pose-game-pause,.pose-game-editor-back{padding:7px 9px!important;font-size:12px!important;border-radius:12px!important;white-space:nowrap}
+  .pose-skip-voice{top:98px!important;right:6px!important;font-size:9px!important;padding:6px 9px!important}
   .pose-game-main{flex-direction:column!important}
   .pose-game-content{width:100%!important;height:64%!important;min-height:0!important;border-right:0!important;border-bottom:2px solid #e2e8f0!important;padding:5px!important}
   .pose-question-panel{padding:6px!important;border-radius:18px!important;min-height:0!important}
@@ -2033,22 +2034,20 @@
                         </div>
                     )}
                     {settings.voiceNarration?.enabled && !isPaused && (voiceBusy || calledStudent || voiceStatus) && (
-                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[75] max-w-[86vw] bg-slate-950/90 text-white px-4 py-2 rounded-2xl font-black shadow-xl border border-white/20 text-center flex items-center gap-3">
-                            <div className="min-w-0">
-                                <div>{voiceBusy ? '🔊 ĐANG ĐỌC LỜI DẪN / CÂU HỎI...' : calledStudent ? '🎯 MỜI: ' + calledStudent.name : voiceStatus}</div>
-                                {!voiceBusy && calledStudent && voiceStatus && <div className="text-[9px] font-bold text-slate-300 mt-0.5">{voiceStatus}</div>}
-                            </div>
-                            {voiceBusy && (
-                                <button
-                                    type="button"
-                                    onClick={skipNarration}
-                                    className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-300 text-[10px] font-black"
-                                    title="Dừng lời đọc hiện tại và cho phép học sinh trả lời ngay"
-                                >
-                                    ⏭ BỎ QUA LỜI ĐỌC
-                                </button>
-                            )}
+                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[75] max-w-[70vw] bg-slate-950/90 text-white px-4 py-2 rounded-2xl font-black shadow-xl border border-white/20 text-center">
+                            <div>{voiceBusy ? '🔊 ĐANG ĐỌC LỜI DẪN / CÂU HỎI...' : calledStudent ? '🎯 MỜI: ' + calledStudent.name : voiceStatus}</div>
+                            {!voiceBusy && calledStudent && voiceStatus && <div className="text-[9px] font-bold text-slate-300 mt-0.5">{voiceStatus}</div>}
                         </div>
+                    )}
+                    {settings.voiceNarration?.enabled && !isPaused && voiceBusy && (
+                        <button
+                            type="button"
+                            onClick={skipNarration}
+                            className="pose-skip-voice absolute top-[70px] right-3 z-[82] px-3 py-1.5 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-300 text-[10px] font-black shadow-xl border border-amber-200"
+                            title="Dừng lời đọc hiện tại và cho phép học sinh trả lời ngay"
+                        >
+                            ⏭ BỎ QUA LỜI ĐỌC
+                        </button>
                     )}
                     <div className="pose-game-main flex-1 flex overflow-hidden">
                         <div
