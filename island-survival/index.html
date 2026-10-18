@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đảo sinh tồn 3D · MotionClass LAB</title><meta name="theme-color" content="#081b35">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap');
+:root{--bg:#071829;--panel:#0e2744;--panel2:#123351;--border:#2b506a;--gold:#ffcf68;--blue:#45bbf4;--green:#68e4a4;--ink:#f4fbff;--muted:#a8bfce}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:'Be Vietnam Pro',system-ui,sans-serif}body{background:radial-gradient(ellipse at 25% -10%,#124d6b 0%,transparent 55%),linear-gradient(145deg,#08182c,#102a46)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}a{color:var(--blue)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f8d677;outline-offset:2px}
+.shell{width:min(1600px,calc(100% - 36px));margin:0 auto}
+header.top{display:flex;align-items:center;gap:18px;justify-content:space-between;padding:18px 0;flex-wrap:wrap}
+.logo{display:flex;gap:12px;align-items:center}.logo-mark{width:48px;height:48px;border-radius:17px;background:linear-gradient(145deg,#68cb8a,#086b99);display:grid;place-items:center;font-size:29px;box-shadow:0 6px 24px #0004}
+.logo h1{margin:0;font-size:24px;font-weight:900;letter-spacing:-.8px}.logo small{display:block;color:#adc5d7;font-size:11px;font-weight:700;letter-spacing:.14em;margin-top:3px}
+.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eyebrow{color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}
+.pill{border:1px solid #38617b;border-radius:999px;padding:8px 13px;color:#bfe2e8;background:#122f49;font-size:12px;font-weight:800}
+.lab{color:#fff0be;background:#7c4b14;border-color:#b98840}
+.btn{border:1px solid #3d637e;border-radius:13px;padding:11px 17px;background:#173652;color:#eaf7ff;font-weight:800;transition:background .18s,transform .18s;white-space:nowrap}
+.btn:hover:not(:disabled){background:#23577a;transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(145deg,#ffe09b,#ffc25f);border-color:#ffdfa1;color:#453009;box-shadow:0 8px 20px #12151e50}
+.btn.primary:hover{background:#ffe6aa}.btn.good{background:#159568;border-color:#4bdcad;color:white}
+.btn.danger{background:#8f354c;border-color:#dc6681}.btn.small{padding:7px 11px;font-size:12px}.btn.ghost{background:transparent}
+.page-title{display:flex;align-items:end;justify-content:space-between;gap:14px;margin:14px 0 20px;flex-wrap:wrap}
+.page-title h2{font-size:clamp(23px,3vw,36px);margin:5px 0;font-weight:900}.page-title p{color:#b3cad8;font-size:13px;line-height:1.8;margin:0}
+.card{border:1px solid var(--border);background:linear-gradient(160deg,#123655ed,#0d243dde);border-radius:22px;box-shadow:0 16px 40px #020b174a}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 365px;gap:18px;align-items:start}
+.stage{min-height:520px;overflow:hidden;position:relative}
+.stage-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;background:#0b2743eb;border-bottom:1px solid #2d617c;position:relative;z-index:5;flex-wrap:wrap}
+.stage-top strong{color:#fff0ba}.stage-top .label{color:#a9cde0;font-size:12px;font-weight:800}
+#world-wrap{position:relative;height:min(58vw,530px);min-height:300px;background:linear-gradient(165deg,#8de1e7,#0f87ad);overflow:hidden}
+#world{display:block;width:100%;height:100%}
+.stage-stamp{position:absolute;top:18px;left:18px;background:#09263abf;border:1px solid #ffffff33;backdrop-filter:blur(9px);padding:11px 17px;border-radius:14px;pointer-events:none}
+.stage-stamp .big{display:block;color:#fff;font-weight:900;font-size:18px}.stage-stamp small{font-size:11px;color:#b7e8ff;font-weight:800}
+.stage-hint{position:absolute;bottom:14px;left:14px;background:#052d408e;padding:9px 13px;border:1px solid #d5f7ff4a;border-radius:12px;font-size:11px;color:white;font-weight:700;pointer-events:none}
+.right-column{display:grid;gap:16px}.panel{padding:19px}.panel h3{font-size:16px;margin:0 0 15px;font-weight:900}.subtext{font-size:12px;color:var(--muted);line-height:1.7}.field{display:grid;gap:7px;margin-bottom:14px}.field label{font-size:11px;text-transform:uppercase;color:#a8cfdf;font-weight:900;letter-spacing:.07em}
+.field input,.field select,.field textarea{border:1px solid #42617a;border-radius:11px;background:#071d32;color:#effcff;padding:11px 12px;width:100%;min-width:0}
+.field select option{color:white;background:#102a46}.field input::placeholder{color:#819cab}.field textarea{resize:vertical;min-height:84px}
+.field.row2{grid-template-columns:1fr 1fr;gap:10px}.field .sl{display:grid;gap:7px}
+.field .sl label{font-size:10px}.field input[type=range]{padding:0;accent-color:#ffd26e}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:15px}
+.tab{padding:9px 10px;border-radius:11px;background:#0a2036;color:#b8d0db;border:1px solid #274d65;font-size:11px;font-weight:900;white-space:nowrap}
+.tab.active{background:#285b74;color:#fff;border-color:#6fd6e1}
+.checkrow{display:flex;align-items:center;gap:11px;font-size:12px;padding:9px 2px;font-weight:700}.checkrow input{width:17px;height:17px;accent-color:#65e9ac}
+.status{padding:10px 12px;border-radius:11px;border:1px solid #3c677d;background:#0c2f44;color:#c6e5ea;font-size:11px;line-height:1.6;margin-bottom:13px}
+.status.good{border-color:#2b9476;color:#8befba;background:#0b403c}.status.warn{border-color:#b78734;color:#ffdfa1;background:#4a331f}
+.kicker{font-size:11px;color:#bed5e2;font-weight:900;text-transform:uppercase;letter-spacing:.09em}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.spread{justify-content:space-between}
+#team-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0}
+.team-card{background:#10314b;border:1px solid #37627b;border-radius:15px;padding:12px;transition:transform .18s,border-color .18s}
+.team-card.active{border:2px solid #f8d36b;background:#1c4460;box-shadow:0 0 25px #f4d36a22;transform:translateY(-2px)}
+.team-name{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900}.team-dot{width:13px;height:13px;border-radius:50%;flex:none}
+.team-score{font-size:19px;color:#fff4c0;font-weight:900;margin-top:7px}
+.team-meta{font-size:10px;color:#a7cbd6;margin-top:5px;font-weight:700;display:flex;gap:8px;flex-wrap:wrap}
+#question-panel{padding:22px;border-top:1px solid #315574;background:#edf6fb;color:#152e47;min-height:180px}
+.question-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:#2b6483;margin-bottom:11px}
+.question-text{font-size:clamp(20px,2.5vw,34px);line-height:1.5;font-weight:900;margin:0 0 15px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.answer{min-height:62px;display:flex;align-items:center;gap:12px;text-align:left;border:2px solid #d0e1eb;border-radius:15px;background:#fff;padding:14px;color:#173451;font-weight:800;font-size:clamp(13px,1.4vw,19px);white-space:normal;transition:transform .15s,border-color .15s}
+.answer:hover:not(:disabled){border-color:#42a2bf;transform:scale(1.008)}
+.answer .letter{background:#d8eef9;border-radius:10px;padding:9px 12px;font-size:17px}
+.answer.correct{background:#e0f9e9;border-color:#1bb77f;color:#155b46}
+.answer.wrong{background:#ffe9e7;border-color:#ea6c68;color:#803e3a}
+.answer:disabled{opacity:1;cursor:default}
+.phase-line{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.countdown{font-size:28px;color:#154168;font-weight:900}
+#banner{position:absolute;z-index:8;left:50%;top:21px;transform:translateX(-50%);background:#092942ee;border:1px solid #ffde8c;padding:12px 17px;border-radius:13px;max-width:70%;text-align:center;font-size:13px;font-weight:900;box-shadow:0 12px 25px #052639a6;pointer-events:none}
+#banner[hidden]{display:none}
+#posebox{position:absolute;z-index:9;bottom:16px;right:18px;background:#122b44eb;border:2px solid #eed69b;border-radius:14px;padding:7px;width:220px;box-shadow:0 10px 30px #001b2a99}
+#posebox[hidden]{display:none}#posevideo{width:100%;display:block;transform:scaleX(-1);border-radius:8px}#posecanvas{position:absolute;inset:7px;width:calc(100% - 14px);height:calc(100% - 45px);transform:scaleX(-1)}
+#pose-status{font-size:10px;color:#e6f3fa;line-height:1.5;padding:5px}
+.board-list{display:grid;gap:8px}.board-item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0b243b;padding:11px;border-radius:11px;border:1px solid #23445c;font-size:12px}
+.result-number{font-weight:900;color:#fff3ab}
+.formmsg{margin-top:9px;color:#ffe0a8;font-size:11px;line-height:1.6}
+#bank-list{max-height:330px;overflow:auto;display:grid;gap:8px}.bank-item{display:flex;gap:9px;align-items:flex-start;border:1px solid #345a73;padding:9px;border-radius:11px;background:#0a2339;font-size:11px}.bank-item input{flex:none;width:16px;height:16px}
+.bank-item strong{display:block;font-weight:800;line-height:1.5}.bank-item small{color:#9ec5d5}
+#students-preview{max-height:155px;overflow:auto;display:flex;flex-wrap:wrap;gap:6px}
+.student-tag{font-size:10px;padding:5px 8px;background:#224c65;border-radius:999px;color:#e5f7ff}
+.overlay{position:fixed;inset:0;background:#031226db;display:grid;place-items:center;z-index:50;padding:20px;backdrop-filter:blur(8px)}
+.overlay[hidden]{display:none}.modal{max-width:680px;width:100%;padding:30px;border:1px solid #5d8393;border-radius:23px;background:#12324c;box-shadow:0 30px 70px #000a}
+.modal h2{margin:0 0 10px;font-size:26px}.modal p{color:#bfdae5;line-height:1.8;font-size:13px}.modal .btn{margin-top:6px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 15px;background:#0c2c48;border-top:1px solid #2c5268;flex-wrap:wrap}
+.toolbar .btn{padding:10px 13px;font-size:12px}
+.footer{padding:24px 0 42px;color:#9cb8c7;font-size:11px;line-height:1.8}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:13px 18px;background:#183d53;color:white;border:1px solid #8ac9cd;border-radius:14px;z-index:70;font-size:12px;box-shadow:0 15px 40px #0008;max-width:90%;display:none}
+@media(max-width:1120px){.layout{grid-template-columns:minmax(0,1fr)}.right-column{grid-template-columns:1fr 1fr}.stage{min-height:0}#world-wrap{height:440px}#team-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:710px){.shell{width:calc(100% - 18px)}header.top{padding:10px 0}.logo h1{font-size:18px}.logo-mark{width:39px;height:39px}.header-actions{gap:5px}.header-actions .btn{font-size:10px;padding:8px 9px}.pill{font-size:10px}#world-wrap{height:290px;min-height:290px}.stage-top{padding:9px}.stage-stamp{top:9px;left:9px;padding:7px}.stage-stamp .big{font-size:13px}#team-board{gap:7px}.team-card{padding:9px}.right-column{grid-template-columns:1fr}.field.row2{grid-template-columns:1fr 1fr}.answers{grid-template-columns:1fr}#question-panel{padding:15px}.question-text{font-size:20px}.answer{min-height:51px;padding:8px;font-size:14px}.toolbar{gap:5px}.toolbar .btn{font-size:10px;padding:8px}.modal{padding:20px}.page-title h2{font-size:23px}#posebox{width:175px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style></head>
+<body>
+<div class="shell">
+<header class="top">
+ <div class="logo"><div class="logo-mark">🏝️</div><div><h1>ĐẢO SINH TỒN <span style="color:#ffcf68">3D</span></h1><small>MOTIONCLASS · THỬ THÁCH TRI THỨC</small></div></div>
+ <div class="header-actions"><span class="pill lab">BẢN THỬ NGHIỆM · NHÁNH PHỤ</span><span id="auth-status" class="pill">Chế độ trải nghiệm</span><a href="/" class="btn ghost small" title="Quay về Cổng giáo viên">⌂ Cổng giáo viên</a></div>
+</header>
+<div class="page-title"><div><div class="eyebrow">Thử thách · Hợp tác · Sinh tồn</div><h2>Chinh phục hòn đảo cuối cùng</h2><p>Trả lời để nhận tài nguyên, xây dựng lá chắn và vượt qua những biến cố 3D bất ngờ. Điểm kiến thức quyết định 70% kết quả.</p></div><button id="open-login" class="btn">🔐 Kết nối MotionClass</button></div>
+<main class="layout">
+ <section class="card stage" aria-label="Sân khấu trò chơi">
+  <div class="stage-top">
+   <span class="label" id="stage-phase">🏝️ SẢNH CHUẨN BỊ</span><span class="label" id="stage-turn">4 đội · 2 vòng</span><strong id="stage-time">SẴN SÀNG</strong>
+  </div>
+  <div id="world-wrap"><canvas id="world" aria-label="Sân khấu quần đảo 3D"></canvas><div class="stage-stamp"><span class="big" id="island-active">ĐẢO SAO VÀNG</span><small id="island-sub">Mọi đội đều xuất phát bình đẳng</small></div><div id="banner" hidden></div><div class="stage-hint">🖱️ Kéo trên biển để quan sát quần đảo 3D</div>
+   <div id="posebox" hidden><video id="posevideo" muted playsinline autoplay></video><canvas id="posecanvas"></canvas><div id="pose-status">🎥 Camera chưa khởi tạo</div></div>
+  </div>
+  <div id="team-board"></div>
+  <div id="question-panel">
+   <div id="question-content"><p class="question-text">Sẵn sàng khám phá đảo sinh tồn?</p><p style="color:#52728a">Chọn cấu hình bên phải, sau đó nhấn <b>Bắt đầu khám phá</b>.</p></div>
+  </div>
+  <div class="toolbar"><div class="row">
+   <button class="btn small" id="pause-button" disabled>⏸ Tạm dừng</button>
+   <button class="btn small" id="skip-voice" hidden>⏭ Bỏ qua lời đọc</button>
+   <button class="btn small" id="skip-animation" hidden>⏭ Bỏ qua hiệu ứng</button>
+   <button class="btn small" id="reset-game">↺ Soạn lại</button>
+   </div><div class="row"><button class="btn good" id="main-action">▶ Bắt đầu khám phá</button></div></div>
+ </section>
+ <aside class="right-column">
+  <section class="card panel" id="setup-panel"><div class="row spread"><h3>⚙️ Soạn trò chơi</h3><span class="pill" style="font-size:10px">Thi đấu đội</span></div>
+   <div class="tabs"><button class="tab active" data-tab="lesson">📚 Học liệu</button><button class="tab" data-tab="team">👥 Đội chơi</button><button class="tab" data-tab="rules">🎮 Luật chơi</button><button class="tab" data-tab="sound">🎙️ Âm thanh</button></div>
+   <div id="tab-lesson" class="tab-content">
+    <div class="status" id="bank-status">Có 24 câu hỏi mẫu để trải nghiệm ngay. Đăng nhập để sử dụng Ngân hàng câu hỏi MotionClass.</div>
+    <div class="field"><label>Môn học / Lớp / Bài</label><div class="row" id="bank-lesson-label">Tin học 3 · Lớp 3 · Ôn tập Tin học</div></div>
+    <div class="field"><label>Tìm kiếm câu hỏi trong Ngân hàng</label><input id="search-bank" type="search" autocomplete="off" name="islandSearch" placeholder="Nhập từ khóa, môn hoặc bài..."></div>
+    <div id="bank-list"></div><div class="row spread" style="margin-top:13px"><span id="bank-count" class="subtext">24 câu mẫu</span><button class="btn small" id="select-demo">Sử dụng bộ mẫu</button></div>
+   </div>
+   <div id="tab-team" class="tab-content" hidden>
+    <div class="field"><label>Lớp học MotionClass</label><select id="class-select"><option value="">Không chọn lớp (thi theo đội mẫu)</option></select></div>
+    <div id="students-preview"></div><p class="subtext" id="class-hint">Nếu chọn lớp, hệ thống nạp học sinh và chia đều. Không có lớp vẫn chơi được.</p>
+    <div class="field" style="margin-top:12px"><label>Số đội tham gia</label><select id="team-count"><option value="2">2 đội</option><option value="3">3 đội</option><option value="4" selected>4 đội</option><option value="5">5 đội</option><option value="6">6 đội</option></select></div>
+   </div>
+   <div id="tab-rules" class="tab-content" hidden>
+    <div class="field row2"><div class="sl"><label>Số vòng mỗi đội</label><select id="rounds"><option value="1">1 vòng</option><option value="2" selected>2 vòng</option><option value="3">3 vòng</option><option value="4">4 vòng</option><option value="5">5 vòng</option></select></div><div class="sl"><label>Giây trả lời</label><select id="time-limit"><option value="10">10 giây</option><option value="15" selected>15 giây</option><option value="20">20 giây</option><option value="30">30 giây</option><option value="45">45 giây</option></select></div></div>
+    <div class="field"><label>Biến cố môi trường</label><select id="difficulty"><option value="easy">Dễ · chỉ minh họa, không trừ điểm an toàn</option><option value="balanced" selected>Cân bằng · cùng thử thách cho mỗi đội</option><option value="hard">Thử thách · bão mạnh hơn về hình ảnh</option></select></div>
+    <div class="field"><label>Phương thức trả lời</label><select id="control"><option value="click">Chuột · Cảm ứng · Bàn phím A/B/C/D</option><option value="pose">AI Pose bằng camera (tùy chọn)</option></select></div>
+    <p class="subtext">Không loại học sinh vĩnh viễn. Kết quả dựa trên 70% kiến thức · 20% an toàn · 10% chiến thuật.</p>
+   </div>
+   <div id="tab-sound" class="tab-content" hidden>
+    <label class="checkrow"><input type="checkbox" id="voice-enabled"> Sử dụng giọng đọc MotionClass</label>
+    <div class="field"><label>Kịch bản giọng đọc</label><select id="script-select" disabled><option value="builtin">Mặc định MotionClass</option></select></div>
+    <div class="field"><label>Nhạc nền (%) <span id="music-number">25</span></label><input type="range" id="music-volume" min="0" max="100" value="25"></div>
+    <div class="field"><label>Hiệu ứng đảo (%) <span id="fx-number">65</span></label><input type="range" id="fx-volume" min="0" max="100" value="65"></div>
+    <div class="field"><label>Âm đúng/sai (%) <span id="feedback-number">85</span></label><input type="range" id="feedback-volume" min="0" max="100" value="85"></div>
+    <div class="field"><label>Giọng đọc (%) <span id="voice-number">90</span></label><input type="range" id="voice-volume" min="0" max="100" value="90"></div>
+    <p class="subtext">Âm lượng thay đổi ngay trong lúc kéo; không khởi động lại nhạc hoặc giọng đọc. Không gọi API tạo giọng trong trận.</p>
+   </div>
+   <div class="status good" id="setup-status">✓ Sẵn sàng để chơi thử. Chưa thay đổi dữ liệu MotionClass.</div>
+   <div class="row"><button class="btn small" id="save-local">💾 Lưu cấu hình thử</button><button class="btn small" id="load-local">↺ Mở cấu hình thử</button></div>
+  </section>
+  <section class="card panel">
+   <div class="row spread"><h3>🏆 Bảng xếp hạng</h3><span id="current-round" class="pill">Vòng 0/2</span></div>
+   <div id="standings" class="board-list"><div class="subtext">Điểm sẽ xuất hiện sau khi bắt đầu.</div></div>
+   <div class="status" id="event-notice" style="margin-top:13px">🌊 Biến cố chung diễn ra sau khi tất cả đội hoàn thành lượt trong vòng.</div>
+   <div class="row"><button class="btn small" id="export-result" disabled>⬇ Xuất kết quả JSON</button><button class="btn small" id="history-button">🕘 Lịch sử thử</button></div>
+  </section>
+ </aside>
+</main>
+<div class="footer">🏝️ MotionClass · Đảo sinh tồn 3D · Preview độc lập · Không ghi câu hỏi hoặc danh sách học sinh mới vào Ngân hàng MotionClass. Kết quả thử chỉ lưu trên trình duyệt hiện tại. Phê duyệt của giáo viên là điều kiện bắt buộc trước khi ghép nhánh chính.</div>
+</div>
+<div id="modal" class="overlay" hidden><div class="modal" id="modal-content"></div></div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/pose-quiz/supabase-config.js"></script>
+<script src="/classrooms/classroom-store.js"></script>
+<script src="/scripts/script-store.js"></script>
+<script src="/unified-voice/voice-profile.js"></script>
+<script src="/island-survival/engine.js"></script>
+<script src="/island-survival/integration.js"></script>
+<script src="/island-survival/scene3d.js"></script>
+<script src="/island-survival/pose-control.js"></script>
+<script src="/island-survival/app.js"></script>
+</body></html>
