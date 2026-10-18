@@ -42,6 +42,10 @@ jobs:
             page.on('pageerror',e=>errors.push(e.message));
             await page.goto('http://127.0.0.1:4181/island-survival/',{waitUntil:'domcontentloaded',timeout:60000});
             await page.getByRole('button',{name:/Bắt đầu khám phá/}).waitFor({timeout:35000});
+            await page.waitForFunction(()=>window.__ISLAND_3D_MODE,{timeout:40000});
+            const mode=await page.evaluate(()=>window.__ISLAND_3D_MODE);
+            if(mode!=='webgl-three')throw new Error('3D WebGL not active: '+mode);
+            console.log('ISLAND_WEBGL_3D_OK');
             await page.getByRole('button',{name:/Bắt đầu khám phá/}).click();
             await page.getByText('ĐỌC CÂU HỎI').first().waitFor({timeout:20000});
             await page.getByRole('button',{name:/Đã đọc xong/}).click();
