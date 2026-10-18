@@ -119,20 +119,59 @@ function loadSettings(){
  }catch(e){toast('Cấu hình không hợp lệ: '+e.message)}
 }
 $('save-local').addEventListener('click',saveSettings);$('load-local').addEventListener('click',loadSettings);
+function cameraStatus(view){
+ const label=view.focusIndex>=0?'Đang xem: '+(game?.state.teams?.[view.focusIndex]?.name||['Sao Vàng','Tia Chớp','Cầu Vồng','Sóng Xanh','Mặt Trời','Ngôi Sao'][view.focusIndex]||'Đảo '+(view.focusIndex+1)):'Toàn cảnh';
+ const zoomed=Math.round(50/Math.max(1,view.distance)*100);
+ $('camera-status').textContent=label+' · '+zoomed+'%'+(view.mode==='canvas-fallback'?' · 2D':' · 3D');
+}
 async function rebuildScene(teams){
  if(scene){scene.destroy();scene=null}
  const id=++activeSceneCount;
- try{const result=await window.IslandScene3D.create($('world'),teams);
+ $('camera-status').textContent='Đang khởi tạo quần đảo...';
+ try{
+  const result=await window.IslandScene3D.create($('world'),teams,{onViewChange:cameraStatus});
   if(id!==activeSceneCount){result.destroy();return}
-  scene=result;if(result.fallback)toast('WebGL hoặc thư viện 3D chưa tải được: dùng bản đồ dự phòng 2D.');
- }catch(err){console.error('Scene startup',err);toast('Không khởi tạo được sân khấu 3D: '+err.message)}
+  scene=result;
+  cameraStatus(result.getView());
+  if(result.fallback)toast('Thiết bị không tải được WebGL: quần đảo đang chạy chế độ 2D có điều khiển.');
+ }catch(err){
+  console.error('Scene startup',err);
+  $('camera-status').textContent='Không tải được quần đảo';
+  toast('Không khởi tạo được sân khấu: '+err.message);
+ }
 }
+const islandButtons=document.querySelectorAll('[data-camera]');
+function cameraAction(action){
+ if(!scene){toast('Quần đảo đang tải. Vui lòng thử lại.');return}
+ switch(action){
+  case 'left':scene.rotate(42,0);break;
+  case 'right':scene.rotate(-42,0);break;
+  case 'up':scene.rotate(0,24);break;
+  case 'down':scene.rotate(0,-24);break;
+  case 'zoom-in':scene.zoom(.78);break;
+  case 'zoom-out':scene.zoom(1.28);break;
+  case 'reset':scene.resetView();break;
+  case 'next':
+  case 'prev':{
+   const i=scene.getView().focusIndex;
+   const count=game?.state.teams?.length||Number($('team-count').value)||4;
+   const index=action==='next'?(i+1)%count:(i<0?count-1:(i+count-1)%count);
+   scene.focusIsland(index);
+   break;
+  }
+ }
+}
+islandButtons.forEach(button=>button.addEventListener('click',()=>cameraAction(button.dataset.camera)));
+$('world').addEventListener('keydown',event=>{
+ const actions={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',Home:'reset',Equal:'zoom-in',NumpadAdd:'zoom-in',Minus:'zoom-out',NumpadSubtract:'zoom-out'};
+ if(actions[event.code]){event.preventDefault();event.stopPropagation();cameraAction(actions[event.code])}
+});
 function teamCards(){
  if(!game)return;
  const g=game,active=g.state.phase==='finished'?-1:g.state.turn%g.state.teams.length;
  $('team-board').innerHTML=g.state.teams.map((team,i)=>{
   const sc=eng.score(team,g.state.config.rounds);
-  return'<div class="team-card '+(i===active?'active':'')+'"><div class="team-name"><span class="team-dot" style="background:'+team.color+'"></span>'+esc(team.name)+'</div>'+
+  return'<div class="team-card '+(i===active?'active':'')+'" data-focus-island="'+i+'" role="button" tabindex="0" title="Nhấn để xem gần đảo '+esc(team.name)+'"><div class="team-name"><span class="team-dot" style="background:'+team.color+'"></span>'+esc(team.name)+'</div>'+
   '<div class="team-score">'+sc.total+' <small style="font-size:10px;color:#bcd9e7">/100 điểm</small></div>'+
   '<div class="team-meta"><span>❤️ '+team.health+'/3</span><span>🪵 '+team.materials+'</span><span>🛡️ '+team.shield+'</span><span>✅ '+team.correct+'</span></div></div>'
  }).join('');
@@ -140,6 +179,16 @@ function teamCards(){
   return'<div class="board-item"><span><b style="color:'+t.color+'">'+(i+1)+'. '+esc(t.name)+'</b><br><small style="color:#93bac9">Kiến thức '+t.score.knowledge+' · An toàn '+t.score.survival+' · Chiến thuật '+t.score.strategy+'</small></span><span class="result-number">'+t.score.total+'</span></div>';
  }).join('');
 }
+$('team-board').addEventListener('click',event=>{
+ const card=event.target.closest('[data-focus-island]');
+ if(card)scene?.focusIsland(Number(card.dataset.focusIsland));
+});
+$('team-board').addEventListener('keydown',event=>{
+ if(event.key!=='Enter'&&event.key!==' ')return;
+ const card=event.target.closest('[data-focus-island]');
+ if(!card)return;
+ event.preventDefault();scene?.focusIsland(Number(card.dataset.focusIsland));
+});
 function setBanner(text){$('banner').hidden=!text;$('banner').textContent=text||''}
 function endPhaseText(phase){
  return{lobby:'🏝️ SẢNH CHUẨN BỊ',reading:'📖 ĐỌC CÂU HỎI',ready:'🎯 SẴN SÀNG TRẢ LỜI',answer:'⏱ ĐANG TRẢ LỜI',
