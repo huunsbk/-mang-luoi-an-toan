@@ -28,7 +28,16 @@ header.top{display:flex;align-items:center;gap:18px;justify-content:space-betwee
 .stage-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;background:#0b2743eb;border-bottom:1px solid #2d617c;position:relative;z-index:5;flex-wrap:wrap}
 .stage-top strong{color:#fff0ba}.stage-top .label{color:#a9cde0;font-size:12px;font-weight:800}
 #world-wrap{position:relative;height:min(58vw,530px);min-height:300px;background:linear-gradient(165deg,#8de1e7,#0f87ad);overflow:hidden}
-#world{display:block;width:100%;height:100%}
+#world{display:block;width:100%;height:100%;cursor:grab;touch-action:none;user-select:none}
+#world:active{cursor:grabbing}
+#island-controls{position:absolute;right:13px;top:13px;z-index:12;display:flex;flex-direction:column;gap:6px;padding:9px;border:1px solid #c2e9f48a;border-radius:16px;background:#062a46dc;box-shadow:0 6px 20px #03233b66;backdrop-filter:blur(10px);max-width:245px}
+.camera-ctrl-row{display:flex;gap:5px;justify-content:center;align-items:center}
+.camera-btn{background:#1b5776ee;border:1px solid #9bd9eb7a;color:white;border-radius:10px;width:40px;height:39px;display:grid;place-items:center;font-size:18px;font-weight:900;touch-action:manipulation}
+.camera-btn:hover,.camera-btn:focus-visible{background:#297ea2;border-color:#ffdf87}
+.camera-btn:active{transform:scale(.94)}
+.camera-btn.wide{width:auto;padding:0 10px;font-size:12px;gap:4px;white-space:nowrap}
+#camera-status{font-size:10px;color:#e5f6ff;text-align:center;font-weight:800;line-height:1.4}
+#camera-guide{font-size:10px;color:#cdf4ffb8;text-align:center;max-width:215px;line-height:1.4}
 .stage-stamp{position:absolute;top:18px;left:18px;background:#09263abf;border:1px solid #ffffff33;backdrop-filter:blur(9px);padding:11px 17px;border-radius:14px;pointer-events:none}
 .stage-stamp .big{display:block;color:#fff;font-weight:900;font-size:18px}.stage-stamp small{font-size:11px;color:#b7e8ff;font-weight:800}
 .stage-hint{position:absolute;bottom:14px;left:14px;background:#052d408e;padding:9px 13px;border:1px solid #d5f7ff4a;border-radius:12px;font-size:11px;color:white;font-weight:700;pointer-events:none}
@@ -83,7 +92,7 @@ header.top{display:flex;align-items:center;gap:18px;justify-content:space-betwee
 .footer{padding:24px 0 42px;color:#9cb8c7;font-size:11px;line-height:1.8}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:13px 18px;background:#183d53;color:white;border:1px solid #8ac9cd;border-radius:14px;z-index:70;font-size:12px;box-shadow:0 15px 40px #0008;max-width:90%;display:none}
 @media(max-width:1120px){.layout{grid-template-columns:minmax(0,1fr)}.right-column{grid-template-columns:1fr 1fr}.stage{min-height:0}#world-wrap{height:440px}#team-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:710px){.shell{width:calc(100% - 18px)}header.top{padding:10px 0}.logo h1{font-size:18px}.logo-mark{width:39px;height:39px}.header-actions{gap:5px}.header-actions .btn{font-size:10px;padding:8px 9px}.pill{font-size:10px}#world-wrap{height:290px;min-height:290px}.stage-top{padding:9px}.stage-stamp{top:9px;left:9px;padding:7px}.stage-stamp .big{font-size:13px}#team-board{gap:7px}.team-card{padding:9px}.right-column{grid-template-columns:1fr}.field.row2{grid-template-columns:1fr 1fr}.answers{grid-template-columns:1fr}#question-panel{padding:15px}.question-text{font-size:20px}.answer{min-height:51px;padding:8px;font-size:14px}.toolbar{gap:5px}.toolbar .btn{font-size:10px;padding:8px}.modal{padding:20px}.page-title h2{font-size:23px}#posebox{width:175px}}
+@media(max-width:710px){#island-controls{right:6px;top:6px;gap:4px;padding:5px;max-width:167px}.camera-btn{width:28px;height:28px;font-size:14px;border-radius:7px}.camera-btn.wide{font-size:9px;padding:0 5px}#camera-guide{display:none}#camera-status{font-size:8px}.stage-hint{font-size:9px;max-width:58%;bottom:5px;left:5px}.shell{width:calc(100% - 18px)}header.top{padding:10px 0}.logo h1{font-size:18px}.logo-mark{width:39px;height:39px}.header-actions{gap:5px}.header-actions .btn{font-size:10px;padding:8px 9px}.pill{font-size:10px}#world-wrap{height:290px;min-height:290px}.stage-top{padding:9px}.stage-stamp{top:9px;left:9px;padding:7px}.stage-stamp .big{font-size:13px}#team-board{gap:7px}.team-card{padding:9px}.right-column{grid-template-columns:1fr}.field.row2{grid-template-columns:1fr 1fr}.answers{grid-template-columns:1fr}#question-panel{padding:15px}.question-text{font-size:20px}.answer{min-height:51px;padding:8px;font-size:14px}.toolbar{gap:5px}.toolbar .btn{font-size:10px;padding:8px}.modal{padding:20px}.page-title h2{font-size:23px}#posebox{width:175px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 </style></head>
 <body>
@@ -98,7 +107,16 @@ header.top{display:flex;align-items:center;gap:18px;justify-content:space-betwee
   <div class="stage-top">
    <span class="label" id="stage-phase">🏝️ SẢNH CHUẨN BỊ</span><span class="label" id="stage-turn">4 đội · 2 vòng</span><strong id="stage-time">SẴN SÀNG</strong>
   </div>
-  <div id="world-wrap"><canvas id="world" aria-label="Sân khấu quần đảo 3D"></canvas><div class="stage-stamp"><span class="big" id="island-active">ĐẢO SAO VÀNG</span><small id="island-sub">Mọi đội đều xuất phát bình đẳng</small></div><div id="banner" hidden></div><div class="stage-hint">🖱️ Kéo trên biển để quan sát quần đảo 3D</div>
+  <div id="world-wrap"><canvas id="world" tabindex="0" aria-label="Quần đảo 3D. Kéo để xoay, cuộn để phóng to, chạm đảo để quan sát, phím mũi tên để xoay"></canvas>
+   <div class="stage-stamp"><span class="big" id="island-active">ĐẢO SAO VÀNG</span><small id="island-sub">Mọi đội đều xuất phát bình đẳng</small></div>
+   <div id="banner" hidden></div>
+   <div id="island-controls" role="group" aria-label="Điều khiển camera quần đảo 3D">
+    <div class="camera-ctrl-row"><button class="camera-btn" data-camera="up" title="Nâng góc nhìn" aria-label="Nâng góc nhìn">↑</button><button class="camera-btn wide" data-camera="reset" title="Về toàn cảnh" aria-label="Về toàn cảnh">◎ Toàn cảnh</button><button class="camera-btn" data-camera="zoom-in" title="Phóng to" aria-label="Phóng to">+</button></div>
+    <div class="camera-ctrl-row"><button class="camera-btn" data-camera="left" title="Xoay trái" aria-label="Xoay trái">←</button><button class="camera-btn" data-camera="down" title="Hạ góc nhìn" aria-label="Hạ góc nhìn">↓</button><button class="camera-btn" data-camera="right" title="Xoay phải" aria-label="Xoay phải">→</button><button class="camera-btn" data-camera="zoom-out" title="Thu nhỏ" aria-label="Thu nhỏ">−</button></div>
+    <div class="camera-ctrl-row"><button class="camera-btn wide" data-camera="prev" title="Xem đảo đội trước" aria-label="Xem đảo đội trước">◀ Đảo</button><button class="camera-btn wide" data-camera="next" title="Xem đảo đội tiếp theo" aria-label="Xem đảo đội tiếp theo">Đảo ▶</button></div>
+    <span id="camera-status" aria-live="polite">Quần đảo · Toàn cảnh</span><span id="camera-guide">Kéo xoay • Cuộn/chụm 2 ngón để zoom</span>
+   </div>
+   <div class="stage-hint">🖱️ Kéo: xoay 360° · Cuộn: phóng to · Chạm đảo: xem gần</div>
    <div id="posebox" hidden><video id="posevideo" muted playsinline autoplay></video><canvas id="posecanvas"></canvas><div id="pose-status">🎥 Camera chưa khởi tạo</div></div>
   </div>
   <div id="team-board"></div>
