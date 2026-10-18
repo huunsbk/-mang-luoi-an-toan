@@ -88,6 +88,38 @@ jobs:
             await page.getByRole('button',{name:/Tiếp tục/}).click();
             if(errors.length)throw Error('Browser JS errors: '+errors.join(' / '));
             console.log('ISLAND_CHROMIUM_QA_PASS');
+            const touchContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            const mobile=await touchContext.newPage();
+            const mobileErrors=[];
+            mobile.on('pageerror',e=>mobileErrors.push(e.message));
+            await mobile.goto('http://127.0.0.1:4181/island-survival/',{waitUntil:'domcontentloaded',timeout:60000});
+            await mobile.waitForFunction(()=>document.getElementById('camera-status')?.textContent?.includes('Toàn cảnh'),null,{timeout:40000});
+            const mobileView=()=>mobile.evaluate(()=>window.__ISLAND_VIEW);
+            const tv=await mobileView();
+            const area=await mobile.locator('#world').boundingBox();
+            const cdp=await touchContext.newCDPSession(mobile);
+            const sx=area.x+area.width*.43,sy=area.y+area.height*.62;
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:sx,y:sy}]});
+            for(let step=1;step<=6;step++){
+              await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:sx+step*14,y:sy+step*2}]});
+            }
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+            const draggedTouch=await mobileView();
+            if(Math.abs(draggedTouch.yaw-tv.yaw)<.15)throw Error('Real touch drag does not rotate islands.');
+            const pinX=area.x+area.width*.48,pinY=area.y+area.height*.60;
+            const dist0=draggedTouch.distance;
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:pinX-23,y:pinY},{x:pinX+23,y:pinY}]});
+            for(let step=1;step<=4;step++){
+              await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pinX-23-step*8,y:pinY},{x:pinX+23+step*8,y:pinY}]});
+            }
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+            const pinched=await mobileView();
+            if(pinched.distance>=dist0)throw Error('Pinch zoom does not enlarge islands.');
+            await mobile.getByRole('button',{name:'Về toàn cảnh'}).tap();
+            if((await mobileView()).focusIndex!==-1)throw Error('Mobile camera reset failed.');
+            if(mobileErrors.length)throw Error('Mobile JS errors: '+mobileErrors.join(' / '));
+            console.log('ISLAND_MOBILE_TOUCH_PINCH_PASS');
+            await touchContext.close();
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
