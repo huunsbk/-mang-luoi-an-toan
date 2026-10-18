@@ -81,18 +81,30 @@ async function editorOptions(client){
 function create({client,volume=1}={}){
  if(!client)throw Error('Thiếu Supabase client.');
  let volumeValue=Math.max(0,Math.min(1,Number(volume)||0));
- let currentAudio=null,currentUrl=null,currentUtterance=null,stopped=0,paused=false;
+ let currentAudio=null,currentUrl=null,currentUtterance=null,currentAudioFinish=null,currentSpeechFinish=null,stopped=0,paused=false;
  let voiceId='device',script=null,phraseMap=new Map(),students=[],studentVoiceMap=new Map();
  let questionAudioMap=new Map(),questionHashMap=new Map(),shuffleBag=[],lastStudentId=null;
  let lessonSettings=null,loaded=false,lastVariant=new Map();
 
  function releaseAudio(){
-  if(currentAudio){try{currentAudio.pause()}catch(_){}currentAudio.onended=currentAudio.onerror=null;currentAudio=null}
+  const finish=currentAudioFinish;
+  currentAudioFinish=null;
+  if(currentAudio){
+   try{currentAudio.pause()}catch(_){}
+   currentAudio.onended=currentAudio.onerror=currentAudio.onabort=currentAudio.onloadedmetadata=null;
+   currentAudio=null;
+  }
   if(currentUrl){URL.revokeObjectURL(currentUrl);currentUrl=null}
+  if(finish)try{finish(false)}catch(_){}
  }
  function stop(){
-  stopped++;paused=false;releaseAudio();
+  stopped++;paused=false;
+  releaseAudio();
+  const finishSpeech=currentSpeechFinish;
+  currentSpeechFinish=null;
   try{speechSynthesis.cancel()}catch(_){}
+  currentUtterance=null;
+  if(finishSpeech)try{finishSpeech(false)}catch(_){}
  }
  function pause(){
   paused=true;
@@ -150,23 +162,62 @@ function create({client,volume=1}={}){
   const a=new Audio(url);currentAudio=a;a.volume=volumeValue;a.preload='auto';
   return await new Promise(resolve=>{
    let done=false;
-   const finish=ok=>{if(done)return;done=true;a.onended=a.onerror=null;if(currentAudio===a)currentAudio=null;resolve(ok)};
-   a.onended=()=>finish(true);a.onerror=()=>finish(false);
+   let timer=setTimeout(()=>finish(false),25000);
+   const armTimeout=ms=>{
+    clearTimeout(timer);
+    timer=setTimeout(()=>finish(false),Math.max(6000,Math.min(45000,ms)));
+   };
+   const finish=ok=>{
+    if(done)return;
+    done=true;
+    clearTimeout(timer);
+    if(currentAudioFinish===finish)currentAudioFinish=null;
+    a.onended=a.onerror=a.onabort=a.onloadedmetadata=null;
+    if(!ok){try{a.pause()}catch(_){}}
+    if(currentAudio===a)currentAudio=null;
+    resolve(ok);
+   };
+   currentAudioFinish=finish;
+   a.onloadedmetadata=()=>{
+    const duration=Number(a.duration);
+    if(Number.isFinite(duration)&&duration>0)armTimeout(duration*1000+4000);
+   };
+   a.onended=()=>finish(true);
+   a.onerror=()=>finish(false);
+   a.onabort=()=>finish(false);
    a.play().catch(()=>finish(false));
   });
  }
  async function speak(text,token){
-  text=norm(text);if(!text||token!==stopped||volumeValue<=0)return false;
+  text=norm(text);if(!text||token!==stopped)return false;
+  if(volumeValue<=0.001)return true;
   if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window))return false;
   return await new Promise(resolve=>{
    const u=new SpeechSynthesisUtterance(text);currentUtterance=u;u.lang='vi-VN';u.rate=.92;u.pitch=.96;u.volume=volumeValue;
-   let done=false;const finish=ok=>{if(done)return;done=true;if(currentUtterance===u)currentUtterance=null;resolve(ok)};
-   u.onend=()=>finish(true);u.onerror=()=>finish(false);
+   let done=false;
+   const timeoutMs=Math.max(6000,Math.min(30000,text.length*140+4500));
+   const timer=setTimeout(()=>{
+    if(currentUtterance===u){try{speechSynthesis.cancel()}catch(_){}}
+    finish(false);
+   },timeoutMs);
+   const finish=ok=>{
+    if(done)return;
+    done=true;
+    clearTimeout(timer);
+    if(currentSpeechFinish===finish)currentSpeechFinish=null;
+    u.onend=u.onerror=null;
+    if(currentUtterance===u)currentUtterance=null;
+    resolve(ok);
+   };
+   currentSpeechFinish=finish;
+   u.onend=()=>finish(true);
+   u.onerror=()=>finish(false);
    try{speechSynthesis.speak(u)}catch(_){finish(false)}
   });
  }
  async function playSegment(seg,token){
   if(token!==stopped)return false;
+  if(volumeValue<=0.001)return true;
   if(seg.url){const ok=await playUrl(seg.url,token);if(ok)return true}
   if(seg.legacyUrl){const ok=await playUrl(seg.legacyUrl,token);if(ok)return true}
   return speak(seg.text,token);
