@@ -98,10 +98,10 @@ jobs:
             const tv=await mobileView();
             const area=await mobile.locator('#world').boundingBox();
             const cdp=await touchContext.newCDPSession(mobile);
-            const sx=area.x+area.width*.43,sy=area.y+area.height*.62;
-            await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:sx,y:sy}]});
+            const mobileX=area.x+area.width*.43,mobileY=area.y+area.height*.62;
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:mobileX,y:mobileY}]});
             for(let step=1;step<=6;step++){
-              await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:sx+step*14,y:sy+step*2}]});
+              await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:mobileX+step*14,y:mobileY+step*2}]});
             }
             await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
             const draggedTouch=await mobileView();
