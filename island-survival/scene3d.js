@@ -2,6 +2,7 @@
 (function(global){
 'use strict';
 function createFallback(canvas,teams){
+ global.__ISLAND_3D_MODE='canvas-fallback';
  const ctx=canvas.getContext('2d');let raf=0,active=0,event=null,running=true;
  function draw(){
   if(!running)return;
@@ -36,6 +37,7 @@ async function create(canvas,teams,options={}){
   TorusGeometry,Group,Vector3,BufferGeometry,Float32BufferAttribute,Points,PointsMaterial,DoubleSide,MathUtils}=T;
  let renderer;
  try{renderer=new WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'})}catch(err){return createFallback(canvas,teams)}
+ global.__ISLAND_3D_MODE='webgl-three';
  const scene=new Scene();scene.background=new Color('#98e8f8');scene.fog=new FogExp2('#98e8f8',.011);
  const camera=new PerspectiveCamera(43,1,.1,250);camera.position.set(0,31,48);camera.lookAt(0,0,0);
  renderer.setPixelRatio(Math.min(global.devicePixelRatio||1,1.7));
