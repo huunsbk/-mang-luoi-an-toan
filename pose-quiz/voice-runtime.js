@@ -286,9 +286,10 @@ function create({client,volume=1}={}){
    studentVoiceCount:studentVoiceMap.size,questionAudioCount:questionAudioMap.size
   };
  }
- async function presentQuestion(question,index,{intro=false}={}){
+ async function presentQuestion(question,index,{intro=false,onStudent=null}={}){
   if(!loaded||!lessonSettings?.voiceNarration?.enabled)return{student:null,played:false};
   const student=lessonSettings.voiceNarration.classroomId?pickStudent():null;
+  if(typeof onStudent==='function')try{onStudent(student)}catch(_){}
   const plan=[];
   if(intro)plan.push(...templateSegments(variant('intro'),{}));
   if(plan.length)plan[plan.length-1].gap=300;
