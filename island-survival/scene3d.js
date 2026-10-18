@@ -17,7 +17,7 @@ function createFallback(canvas,teams,options={}){
   const a=(i/teams.length)*Math.PI*2-Math.PI/2+view.yaw;
   const z=50/view.distance;
   const center=view.focusIndex<0?null:((view.focusIndex/teams.length)*Math.PI*2-Math.PI/2+view.yaw);
-  const ox=center?Math.cos(center)*w*.31*z:0,oy=center?Math.sin(center)*h*.26*z:0;
+  const ox=center!==null?Math.cos(center)*w*.31*z:0,oy=center!==null?Math.sin(center)*h*.26*z:0;
   return{x:w/2+Math.cos(a)*w*.31*z-ox,y:h*.49+Math.sin(a)*h*.26*z-oy,r:clamp(Math.min(w/teams.length*.64,85)*z,14,150)};
  }
  function draw(){
