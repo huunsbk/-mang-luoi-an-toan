@@ -224,6 +224,7 @@ class Handler(BaseHTTPRequestHandler):
             "/pose-quiz/": ("pose-quiz/index.html", "text/html; charset=utf-8"),
             "/pose-quiz/index.html": ("pose-quiz/index.html", "text/html; charset=utf-8"),
             "/pose-quiz/supabase-config.js": ("pose-quiz/supabase-config.js", "application/javascript; charset=utf-8"),
+            "/pose-quiz/voice-runtime.js": ("pose-quiz/voice-runtime.js", "application/javascript; charset=utf-8"),
             "/pose-quiz/assets/default-bgm.mp3": ("pose-quiz/assets/default-bgm.mp3", "audio/mpeg"),
             "/pose-quiz/assets/default-correct.mp3": ("pose-quiz/assets/default-correct.mp3", "audio/mpeg"),
             "/pose-quiz/assets/default-wrong.mp3": ("pose-quiz/assets/default-wrong.mp3", "audio/mpeg"),
