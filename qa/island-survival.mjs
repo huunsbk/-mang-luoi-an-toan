@@ -41,7 +41,7 @@ for(let i=0;i<8;i++){
    assert.equal(G.state.phase,'event_done');
    assert(!G.resolveEvent(),'Biến cố không được áp dụng hai lần');
    G.state.teams.forEach((t,k)=>assert(t.health<=h[k]));
-   if(i!==7)assert(G.next());
+   assert(G.next());
  }
 }
 assert.equal(G.state.phase,'finished','Trận phải kết thúc khi đủ lượt, không mắc kẹt.');
