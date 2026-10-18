@@ -8,6 +8,10 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/pose-quiz/supabase-config.js"></script>
+    <script src="/classrooms/classroom-store.js"></script>
+    <script src="/scripts/script-store.js"></script>
+    <script src="/unified-voice/voice-profile.js"></script>
+    <script src="/pose-quiz/voice-runtime.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
@@ -847,7 +851,10 @@
                 if (!ids.length) return alert('Hãy chọn ít nhất một câu hỏi.');
                 try {
                     const result = await backendRequest('bank.resolve', { ids });
-                    const imported = result.questions || [];
+                    const imported = (result.questions || []).map((question, index) => ({
+                        ...question,
+                        bankQuestionId: ids[index] || question.bankQuestionId || null
+                    }));
                     setSettings({ ...settings, questions: [...settings.questions, ...imported] });
                     alert(`Đã thêm ${imported.length} câu hỏi do backend xác thực vào bài đang soạn.`);
                     setScreen('EDITOR');
@@ -994,6 +1001,11 @@
                     timeLimit: 20,
                     checkInterval: 20,
                     numAnswers: 4,
+                    voiceNarration: {
+                        enabled: false,
+                        scriptId: 'builtin',
+                        classroomId: ''
+                    },
                     poseAssets: {
                         NONE: null,
                         RAISE_LEFT: null,
@@ -1129,6 +1141,11 @@
                     timeLimit: 20,
                     checkInterval: 20,
                     numAnswers: 4,
+                    voiceNarration: {
+                        enabled: false,
+                        scriptId: 'builtin',
+                        classroomId: ''
+                    },
                     poseAssets: { NONE: null, RAISE_LEFT: null, RAISE_RIGHT: null, BOTH_UP: null, CROSS_ARMS: null },
                     questions: [{
                         id: Date.now(),
@@ -1195,7 +1212,7 @@
                 </div>
                 <div className="mb-4 text-8xl animate-bounce drop-shadow-2xl">🙋‍♂️</div>
                 <h1 className="text-6xl font-black mb-2 tracking-tighter uppercase">AI POSE QUIZ</h1>
-                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V10 Khóa vùng trả lời</p>
+                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - LAB Giọng đọc & Lớp học</p>
                 <div className="flex flex-col gap-3 w-[34rem] max-w-full">
                     <button onClick={() => { unlockAudio(); setScreen('GAME'); }} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
                     <div className="grid grid-cols-2 gap-3">
@@ -1219,6 +1236,9 @@
             const [showVolumeControl, setShowVolumeControl] = useState(false);
             const isMuted = masterVolume <= 0.001;
             const [isPaused, setIsPaused] = useState(false);
+            const [voiceBusy, setVoiceBusy] = useState(false);
+            const [calledStudent, setCalledStudent] = useState(null);
+            const [voiceStatus, setVoiceStatus] = useState('');
             const [gameToken, setGameToken] = useState(null);
             const [gameReady, setGameReady] = useState(false);
             const [gameError, setGameError] = useState('');
@@ -1231,6 +1251,10 @@
             const isPausedRef = useRef(false);
             const pendingResultRef = useRef(null);
             const feedbackTimeoutRef = useRef(null);
+            const voiceRuntimeRef = useRef(null);
+            const voiceLoadedRef = useRef(false);
+            const presentedQuestionRef = useRef('');
+            const currentStudentRef = useRef(null);
             
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
@@ -1248,7 +1272,7 @@
             const lastVideoTimestampRef = useRef(0);
 
             const currentQuestion = settings.questions[qIndex];
-            const recognitionBlocked = selectionMode || targetStatus !== 'LOCKED' || !targetQuality.ok || !!poseError;
+            const recognitionBlocked = selectionMode || targetStatus !== 'LOCKED' || !targetQuality.ok || !!poseError || voiceBusy;
             const lessonBackground = mediaSrc(settings.theme?.background);
             const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
             const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
@@ -1337,12 +1361,25 @@
                         playDefaultFeedbackTone(isCorrect, (settings.audio.feedbackVolume ?? 0.9) * masterVolume);
                     }
 
-                    scheduleCheckedResult(result, 1500);
+                    if (settings.voiceNarration?.enabled && voiceRuntimeRef.current) {
+                        setVoiceBusy(true);
+                        try {
+                            await voiceRuntimeRef.current.result(currentQuestion, currentStudentRef.current, isCorrect);
+                            if (result.finished) await voiceRuntimeRef.current.summary(result.score || 0, result.total || settings.questions.length);
+                        } catch (voiceErr) {
+                            setVoiceStatus('⚠ Lỗi lời nhận xét: ' + (voiceErr.message || voiceErr));
+                        } finally {
+                            setVoiceBusy(false);
+                        }
+                        scheduleCheckedResult(result, 350);
+                    } else {
+                        scheduleCheckedResult(result, 1500);
+                    }
                 } catch (err) {
                     checkInFlightRef.current = false;
                     alert('Backend không chấm được câu hỏi: ' + err.message);
                 }
-            }, [feedback, gameReady, gameToken, detectedPose, isMuted, masterVolume, settings, scheduleCheckedResult, recognitionBlocked]);
+            }, [feedback, gameReady, gameToken, detectedPose, isMuted, masterVolume, settings, scheduleCheckedResult, recognitionBlocked, currentQuestion]);
 
             // Hàm xử lý khi nhấn nút Kiểm tra
             const handleManualCheck = () => {
@@ -1388,24 +1425,73 @@
                 };
             }, [isMuted, isPaused, masterVolume, settings.audio.bgm?.data, settings.audio.bgmVolume]);
 
+            // Giọng đọc câu hỏi do PoseQuizVoiceRuntime quản lý. Khi tắt "Sử dụng giọng đọc",
+            // không phát audio câu hỏi cũ; nhạc nền và hiệu ứng đúng/sai vẫn giữ nguyên.
             useEffect(() => {
                 if (questionAudioRef.current) {
                     questionAudioRef.current.pause();
                     questionAudioRef.current = null;
                 }
-                const questionAudio = mediaSrc(currentQuestion?.audio?.data);
-                if (questionAudio && !isMuted && !feedback && !isPaused) {
-                    questionAudioRef.current = new Audio(questionAudio);
-                    questionAudioRef.current.volume = Math.min(1, Math.max(0, Number(settings.audio.questionVolume ?? 1) * masterVolume));
-                    questionAudioRef.current.play().catch(() => {});
+            }, [qIndex, settings.voiceNarration?.enabled]);
+
+            useEffect(() => {
+                if (!settings.voiceNarration?.enabled) {
+                    voiceRuntimeRef.current?.stop?.();
+                    voiceLoadedRef.current = false;
+                    presentedQuestionRef.current = '';
+                    currentStudentRef.current = null;
+                    setCalledStudent(null);
+                    setVoiceBusy(false);
+                    setVoiceStatus('');
+                    return;
                 }
-                return () => {
-                    if (questionAudioRef.current) {
-                        questionAudioRef.current.pause();
-                        questionAudioRef.current = null;
+                if (!voiceRuntimeRef.current) {
+                    voiceRuntimeRef.current = window.PoseQuizVoiceRuntime.create({client: supabaseClient, volume: masterVolume});
+                }
+                voiceRuntimeRef.current.setVolume(masterVolume);
+            }, [settings.voiceNarration?.enabled, masterVolume]);
+
+            useEffect(() => {
+                if (!settings.voiceNarration?.enabled || !gameReady || !currentQuestion || feedback) return;
+                const key = String(qIndex) + ':' + String(currentQuestion.id || '');
+                if (presentedQuestionRef.current === key) return;
+                let cancelled = false;
+                const play = async () => {
+                    setVoiceBusy(true);
+                    try {
+                        const runtime = voiceRuntimeRef.current || window.PoseQuizVoiceRuntime.create({client: supabaseClient, volume: masterVolume});
+                        voiceRuntimeRef.current = runtime;
+                        runtime.setVolume(masterVolume);
+                        if (!voiceLoadedRef.current) {
+                            const info = await runtime.load(settings);
+                            voiceLoadedRef.current = true;
+                            if (!cancelled) setVoiceStatus('🎙️ '+info.voiceLabel+' · '+info.scriptTitle+(info.classSize ? ' · '+info.classSize+' HS' : ' · Không gọi tên HS'));
+                        }
+                        if (cancelled) return;
+                        presentedQuestionRef.current = key;
+                        const presented = await runtime.presentQuestion(currentQuestion, qIndex, {intro: qIndex === 0});
+                        if (cancelled) return;
+                        currentStudentRef.current = presented.student || null;
+                        setCalledStudent(presented.student || null);
+                    } catch (err) {
+                        if (!cancelled) setVoiceStatus('⚠ Không đọc được lời dẫn: '+(err.message || err));
+                    } finally {
+                        if (!cancelled) setVoiceBusy(false);
                     }
                 };
-            }, [qIndex, currentQuestion?.audio?.data, isMuted, isPaused, masterVolume, settings.audio.questionVolume]);
+                play();
+                return () => { cancelled = true; };
+            }, [settings.voiceNarration?.enabled, gameReady, qIndex, currentQuestion?.id, feedback]);
+
+            useEffect(() => {
+                if (!voiceRuntimeRef.current) return;
+                if (isPaused) voiceRuntimeRef.current.pause();
+                else voiceRuntimeRef.current.resume();
+            }, [isPaused]);
+
+            useEffect(() => () => {
+                voiceRuntimeRef.current?.stop?.();
+            }, []);
 
             useEffect(() => {
                 selectionModeRef.current = selectionMode;
@@ -1697,7 +1783,7 @@
             }, [gameReady, resetTargetSelection]);
 
             useEffect(() => {
-                if (!gameReady || gameError || feedback || isPaused || recognitionBlocked) return;
+                if (!gameReady || gameError || feedback || isPaused || voiceBusy || recognitionBlocked) return;
                 if (timeLeft <= 0) { checkAnswer(); return; }
                 const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
                 const intervalTimer = setInterval(() => {
@@ -1707,7 +1793,7 @@
                     });
                 }, 1000);
                 return () => { clearInterval(timer); clearInterval(intervalTimer); };
-            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused, recognitionBlocked]);
+            }, [timeLeft, feedback, checkTimer, checkAnswer, settings.checkInterval, gameReady, gameError, isPaused, voiceBusy, recognitionBlocked]);
 
             if (!gameReady) {
                 return (
@@ -1789,6 +1875,12 @@
                     {isPaused && (
                         <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[80] bg-amber-400 text-amber-950 px-5 py-2 rounded-full font-black shadow-xl border-2 border-white">
                             ⏸ ĐANG TẠM DỪNG — giáo viên có thể sửa, giải thích đáp án
+                        </div>
+                    )}
+                    {settings.voiceNarration?.enabled && !isPaused && (voiceBusy || calledStudent || voiceStatus) && (
+                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[75] max-w-[80vw] bg-slate-950/90 text-white px-4 py-2 rounded-2xl font-black shadow-xl border border-white/20 text-center">
+                            {voiceBusy ? '🔊 ĐANG ĐỌC LỜI DẪN / CÂU HỎI...' : calledStudent ? '🎯 MỜI: ' + calledStudent.name : voiceStatus}
+                            {!voiceBusy && calledStudent && voiceStatus && <div className="text-[9px] font-bold text-slate-300 mt-0.5">{voiceStatus}</div>}
                         </div>
                     )}
                     <div className="pose-game-main flex-1 flex overflow-hidden">
@@ -2029,6 +2121,8 @@
             const [importBusy, setImportBusy] = useState(false);
             const [importPreview, setImportPreview] = useState(null);
             const [importMode, setImportMode] = useState('append');
+            const [voiceOptions, setVoiceOptions] = useState({ loading: true, error: '', scripts: [], classes: [], voiceId: '', voiceLabel: '' });
+            const [voiceOptionsRefresh, setVoiceOptionsRefresh] = useState(0);
             const [poseMapping, setPoseMapping] = useState({
                 A: 'RAISE_LEFT',
                 B: 'RAISE_RIGHT',
@@ -2042,6 +2136,19 @@
                     .then((result) => setShareGroups(result.groups || []))
                     .catch(() => setShareGroups([]));
             }, []);
+
+            useEffect(() => {
+                let cancelled = false;
+                setVoiceOptions(prev => ({...prev, loading: true, error: ''}));
+                window.PoseQuizVoiceRuntime.editorOptions(supabaseClient)
+                    .then((data) => {
+                        if (!cancelled) setVoiceOptions({loading: false, error: '', ...data});
+                    })
+                    .catch((err) => {
+                        if (!cancelled) setVoiceOptions(prev => ({...prev, loading: false, error: err.message || 'Không tải được kịch bản/lớp học.'}));
+                    });
+                return () => { cancelled = true; };
+            }, [voiceOptionsRefresh]);
 
             const handleFile = async (e, callback) => {
                 const file = e.target.files[0];
@@ -2231,6 +2338,65 @@
                                         <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">TG quét tự động (giây)</label>
                                         <input type="number" value={settings.checkInterval} onChange={(e) => setSettings({...settings, checkInterval: parseInt(e.target.value) || 20})} className="w-full p-2 bg-slate-50 rounded-xl border border-slate-200 font-bold" />
                                     </div>
+                                </div>
+
+                                <div className="mb-5 rounded-2xl border-2 border-indigo-100 bg-indigo-50/70 p-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <div className="text-[10px] font-black text-indigo-700 uppercase">🎙️ Lời dẫn MotionClass</div>
+                                            <div className="text-[9px] font-semibold text-slate-500 mt-0.5">Chỉ khi bật mới đọc kịch bản, tên học sinh và câu hỏi. Tắt = không có giọng đọc.</div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSettings({...settings, voiceNarration: {
+                                                ...(settings.voiceNarration || {}),
+                                                enabled: !(settings.voiceNarration?.enabled === true),
+                                                scriptId: settings.voiceNarration?.scriptId || 'builtin',
+                                                classroomId: settings.voiceNarration?.classroomId || ''
+                                            }})}
+                                            className={`px-3 py-2 rounded-xl text-[10px] font-black whitespace-nowrap ${settings.voiceNarration?.enabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}
+                                        >
+                                            {settings.voiceNarration?.enabled ? '🔊 ĐANG DÙNG GIỌNG' : '🔇 KHÔNG DÙNG GIỌNG'}
+                                        </button>
+                                    </div>
+
+                                    {settings.voiceNarration?.enabled && (
+                                        <div className="mt-3 space-y-3">
+                                            <div>
+                                                <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Kịch bản lời dẫn</label>
+                                                <select
+                                                    value={settings.voiceNarration?.scriptId || 'builtin'}
+                                                    onChange={(e) => setSettings({...settings, voiceNarration: {...(settings.voiceNarration || {}), enabled: true, scriptId: e.target.value, classroomId: settings.voiceNarration?.classroomId || ''}})}
+                                                    className="w-full p-2 bg-white rounded-xl border border-indigo-100 text-xs font-bold"
+                                                >
+                                                    {(voiceOptions.scripts || []).map(item => <option key={item.id} value={item.id}>{item.id === 'builtin' ? 'Mặc định có sẵn' : item.title}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Lớp tham gia</label>
+                                                <select
+                                                    value={settings.voiceNarration?.classroomId || ''}
+                                                    onChange={(e) => setSettings({...settings, voiceNarration: {...(settings.voiceNarration || {}), enabled: true, scriptId: settings.voiceNarration?.scriptId || 'builtin', classroomId: e.target.value}})}
+                                                    className="w-full p-2 bg-white rounded-xl border border-indigo-100 text-xs font-bold"
+                                                >
+                                                    <option value="">— Không sử dụng lớp · không đọc tên học sinh —</option>
+                                                    {(voiceOptions.classes || []).map(item => <option key={item.id} value={item.id}>{item.name}{item.grade ? ' · Lớp '+item.grade : ''}{item.school_year ? ' · '+item.school_year : ''}</option>)}
+                                                </select>
+                                                <div className="text-[9px] text-slate-500 mt-1">Có lớp: hệ thống gọi học sinh ngẫu nhiên theo lượt, hạn chế lặp. Không lớp: bỏ phần tên.</div>
+                                            </div>
+                                            <div className="rounded-xl bg-white border border-indigo-100 p-2 text-[9px] font-bold text-slate-600">
+                                                {voiceOptions.loading ? '⏳ Đang tải kịch bản, lớp và giọng hệ thống...' :
+                                                 voiceOptions.error ? '⚠ '+voiceOptions.error :
+                                                 '🎙️ Giọng hệ thống: '+(voiceOptions.voiceLabel || voiceOptions.voiceId || 'Giọng thiết bị')}
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 text-[9px] font-black">
+                                                <a href="/scripts/" target="_blank" rel="noopener" className="px-2 py-1.5 bg-white border border-indigo-100 rounded-lg text-indigo-600">Kịch bản ↗</a>
+                                                <a href="/classrooms/" target="_blank" rel="noopener" className="px-2 py-1.5 bg-white border border-indigo-100 rounded-lg text-indigo-600">Lớp học ↗</a>
+                                                <a href="/unified-voice/" target="_blank" rel="noopener" className="px-2 py-1.5 bg-white border border-indigo-100 rounded-lg text-indigo-600">Giọng đọc ↗</a>
+                                                <button type="button" onClick={() => setVoiceOptionsRefresh(v => v + 1)} className="px-2 py-1.5 bg-white border border-indigo-100 rounded-lg text-indigo-600">⟳ Làm mới</button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <h4 className="text-[10px] font-black text-indigo-400 uppercase mb-3">📸 Ảnh đại diện tư thế AI</h4>
