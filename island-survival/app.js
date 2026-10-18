@@ -249,7 +249,19 @@ function stopTick(){clearInterval(ticker);ticker=null;clearInterval(eventTicker)
 function startTick(){
  clearInterval(ticker);ticker=setInterval(()=>{
   if(!game||game.state.paused)return;
-  if(game.state.phase==='answer'){const before=game.state.phase;game.tick();if(before!=='feedback'&&game.state.phase==='feedback'){audio.tone(false);announceResult(false)}render();}
+  if(game.state.phase==='answer'){
+   game.tick();
+   if(game.state.phase==='feedback'){
+    audio.tone(false);
+    render();
+    announceResult(false);
+   }else{
+    // Không thay DOM các nút A/B/C/D mỗi giây: học sinh đang nhấn không bị mất mục tiêu.
+    const clock=document.querySelector('#question-content .countdown');
+    if(clock)clock.textContent=game.state.seconds+'s';
+    $('stage-time').textContent=game.state.seconds+' GIÂY';
+   }
+  }
  },1000);
 }
 async function startGame(){
