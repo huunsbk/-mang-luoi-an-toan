@@ -23,6 +23,7 @@ assert(G.beginAnswer());
 const seconds=G.state.seconds;
 G.pause();G.tick();assert.equal(G.state.seconds,seconds,'Tạm dừng phải đóng băng bộ đếm.');G.pause();
 for(let i=0;i<8;i++){
+ if(i>0){assert.equal(G.state.phase,'reading');assert(G.ready());assert(G.beginAnswer());}
  assert.equal(G.state.phase,'answer');
  const q=G.currentQuestion();
  const team=G.activeTeam();
