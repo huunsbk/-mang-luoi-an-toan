@@ -128,11 +128,13 @@ async function rebuildScene(teams){
  if(scene){scene.destroy();scene=null}
  const id=++activeSceneCount;
  $('camera-status').textContent='Đang khởi tạo quần đảo...';
+ document.querySelectorAll('[data-camera]').forEach(button=>button.disabled=true);
  try{
   const result=await window.IslandScene3D.create($('world'),teams,{onViewChange:cameraStatus});
   if(id!==activeSceneCount){result.destroy();return}
   scene=result;
   cameraStatus(result.getView());
+  document.querySelectorAll('[data-camera]').forEach(button=>button.disabled=false);
   if(result.fallback)toast('Thiết bị không tải được WebGL: quần đảo đang chạy chế độ 2D có điều khiển.');
  }catch(err){
   console.error('Scene startup',err);
