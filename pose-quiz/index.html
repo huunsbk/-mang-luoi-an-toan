@@ -1465,14 +1465,20 @@
                         if (!voiceLoadedRef.current) {
                             const info = await runtime.load(settings);
                             voiceLoadedRef.current = true;
-                            if (!cancelled) setVoiceStatus('🎙️ '+info.voiceLabel+' · '+info.scriptTitle+(info.classSize ? ' · '+info.classSize+' HS' : ' · Không gọi tên HS'));
+                            if (!cancelled) setVoiceStatus('🎙️ '+info.voiceLabel+' · '+info.scriptTitle+(info.classSize ? ' · '+info.classSize+' HS · '+info.studentVoiceCount+' tên có WAV' : ' · Không gọi tên HS')+' · '+info.questionAudioCount+' WAV câu hỏi');
                         }
                         if (cancelled) return;
                         presentedQuestionRef.current = key;
-                        const presented = await runtime.presentQuestion(currentQuestion, qIndex, {intro: qIndex === 0});
+                        const presented = await runtime.presentQuestion(currentQuestion, qIndex, {
+                            intro: qIndex === 0,
+                            onStudent: (student) => {
+                                if (cancelled) return;
+                                currentStudentRef.current = student || null;
+                                setCalledStudent(student || null);
+                            }
+                        });
                         if (cancelled) return;
                         currentStudentRef.current = presented.student || null;
-                        setCalledStudent(presented.student || null);
                     } catch (err) {
                         if (!cancelled) setVoiceStatus('⚠ Không đọc được lời dẫn: '+(err.message || err));
                     } finally {
