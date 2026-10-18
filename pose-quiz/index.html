@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Pose Quiz Game - V10 Multi-Person Target Lock</title>
+    <title>AI Pose Quiz Game - V10 Fixed Answer Zone</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -285,50 +285,139 @@
             return { ok: true, level: 'good', label: 'Khoảng cách tốt — AI đã sẵn sàng nhận tư thế' };
         };
 
-        const boxIoU = (a, b) => {
-            if (!a || !b) return 0;
-            const left = Math.max(a.minX, b.minX);
-            const top = Math.max(a.minY, b.minY);
-            const right = Math.min(a.maxX, b.maxX);
-            const bottom = Math.min(a.maxY, b.maxY);
-            const inter = Math.max(0, right - left) * Math.max(0, bottom - top);
-            const union = a.width * a.height + b.width * b.height - inter;
-            return union > 0 ? inter / union : 0;
+        // Khóa VÙNG TRẢ LỜI, không khóa danh tính học sinh.
+        // Vùng được lưu bằng tọa độ chuẩn hóa 0..1 nên không thay đổi khi canvas/video đổi kích thước.
+        const getTorsoCenter = (detection) => {
+            if (!detection) return null;
+            const landmarks = detection.landmarks || [];
+            const torsoPoints = [11, 12, 23, 24]
+                .map(index => landmarks[index])
+                .filter(point =>
+                    point &&
+                    Number.isFinite(point.x) &&
+                    Number.isFinite(point.y) &&
+                    (!Number.isFinite(point.visibility) || point.visibility >= 0.25)
+                );
+
+            if (torsoPoints.length >= 2) {
+                return {
+                    x: clamp01(torsoPoints.reduce((sum, point) => sum + point.x, 0) / torsoPoints.length),
+                    y: clamp01(torsoPoints.reduce((sum, point) => sum + point.y, 0) / torsoPoints.length)
+                };
+            }
+
+            return {
+                x: detection.box?.cx ?? 0.5,
+                y: detection.box?.cy ?? 0.5
+            };
         };
 
-        const pickTrackedPose = (previous, detections) => {
-            if (!previous || !detections?.length) return null;
-            let best = null;
-            let bestScore = Infinity;
-            const predictedX = previous.cx + (previous.vx || 0);
-            const predictedY = previous.cy + (previous.vy || 0);
+        const buildLockedAnswerRegion = (detection) => {
+            if (!detection?.box) return null;
+            const box = detection.box;
+            const width = Math.min(0.58, Math.max(0.28, box.width * 1.22));
+            const height = Math.min(0.96, Math.max(0.56, box.height * 1.12));
+            let minX = box.cx - width / 2;
+            let maxX = box.cx + width / 2;
+            let minY = box.cy - height / 2;
+            let maxY = box.cy + height / 2;
 
-            detections.forEach(detection => {
-                const centerDistance = Math.hypot(
-                    detection.box.cx - predictedX,
-                    detection.box.cy - predictedY
-                );
-                const sizeRatio = detection.box.height / Math.max(0.02, previous.height);
-                const overlap = boxIoU(previous, detection.box);
-                const allowedDistance = Math.max(0.18, Math.min(0.32, previous.width * 1.25));
-                const plausible = (centerDistance <= allowedDistance || overlap >= 0.08) && sizeRatio >= 0.5 && sizeRatio <= 1.9;
-                if (!plausible) return;
+            if (minX < 0) { maxX -= minX; minX = 0; }
+            if (maxX > 1) { minX -= (maxX - 1); maxX = 1; }
+            if (minY < 0) { maxY -= minY; minY = 0; }
+            if (maxY > 1) { minY -= (maxY - 1); maxY = 1; }
 
-                // PoseLandmarker VIDEO mode maintains internal tracks reasonably well.
-                // Prefer the same output slot when spatial evidence is also plausible,
-                // while still allowing recovery if MediaPipe reorders detections.
-                const slotBias = detection.index === previous.index ? -0.16 : 0.08;
-                const score = centerDistance * 1.6
-                    + Math.abs(Math.log(sizeRatio)) * 0.18
-                    + (1 - overlap) * 0.25
-                    + slotBias;
+            minX = clamp01(minX);
+            maxX = clamp01(maxX);
+            minY = clamp01(minY);
+            maxY = clamp01(maxY);
 
-                if (score < bestScore) {
-                    bestScore = score;
-                    best = detection;
-                }
-            });
-            return best;
+            return {
+                minX, maxX, minY, maxY,
+                width: Math.max(0.02, maxX - minX),
+                height: Math.max(0.02, maxY - minY),
+                cx: (minX + maxX) / 2,
+                cy: (minY + maxY) / 2
+            };
+        };
+
+        const isDetectionInsideLockedRegion = (detection, region) => {
+            if (!detection || !region) return false;
+            const center = getTorsoCenter(detection);
+            if (!center) return false;
+            return center.x >= region.minX &&
+                center.x <= region.maxX &&
+                center.y >= region.minY &&
+                center.y <= region.maxY;
+        };
+
+        const pickDetectionInLockedRegion = (region, detections) => {
+            if (!region || !detections?.length) return null;
+            return detections
+                .filter(detection => isDetectionInsideLockedRegion(detection, region))
+                .map(detection => {
+                    const center = getTorsoCenter(detection);
+                    return {
+                        detection,
+                        distance: Math.hypot(center.x - region.cx, center.y - region.cy)
+                    };
+                })
+                .sort((a, b) => a.distance - b.distance)[0]?.detection || null;
+        };
+
+        const drawPoseSkeleton = (ctx, detection, color) => {
+            if (!ctx || !detection) return;
+            ctx.save();
+            try {
+                drawConnectors(ctx, detection.landmarks, POSE_CONNECTIONS, {
+                    color,
+                    lineWidth: 4
+                });
+                drawLandmarks(ctx, detection.landmarks, {
+                    color: '#ffffff',
+                    lineWidth: 1,
+                    radius: 3
+                });
+            } catch (_) {}
+            ctx.restore();
+        };
+
+        const drawLockedAnswerRegion = (ctx, region, color, label, active = false) => {
+            if (!ctx || !region) return;
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            const x = region.minX * width;
+            const y = region.minY * height;
+            const w = region.width * width;
+            const h = region.height * height;
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = active ? 6 : 5;
+            ctx.setLineDash(active ? [] : [12, 8]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.setLineDash([]);
+            ctx.fillStyle = active ? 'rgba(34,197,94,0.08)' : 'rgba(245,158,11,0.10)';
+            ctx.fillRect(x, y, w, h);
+
+            if (label) {
+                ctx.font = '800 18px Quicksand, sans-serif';
+                const textWidth = ctx.measureText(label).width;
+                const labelW = Math.max(120, textWidth + 22);
+                const labelH = 32;
+                const labelX = Math.max(0, Math.min(width - labelW, x));
+                const labelY = Math.max(0, y - labelH);
+                ctx.fillStyle = color;
+                ctx.fillRect(labelX, labelY, labelW, labelH);
+                ctx.fillStyle = '#ffffff';
+                ctx.textBaseline = 'middle';
+                ctx.save();
+                ctx.translate(labelX + labelW, 0);
+                ctx.scale(-1, 1);
+                ctx.fillText(label, 10, labelY + labelH / 2);
+                ctx.restore();
+            }
+            ctx.restore();
         };
 
         const drawDetection = (ctx, detection, color, label, strong = false) => {
@@ -1106,7 +1195,7 @@
                 </div>
                 <div className="mb-4 text-8xl animate-bounce drop-shadow-2xl">🙋‍♂️</div>
                 <h1 className="text-6xl font-black mb-2 tracking-tighter uppercase">AI POSE QUIZ</h1>
-                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V10 Multi-Person</p>
+                <p className="text-white/80 text-xl mb-7 italic">Học vui cùng trí tuệ nhân tạo - V10 Khóa vùng trả lời</p>
                 <div className="flex flex-col gap-3 w-[34rem] max-w-full">
                     <button onClick={() => { unlockAudio(); setScreen('GAME'); }} className="bg-green-500 hover:bg-green-400 py-4 rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95 uppercase">Bắt đầu</button>
                     <div className="grid grid-cols-2 gap-3">
@@ -1152,7 +1241,7 @@
             const questionAudioRef = useRef(null);
             const isMounted = useRef(true);
             const detectionsRef = useRef([]);
-            const targetTrackRef = useRef(null);
+            const lockedRegionRef = useRef(null);
             const selectionModeRef = useRef(true);
             const lastPeopleUiUpdateRef = useRef(0);
             const lastQualityUiUpdateRef = useRef(0);
@@ -1326,8 +1415,8 @@
                 selectionModeRef.current = true;
                 setSelectionMode(true);
                 setTargetStatus('SELECTING');
-                setTargetQuality({ ok: false, level: 'waiting', label: 'Chọn học sinh cần nhận diện' });
-                targetTrackRef.current = null;
+                setTargetQuality({ ok: false, level: 'waiting', label: 'Chọn vị trí học sinh sẽ đứng trả lời' });
+                lockedRegionRef.current = null;
                 setDetectedPose('NONE');
             }, []);
 
@@ -1374,8 +1463,10 @@
                 const selected = candidates[0];
                 if (!selected) return;
 
-                const now = performance.now();
-                targetTrackRef.current = { ...selected.box, index: selected.index, vx: 0, vy: 0, lastSeen: now };
+                const region = buildLockedAnswerRegion(selected);
+                if (!region) return;
+
+                lockedRegionRef.current = region;
                 selectionModeRef.current = false;
                 setSelectionMode(false);
                 setTargetStatus('LOCKED');
@@ -1438,48 +1529,44 @@
                         return;
                     }
 
-                    const previous = targetTrackRef.current;
-                    const matched = pickTrackedPose(previous, detections);
+                    const region = lockedRegionRef.current;
+                    const matched = pickDetectionInLockedRegion(region, detections);
 
                     if (matched) {
-                        const previousVx = previous?.vx || 0;
-                        const previousVy = previous?.vy || 0;
-                        const deltaX = previous ? matched.box.cx - previous.cx : 0;
-                        const deltaY = previous ? matched.box.cy - previous.cy : 0;
-                        targetTrackRef.current = {
-                            ...matched.box,
-                            index: matched.index,
-                            vx: previousVx * 0.55 + deltaX * 0.45,
-                            vy: previousVy * 0.55 + deltaY * 0.45,
-                            lastSeen: now
-                        };
                         setTargetStatus('LOCKED');
                         const quality = getPoseQuality(matched);
                         if (now - lastQualityUiUpdateRef.current > 140) {
                             setTargetQuality(quality);
                             lastQualityUiUpdateRef.current = now;
                         }
-                        drawDetection(ctx, matched, quality.ok ? '#22c55e' : '#f59e0b', quality.ok ? 'ĐÃ KHÓA' : 'GIỮ VỊ TRÍ', true);
+
+                        drawPoseSkeleton(ctx, matched, quality.ok ? '#22c55e' : '#f59e0b');
+                        drawLockedAnswerRegion(
+                            ctx,
+                            region,
+                            quality.ok ? '#22c55e' : '#f59e0b',
+                            quality.ok ? 'VÙNG TRẢ LỜI — SẴN SÀNG' : 'VÙNG TRẢ LỜI — ĐIỀU CHỈNH',
+                            quality.ok
+                        );
                         setDetectedPose(quality.ok ? analyzePose(matched.landmarks) : 'NONE');
                     } else {
-                        const lastSeen = previous?.lastSeen || now;
-                        const missingFor = now - lastSeen;
+                        setTargetStatus('WAITING');
                         setDetectedPose('NONE');
-                        if (missingFor < 2500) {
-                            setTargetStatus('SEARCHING');
-                            if (now - lastQualityUiUpdateRef.current > 140) {
-                                setTargetQuality({ ok: false, level: 'searching', label: 'Đang tìm lại học sinh đã chọn...' });
-                                lastQualityUiUpdateRef.current = now;
-                            }
-                            detections.forEach(detection => drawDetection(ctx, detection, '#f59e0b', '', false));
-                        } else {
-                            setTargetStatus('LOST');
-                            if (now - lastQualityUiUpdateRef.current > 140) {
-                                setTargetQuality({ ok: false, level: 'lost', label: 'Đã mất mục tiêu — bấm Chọn lại học sinh' });
-                                lastQualityUiUpdateRef.current = now;
-                            }
-                            detections.forEach((detection, index) => drawDetection(ctx, detection, '#ef4444', 'HS ' + (index + 1), false));
+                        if (now - lastQualityUiUpdateRef.current > 140) {
+                            setTargetQuality({
+                                ok: false,
+                                level: 'waiting',
+                                label: 'Đang chờ học sinh quay lại vùng trả lời...'
+                            });
+                            lastQualityUiUpdateRef.current = now;
                         }
+                        drawLockedAnswerRegion(
+                            ctx,
+                            region,
+                            '#f59e0b',
+                            'VÙNG TRẢ LỜI — ĐANG CHỜ',
+                            false
+                        );
                     }
                 };
 
@@ -1593,7 +1680,7 @@
                     cancelled = true;
                     isMounted.current = false;
                     detectionsRef.current = [];
-                    targetTrackRef.current = null;
+                    lockedRegionRef.current = null;
                     if (cameraRef.current) {
                         try { cameraRef.current.stop(); } catch (_) {}
                         cameraRef.current = null;
@@ -1748,25 +1835,19 @@
                                     height="480"
                                     onClick={handleCanvasClick}
                                     className={`camera-flip absolute inset-0 w-full h-full object-contain ${selectionMode ? 'cursor-crosshair' : 'cursor-default'}`}
-                                    title={selectionMode ? 'Chạm vào khung học sinh muốn AI nhận diện' : 'AI đang khóa học sinh đã chọn'}
+                                    title={selectionMode ? 'Chạm vào học sinh đang đứng tại vị trí muốn dùng làm vùng trả lời' : 'AI đang khóa cố định vùng trả lời'}
                                 />
                                 {selectionMode && (
                                     <div className="absolute top-3 left-3 right-3 z-20 bg-indigo-600/95 text-white px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-center pointer-events-none">
-                                        <div className="font-black text-sm">🎯 CHỌN HỌC SINH CẦN NHẬN DIỆN</div>
+                                        <div className="font-black text-sm">🎯 CHỌN VỊ TRÍ TRẢ LỜI</div>
                                         <div className="text-xs font-bold text-indigo-100 mt-0.5">
-                                            {peopleCount > 0 ? `AI thấy ${peopleCount} học sinh — chạm trực tiếp vào khung của em cần chơi` : 'Chưa thấy học sinh — mời các em đứng trọn trong khung camera'}
+                                            {peopleCount > 0 ? `AI thấy ${peopleCount} học sinh — chạm vào học sinh đang đứng ở vị trí muốn khóa` : 'Chưa thấy học sinh — mời một em đứng tại vị trí trả lời rồi chọn'}
                                         </div>
                                     </div>
                                 )}
-                                {targetStatus === 'SEARCHING' && (
+                                {targetStatus === 'WAITING' && (
                                     <div className="absolute top-3 left-3 right-3 z-20 bg-amber-400/95 text-amber-950 px-4 py-2 rounded-2xl shadow-xl font-black text-sm text-center pointer-events-none">
-                                        🔎 ĐANG TÌM LẠI HỌC SINH ĐÃ CHỌN — chưa tính đáp án
-                                    </div>
-                                )}
-                                {targetStatus === 'LOST' && (
-                                    <div className="absolute top-3 left-3 right-3 z-30 bg-red-600/95 text-white px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-center">
-                                        <div className="font-black text-sm">⚠ ĐÃ MẤT HỌC SINH MỤC TIÊU</div>
-                                        <button onClick={resetTargetSelection} className="mt-2 bg-white text-red-700 px-4 py-1.5 rounded-xl text-xs font-black">🎯 CHỌN LẠI HỌC SINH</button>
+                                        ⏳ ĐANG CHỜ HỌC SINH QUAY LẠI VÙNG TRẢ LỜI — AI không chuyển sang học sinh khác
                                     </div>
                                 )}
                                 {poseError && (
@@ -1781,26 +1862,26 @@
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                                                {selectionMode ? 'Trạng thái AI:' : targetStatus === 'LOCKED' ? 'Học sinh đang:' : 'Theo dõi:'}
+                                                {selectionMode ? 'Trạng thái AI:' : targetStatus === 'LOCKED' ? 'Trong vùng:' : 'Vùng trả lời:'}
                                             </span>
                                             <span className={`pose-camera-status-name text-lg font-black uppercase italic leading-none ${targetQuality.ok ? 'text-indigo-700' : 'text-amber-600'}`}>
-                                                {selectionMode ? 'CHỜ CHỌN HỌC SINH' : targetStatus === 'LOCKED' ? DEFAULT_POSE_CONFIG[detectedPose].label : targetStatus === 'SEARCHING' ? 'ĐANG TÌM LẠI' : 'MẤT MỤC TIÊU'}
+                                                {selectionMode ? 'CHỜ CHỌN VỊ TRÍ' : targetStatus === 'LOCKED' ? DEFAULT_POSE_CONFIG[detectedPose].label : 'ĐANG CHỜ HỌC SINH'}
                                             </span>
                                             <span className={`text-[10px] mt-1 font-bold leading-tight ${targetQuality.ok ? 'text-emerald-600' : 'text-slate-500'}`}>{targetQuality.label}</span>
                                         </div>
                                     </div>
                                     <div className="pose-camera-scan flex items-center gap-2">
                                          <div className="text-right mr-1">
-                                            <div className="text-[8px] font-bold text-slate-400 uppercase leading-none">{targetStatus === 'LOCKED' ? 'Target lock' : 'Multi-pose'}</div>
+                                            <div className="text-[8px] font-bold text-slate-400 uppercase leading-none">{selectionMode ? 'Multi-pose' : 'Khóa vùng'}</div>
                                             <div className={`text-[10px] font-black ${targetQuality.ok ? 'text-emerald-600' : 'text-indigo-500'}`}>{selectionMode ? peopleCount + ' người' : targetQuality.ok ? 'SẴN SÀNG' : 'TẠM DỪNG'}</div>
                                          </div>
                                          {!selectionMode && (
                                             <button
                                                 onClick={resetTargetSelection}
                                                 className="px-3 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black shadow"
-                                                title="Chọn một học sinh khác"
+                                                title="Mở khóa vùng hiện tại để chọn một vị trí trả lời khác"
                                             >
-                                                🎯 CHỌN LẠI
+                                                🔓 ĐỔI VÙNG
                                             </button>
                                          )}
                                     </div>
