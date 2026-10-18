@@ -144,10 +144,21 @@ function createVoice({sound:audio,settings,onStatus=()=>{}}={}){
  async function speakQuestion(q,student,index){
   const token=generation;
   const name=student?.name||'';
-  const call=template('call',{name,index});
-  if(call)await play(call,phraseMap.get(call)||null,token);
-  if(token!==generation)return;
-  if(student&&nameVoices.has(student.id))await play(name,nameVoices.get(student.id),token);
+  const callPattern=script?.slots?.call?.[0]||store.BUILTIN.slots?.call?.[0]||'';
+  if(student&&name&&callPattern.includes('{tên}')){
+   // Đọc các cụm kịch bản và WAV tên đúng một lần, ở đúng vị trí {tên}.
+   // Không đọc trùng tên học sinh khi câu dẫn đã chứa chính họ tên ấy.
+   const pieces=callPattern.replace(/\{số\}/g,String(index)).split('{tên}');
+   const prefix=norm(pieces[0]),suffix=norm(pieces.slice(1).join('{tên}'));
+   if(prefix)await play(prefix,phraseMap.get(prefix)||null,token);
+   if(token!==generation)return;
+   await play(name,nameVoices.get(student.id)||null,token);
+   if(token!==generation)return;
+   if(suffix)await play(suffix,phraseMap.get(suffix)||null,token);
+  }else{
+   const call=template('call',{name,index});
+   if(call)await play(call,phraseMap.get(call)||null,token);
+  }
   if(token!==generation)return;
   const text=questionSpeech(q);
   const url=audioMap.get(q.id+':full');
