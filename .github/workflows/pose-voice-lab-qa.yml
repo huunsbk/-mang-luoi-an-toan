@@ -50,7 +50,7 @@ jobs:
             const errors=[];
             page.on('pageerror',e=>errors.push(String(e)));
             await page.goto('http://127.0.0.1:4173/pose-quiz/',{waitUntil:'networkidle',timeout:60000});
-            await page.getByText('ĐĂNG NHẬP').waitFor({timeout:30000});
+            await page.getByRole('button',{name:'ĐĂNG NHẬP'}).first().waitFor({timeout:30000});
             if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
             await browser.close();
             console.log('POSE_VOICE_LAB_BROWSER_OK');
