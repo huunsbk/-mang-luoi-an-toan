@@ -804,7 +804,7 @@
                     setLessons(bankResult.facets?.lessons || []);
                     setGroups(groupResult.groups || []);
                 } catch (err) {
-                    setError(err.message || 'Không tải được kho câu hỏi.');
+                    setError(err.message || 'Không tải được Ngân hàng câu hỏi.');
                 } finally {
                     setLoading(false);
                 }
@@ -877,7 +877,7 @@
 
             const deleteSelected = async () => {
                 if (!ownSelectedIds.length) return alert('Không có câu hỏi do thầy/cô sở hữu trong phần đã chọn.');
-                if (!confirm(`Xóa ${ownSelectedIds.length} câu của thầy/cô khỏi kho?`)) return;
+                if (!confirm(`Xóa ${ownSelectedIds.length} câu của thầy/cô khỏi Ngân hàng câu hỏi?`)) return;
                 try {
                     await backendRequest('bank.delete', { ids: ownSelectedIds });
                     setSelected(prev => {
@@ -936,8 +936,8 @@
 
                     <div className="flex-1 overflow-y-auto p-6">
                         <div className="max-w-7xl mx-auto">
-                            {loading && <div className="text-center py-16 font-bold text-slate-500">Đang tải kho câu hỏi...</div>}
-                            {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-5 font-bold">Không tải được kho câu hỏi: {error}<div className="text-xs mt-2">Backend chưa sẵn sàng. Hãy kiểm tra kết nối.</div></div>}
+                            {loading && <div className="text-center py-16 font-bold text-slate-500">Đang tải Ngân hàng câu hỏi...</div>}
+                            {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-5 font-bold">Không tải được Ngân hàng câu hỏi: {error}<div className="text-xs mt-2">Backend chưa sẵn sàng. Hãy kiểm tra kết nối.</div></div>}
                             {!loading && !error && visibleItems.length === 0 && (
                                 <div className="text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 p-14 text-slate-500">
                                     <div className="text-6xl mb-3">📭</div>
