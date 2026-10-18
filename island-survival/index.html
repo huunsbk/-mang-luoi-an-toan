@@ -94,6 +94,94 @@ header.top{display:flex;align-items:center;gap:18px;justify-content:space-betwee
 @media(max-width:1120px){.layout{grid-template-columns:minmax(0,1fr)}.right-column{grid-template-columns:1fr 1fr}.stage{min-height:0}#world-wrap{height:440px}#team-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:710px){#island-controls{right:6px;top:6px;gap:4px;padding:5px;max-width:167px}.camera-btn{width:28px;height:28px;font-size:14px;border-radius:7px}.camera-btn.wide{font-size:9px;padding:0 5px}#camera-guide{display:none}#camera-status{font-size:8px}.stage-hint{font-size:9px;max-width:58%;bottom:5px;left:5px}.shell{width:calc(100% - 18px)}header.top{padding:10px 0}.logo h1{font-size:18px}.logo-mark{width:39px;height:39px}.header-actions{gap:5px}.header-actions .btn{font-size:10px;padding:8px 9px}.pill{font-size:10px}#world-wrap{height:290px;min-height:290px}.stage-top{padding:9px}.stage-stamp{top:9px;left:9px;padding:7px}.stage-stamp .big{font-size:13px}#team-board{gap:7px}.team-card{padding:9px}.right-column{grid-template-columns:1fr}.field.row2{grid-template-columns:1fr 1fr}.answers{grid-template-columns:1fr}#question-panel{padding:15px}.question-text{font-size:20px}.answer{min-height:51px;padding:8px;font-size:14px}.toolbar{gap:5px}.toolbar .btn{font-size:10px;padding:8px}.modal{padding:20px}.page-title h2{font-size:23px}#posebox{width:175px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Island cockpit: one 3D screen for every teaching action, no scrolling of the page during a match */
+body.island-gameplay{overflow:hidden;overscroll-behavior:none}
+body.island-gameplay .stage{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;min-height:0;border:0;border-radius:0;z-index:40;box-shadow:none}
+.stage{isolation:isolate}
+.stage-top{position:absolute;z-index:30;top:0;left:0;right:0;min-height:55px;pointer-events:none;box-shadow:0 5px 20px #02162b42}
+#world-wrap{height:min(72vh,675px);min-height:550px}
+body.island-gameplay #world-wrap{position:absolute;inset:0;width:100%;height:100%;min-height:0}
+.stage-stamp{top:71px;max-width:245px}
+#island-controls{top:70px}
+#team-board{position:absolute;z-index:15;left:16px;right:245px;top:143px;display:flex;flex-wrap:nowrap;gap:7px;margin:0;overflow-x:auto;scrollbar-width:thin;padding:1px 3px 6px;pointer-events:auto}
+#team-board .team-card{flex:0 0 135px;padding:8px 10px;border-radius:12px;background:#06283fdb;backdrop-filter:blur(8px);cursor:pointer;min-width:0}
+#team-board .team-score{font-size:15px;margin-top:3px}
+#team-board .team-name{font-size:11px}
+#team-board .team-meta{font-size:9px;margin-top:3px}
+#team-board .team-card:hover{background:#215478ee}
+#question-panel{position:absolute;z-index:25;left:50%;bottom:87px;transform:translateX(-50%);width:min(850px,calc(100% - 300px));max-width:calc(100% - 24px);max-height:calc(100% - 215px);min-height:0;overflow-y:auto;overscroll-behavior:contain;border:2px solid #b9e6f5;box-shadow:0 18px 65px #031423b9,0 0 0 6px #07284045;border-radius:23px;background:#f3f9fded;backdrop-filter:blur(14px);color:#122d43;padding:19px 22px}
+#question-panel .question-text{font-size:clamp(19px,2.15vw,33px);line-height:1.42;margin:6px 0 12px;overflow-wrap:anywhere}
+#question-panel .answer{min-height:59px;padding:10px 12px;line-height:1.35}
+#question-panel .answers{gap:9px}
+#question-panel .answer .letter{padding:8px 12px}
+#question-panel .question-head{margin-bottom:6px}
+#question-panel .status{margin-bottom:5px;line-height:1.45}
+#question-panel .kicker{margin:11px 0 6px!important}
+#question-panel .build-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#question-panel .build-options .btn{min-height:62px;white-space:normal;text-align:center;line-height:1.3;touch-action:manipulation}
+#question-panel[hidden]{display:none}
+#question-panel[data-phase="event"]{width:min(490px,calc(100% - 30px));padding:14px 20px;background:#fff8ebe9;border-color:#ffdc88}
+#question-panel[data-phase="event"] .question-text{font-size:23px}
+#question-panel[data-phase="transition"]{width:min(520px,calc(100% - 30px));padding:16px 20px}
+#question-panel[data-phase="finished"]{width:min(610px,calc(100% - 30px))}
+.stage .toolbar{position:absolute;z-index:31;bottom:12px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 26px);display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap;min-height:58px;padding:8px 11px;background:#092a46e8;border:1px solid #79b9d2a8;box-shadow:0 9px 30px #04192ba3;border-radius:16px;backdrop-filter:blur(14px)}
+.stage .toolbar .row{gap:7px;flex-wrap:nowrap}
+.stage .toolbar .btn{font-size:12px;padding:10px 13px;min-height:42px}
+.stage .toolbar #main-action{font-weight:900;min-width:150px}
+.stage .toolbar .btn[hidden]{display:none}
+.stage-hint{bottom:auto;top:116px;right:245px;left:auto;font-size:10px}
+#banner{top:57px;max-width:45%;z-index:24}
+#posebox{bottom:84px;z-index:28;width:180px;right:12px}
+body.island-gameplay #toast{z-index:60;bottom:80px}
+@media(max-width:1120px){
+ #world-wrap{height:min(73vh,650px);min-height:510px}
+ #team-board{display:flex;grid-template-columns:none;right:184px;top:142px}
+ #team-board .team-card{flex:0 0 118px}
+ #question-panel{width:min(720px,calc(100% - 24px));max-height:calc(100% - 234px)}
+ .stage-hint{display:none}
+}
+@media(max-width:710px){
+ #world-wrap{height:590px;min-height:590px}
+ body.island-gameplay #world-wrap{height:100%;min-height:0}
+ .stage-top{height:49px;min-height:49px;flex-wrap:nowrap;gap:4px;padding:7px 9px}
+ .stage-top .label{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .stage-top strong{font-size:10px;white-space:nowrap}
+ .stage-stamp{top:53px;left:7px;max-width:39%;padding:5px 7px}
+ .stage-stamp .big{font-size:11px}
+ .stage-stamp small{font-size:9px}
+ #island-controls{top:52px;right:6px}
+ #team-board{top:166px;left:7px;right:7px;gap:5px}
+ #team-board .team-card{flex:0 0 102px;padding:6px;min-height:54px}
+ #team-board .team-meta{font-size:8px}
+ #question-panel{width:calc(100% - 14px);max-width:none;bottom:66px;max-height:calc(100% - 235px);border-radius:15px;padding:11px 12px;border-width:1px}
+ #question-panel .question-head{font-size:10px;gap:5px}
+ #question-panel .question-text{font-size:clamp(16px,4.5vw,21px);line-height:1.35;margin:4px 0 9px}
+ #question-panel .answers{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ #question-panel .answer{min-height:56px;font-size:12px;padding:6px;gap:5px;border-radius:10px}
+ #question-panel .answer .letter{font-size:12px;padding:6px}
+ #question-panel .status{font-size:11px;padding:7px;line-height:1.4}
+ #question-panel .build-options{gap:6px}
+ #question-panel .build-options .btn{font-size:11px;min-height:54px;padding:8px 4px}
+ #question-panel .countdown{font-size:20px}
+ #question-panel .phase-line{font-size:10px;margin-top:7px}
+ #question-panel[data-phase="event"]{max-height:calc(100% - 235px)}
+ #banner{top:48px;max-width:52%;font-size:10px;padding:6px}
+ .stage .toolbar{bottom:5px;max-width:calc(100% - 10px);width:calc(100% - 10px);min-height:53px;gap:4px;padding:5px;justify-content:space-between}
+ .stage .toolbar .row{gap:3px;min-width:0}
+ .stage .toolbar .btn{font-size:10px;min-height:37px;padding:6px}
+ .stage .toolbar #main-action{min-width:0;white-space:normal}
+ #posebox{right:5px;bottom:70px;width:140px}
+}
+@media(max-height:660px){
+ #team-board{top:85px}
+ .stage-stamp{top:56px}
+ #question-panel{max-height:calc(100% - 150px);bottom:62px;padding:9px 13px}
+ #question-panel .question-text{font-size:18px;margin:4px 0 8px}
+ #question-panel .answer{min-height:45px;padding:6px;font-size:13px}
+ #question-panel .status{padding:6px}
+ .stage .toolbar{bottom:3px;min-height:48px;padding:4px}
+}
 </style></head>
 <body>
 <div class="shell">
@@ -118,9 +206,8 @@ header.top{display:flex;align-items:center;gap:18px;justify-content:space-betwee
    </div>
    <div class="stage-hint">🖱️ Kéo: xoay 360° · Cuộn: phóng to · Chạm đảo: xem gần</div>
    <div id="posebox" hidden><video id="posevideo" muted playsinline autoplay></video><canvas id="posecanvas"></canvas><div id="pose-status">🎥 Camera chưa khởi tạo</div></div>
-  </div>
-  <div id="team-board"></div>
-  <div id="question-panel">
+  <div id="team-board" aria-label="Điểm các đội trên sân khấu"></div>
+  <div id="question-panel" role="region" aria-label="Câu hỏi và thao tác trong trò chơi">
    <div id="question-content"><p class="question-text">Sẵn sàng khám phá đảo sinh tồn?</p><p style="color:#52728a">Chọn cấu hình bên phải, sau đó nhấn <b>Bắt đầu khám phá</b>.</p></div>
   </div>
   <div class="toolbar"><div class="row">
@@ -129,6 +216,7 @@ header.top{display:flex;align-items:center;gap:18px;justify-content:space-betwee
    <button class="btn small" id="skip-animation" hidden>⏭ Bỏ qua hiệu ứng</button>
    <button class="btn small" id="reset-game">↺ Soạn lại</button>
    </div><div class="row"><button class="btn good" id="main-action">▶ Bắt đầu khám phá</button></div></div>
+  </div>
  </section>
  <aside class="right-column">
   <section class="card panel" id="setup-panel"><div class="row spread"><h3>⚙️ Soạn trò chơi</h3><span class="pill" style="font-size:10px">Thi đấu đội</span></div>
