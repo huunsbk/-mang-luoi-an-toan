@@ -1455,25 +1455,36 @@
                 if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
             }, []);
 
+            // Tạo nhạc nền đúng một lần cho mỗi nguồn âm thanh.
+            // Kéo thanh âm lượng chỉ đổi .volume của Audio đang phát, KHÔNG tạo Audio mới
+            // nên bài nhạc không bị tắt/chạy lại từ đầu trong lúc kéo.
             useEffect(() => {
                 if (bgmRef.current) {
-                    bgmRef.current.pause();
+                    try { bgmRef.current.pause(); } catch (_) {}
                     bgmRef.current = null;
                 }
+
                 const bgmSrc = resolvedLessonAudioSrc(settings, 'bgm');
-                if (bgmSrc && bgmGameVolume > 0.001 && !isPaused) {
-                    bgmRef.current = new Audio(bgmSrc);
-                    bgmRef.current.loop = true;
-                    bgmRef.current.volume = bgmGameVolume;
-                    bgmRef.current.play().catch(() => {});
+                if (!bgmSrc) return;
+
+                const audio = new Audio(bgmSrc);
+                audio.loop = true;
+                audio.volume = bgmGameVolume;
+                bgmRef.current = audio;
+
+                if (!isPaused) {
+                    audio.play().catch(() => {});
                 }
+
                 return () => {
-                    if (bgmRef.current) {
-                        bgmRef.current.pause();
+                    if (bgmRef.current === audio) {
+                        try { audio.pause(); } catch (_) {}
                         bgmRef.current = null;
+                    } else {
+                        try { audio.pause(); } catch (_) {}
                     }
                 };
-            }, [isPaused, bgmGameVolume, settings.audio.bgm?.data]);
+            }, [settings.audio.bgm?.data]);
 
             // Giọng đọc câu hỏi do PoseQuizVoiceRuntime quản lý. Khi tắt "Sử dụng giọng đọc",
             // không phát audio câu hỏi cũ; nhạc nền và hiệu ứng đúng/sai vẫn giữ nguyên.
@@ -1540,9 +1551,17 @@
             }, [settings.voiceNarration?.enabled, gameReady, qIndex, currentQuestion?.id, feedback, voiceGameVolume]);
 
             useEffect(() => {
-                if (!voiceRuntimeRef.current) return;
-                if (isPaused) voiceRuntimeRef.current.pause();
-                else voiceRuntimeRef.current.resume();
+                if (isPaused) {
+                    if (bgmRef.current) {
+                        try { bgmRef.current.pause(); } catch (_) {}
+                    }
+                    voiceRuntimeRef.current?.pause?.();
+                } else {
+                    if (bgmRef.current) {
+                        bgmRef.current.play().catch(() => {});
+                    }
+                    voiceRuntimeRef.current?.resume?.();
+                }
             }, [isPaused]);
 
             useEffect(() => {
