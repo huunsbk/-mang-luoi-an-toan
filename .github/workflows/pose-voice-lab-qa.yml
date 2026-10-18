@@ -6,6 +6,7 @@ on:
       - pose-quiz-voice-lab
     paths:
       - 'pose-quiz/**'
+      - 'server.py'
       - 'scripts/script-store.js'
       - 'classrooms/**'
       - 'unified-voice/**'
@@ -32,6 +33,7 @@ jobs:
           node qa/pose-voice-lab.mjs
           grep -q '🔊 ĐANG DÙNG GIỌNG' pose-quiz/index.html
           grep -q 'bankQuestionId' pose-quiz/index.html
+          grep -q '"/pose-quiz/voice-runtime.js"' server.py
 
       - name: Browser parse smoke
         run: |
