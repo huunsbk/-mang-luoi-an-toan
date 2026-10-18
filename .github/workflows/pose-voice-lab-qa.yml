@@ -1,0 +1,58 @@
+name: Pose Voice LAB QA
+
+on:
+  push:
+    branches:
+      - pose-quiz-voice-lab
+    paths:
+      - 'pose-quiz/**'
+      - 'scripts/script-store.js'
+      - 'classrooms/**'
+      - 'unified-voice/**'
+      - 'qa/pose-voice-lab.mjs'
+      - '.github/workflows/pose-voice-lab-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Static checks
+        run: |
+          node --check pose-quiz/voice-runtime.js
+          node qa/pose-voice-lab.mjs
+          grep -q '🔊 ĐANG DÙNG GIỌNG' pose-quiz/index.html
+          grep -q 'bankQuestionId' pose-quiz/index.html
+
+      - name: Browser parse smoke
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/pose-lab-http.log 2>&1 &
+          for i in $(seq 1 15); do
+            curl -fsS http://127.0.0.1:4173/pose-quiz/ >/dev/null && break
+            sleep 1
+          done
+          node - <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            const errors=[];
+            page.on('pageerror',e=>errors.push(String(e)));
+            await page.goto('http://127.0.0.1:4173/pose-quiz/',{waitUntil:'networkidle',timeout:60000});
+            await page.getByText('ĐĂNG NHẬP').waitFor({timeout:30000});
+            if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
+            await browser.close();
+            console.log('POSE_VOICE_LAB_BROWSER_OK');
+          })();
+          NODE
