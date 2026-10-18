@@ -778,10 +778,12 @@
             const [groups, setGroups] = useState([]);
             const [subjects, setSubjects] = useState([]);
             const [lessons, setLessons] = useState([]);
+            const [grades, setGrades] = useState([]);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState('');
             const [subjectFilter, setSubjectFilter] = useState('ALL');
             const [lessonFilter, setLessonFilter] = useState('ALL');
+            const [gradeFilter, setGradeFilter] = useState('ALL');
             const [shareFilter, setShareFilter] = useState('ALL');
             const [searchText, setSearchText] = useState('');
             const [selected, setSelected] = useState(() => new Set());
@@ -794,6 +796,7 @@
                         backendRequest('bank.list', {
                             subject_name: subjectFilter,
                             lesson_name: lessonFilter,
+                            grade: gradeFilter,
                             source: shareFilter,
                             search: searchText
                         }),
@@ -802,6 +805,7 @@
                     setItems(bankResult.items || []);
                     setSubjects(bankResult.facets?.subjects || []);
                     setLessons(bankResult.facets?.lessons || []);
+                    setGrades(bankResult.facets?.grades || []);
                     setGroups(groupResult.groups || []);
                 } catch (err) {
                     setError(err.message || 'Không tải được Ngân hàng câu hỏi.');
@@ -813,7 +817,7 @@
             useEffect(() => {
                 const timer = setTimeout(() => load(), 180);
                 return () => clearTimeout(timer);
-            }, [subjectFilter, lessonFilter, shareFilter, searchText]);
+            }, [subjectFilter, lessonFilter, gradeFilter, shareFilter, searchText]);
 
             const groupNames = useMemo(
                 () => Object.fromEntries(groups.map(group => [group.id, group.name])),
@@ -852,10 +856,13 @@
                 if (!ids.length) return alert('Hãy chọn ít nhất một câu hỏi.');
                 try {
                     const result = await backendRequest('bank.resolve', { ids });
-                    const itemById = new Map((items || []).map(item => [item.id, item]));
+                    const sources = Array.isArray(result.items) && result.items.length
+                        ? result.items
+                        : ids.map(id => (items || []).find(item => item.id === id)).filter(Boolean);
+                    const sourceById = new Map(sources.map(item => [item.id, item]));
                     const imported = (result.questions || []).map((question, index) => {
                         const bankQuestionId = ids[index] || question.bankQuestionId || null;
-                        const source = itemById.get(bankQuestionId);
+                        const source = sourceById.get(bankQuestionId);
                         return {
                             ...question,
                             bankQuestionId,
@@ -863,8 +870,26 @@
                             bankSource: source?.visibility || null
                         };
                     });
-                    setSettings({ ...settings, questions: [...settings.questions, ...imported] });
-                    alert(`Đã thêm ${imported.length} câu hỏi do backend xác thực vào bài đang soạn.`);
+                    const subjectsSelected = [...new Set(sources.map(item => String(item.subject_name || '').trim()).filter(Boolean))];
+                    const lessonsSelected = [...new Set(sources.map(item => String(item.lesson_name || '').trim()).filter(Boolean))];
+                    const gradesSelected = [...new Set(sources.map(item => Number(item.grade)).filter(grade => Number.isInteger(grade) && grade >= 1 && grade <= 12))];
+                    const metadataSynced = subjectsSelected.length === 1 && lessonsSelected.length === 1 && gradesSelected.length === 1;
+
+                    setSettings(prev => ({
+                        ...prev,
+                        ...(metadataSynced ? {
+                            subject: subjectsSelected[0],
+                            title: lessonsSelected[0],
+                            grade: gradesSelected[0]
+                        } : {}),
+                        questions: [...(prev.questions || []), ...imported]
+                    }));
+                    alert(
+                        `Đã thêm ${imported.length} câu hỏi vào bài đang soạn.` +
+                        (metadataSynced
+                            ? ` Đã đồng bộ: Lớp ${gradesSelected[0]} · ${subjectsSelected[0]} · ${lessonsSelected[0]}.`
+                            : ' Các câu thuộc nhiều môn/bài/lớp nên giữ nguyên thông tin bài đang soạn.')
+                    );
                     setScreen('EDITOR');
                 } catch (err) {
                     alert('Không lấy được câu hỏi: ' + err.message);
@@ -913,7 +938,7 @@
                     <div className="bg-white border-b border-slate-200 px-6 py-4">
                         <div className="max-w-7xl mx-auto flex flex-wrap gap-3 items-center">
                             <div className="text-sm font-black text-slate-600 mr-auto">
-                                Bài đang soạn: <span className="text-violet-700">{settings.subject || 'Chưa chọn môn'} / {settings.title || 'Chưa đặt tên bài'}</span>
+                                Bài đang soạn: <span className="text-violet-700">{settings.grade ? `Lớp ${settings.grade} · ` : ''}{settings.subject || 'Chưa chọn môn'} / {settings.title || 'Chưa đặt tên bài'}</span>
                             </div>
                             <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
                                 <option value="ALL">Tất cả môn</option>
@@ -922,6 +947,10 @@
                             <select value={lessonFilter} onChange={(e) => setLessonFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
                                 <option value="ALL">Tất cả bài</option>
                                 {lessons.map(lesson => <option key={lesson} value={lesson}>{lesson}</option>)}
+                            </select>
+                            <select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
+                                <option value="ALL">Tất cả lớp</option>
+                                {grades.map(grade => <option key={grade} value={String(grade)}>Lớp {grade}</option>)}
                             </select>
                             <select value={shareFilter} onChange={(e) => setShareFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
                                 <option value="ALL">Tất cả nguồn</option>
@@ -1004,6 +1033,7 @@
                 return {
                     subject: "Tin học",
                     title: "Bài dạy AI Pose Quiz",
+                    grade: null,
                     bankVisibility: "private",
                     bankGroupId: "",
                     timeLimit: 20,
@@ -1100,12 +1130,14 @@
             const saveQuestionsToBank = async (questions) => {
                 const subjectName = (settings.subject || 'Chưa phân loại').trim() || 'Chưa phân loại';
                 const lessonName = (settings.title || 'Chưa phân loại').trim() || 'Chưa phân loại';
+                const grade = Number(settings.grade);
                 const visibility = ['private', 'public', 'group'].includes(settings.bankVisibility)
                     ? settings.bankVisibility
                     : 'private';
                 const groupId = visibility === 'group' ? (settings.bankGroupId || null) : null;
 
                 if (!questions?.length) return alert('Không có câu hỏi để đồng bộ.');
+                if (!Number.isInteger(grade) || grade < 1 || grade > 12) return alert('Hãy chọn lớp/khối từ 1 đến 12 trước khi đồng bộ Ngân hàng câu hỏi.');
                 if (visibility === 'group' && !groupId) return alert('Hãy chọn nhóm muốn chia sẻ.');
 
                 const localIds = questions.map(question => String(question?.id ?? ''));
@@ -1113,6 +1145,7 @@
                     const result = await backendRequest('bank.save', {
                         subject_name: subjectName,
                         lesson_name: lessonName,
+                        grade,
                         visibility,
                         group_id: groupId,
                         questions,
@@ -1178,6 +1211,7 @@
                 setSettings({
                     subject: 'Tin học',
                     title: 'Bài dạy mới',
+                    grade: null,
                     bankVisibility: 'private',
                     bankGroupId: '',
                     timeLimit: 20,
@@ -2402,6 +2436,19 @@
                 return () => { cancelled = true; };
             }, [voiceOptionsRefresh]);
 
+            useEffect(() => {
+                const classroomId = settings.voiceNarration?.classroomId;
+                if (!classroomId || voiceOptions.loading) return;
+                const selectedClass = (voiceOptions.classes || []).find(item => item.id === classroomId);
+                if (!selectedClass?.grade || !settings.grade) return;
+                if (Number(selectedClass.grade) !== Number(settings.grade)) {
+                    setSettings(prev => ({
+                        ...prev,
+                        voiceNarration: {...(prev.voiceNarration || {}), classroomId: ''}
+                    }));
+                }
+            }, [voiceOptions.loading, voiceOptions.classes, settings.grade, settings.voiceNarration?.classroomId]);
+
             const handleFile = async (e, callback) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -2554,9 +2601,37 @@
                     <div className="pose-editor-header bg-white border-b-2 border-slate-200 p-4 flex justify-between items-center px-8 shadow-sm">
                         <div className="flex flex-col">
                             <h2 className="pose-editor-title text-2xl font-black text-indigo-600 uppercase tracking-tighter">THIẾT LẬP BÀI DẠY V9.9 CLOUD</h2>
-                            <div className="pose-editor-title-fields flex gap-2 mt-1">
-                                <input value={settings.subject || ''} onChange={(e) => setSettings({...settings, subject: e.target.value})} placeholder="Môn học (VD: Tin học)" className="w-48 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold outline-none focus:border-indigo-300" />
-                                <input value={settings.title || ''} onChange={(e) => setSettings({...settings, title: e.target.value})} placeholder="Tên bài dạy" className="w-80 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold outline-none focus:border-indigo-300" />
+                            <div className="pose-editor-title-fields flex gap-2 mt-1 items-end">
+                                <label className="text-[9px] font-black text-slate-400 uppercase">
+                                    Môn học
+                                    <input value={settings.subject || ''} onChange={(e) => setSettings({...settings, subject: e.target.value})} placeholder="VD: Tin học 3" className="mt-1 block w-48 max-w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-800 normal-case outline-none focus:border-indigo-300" />
+                                </label>
+                                <label className="text-[9px] font-black text-slate-400 uppercase">
+                                    Lớp/khối
+                                    <select
+                                        value={settings.grade ? String(settings.grade) : ''}
+                                        onChange={(e) => {
+                                            const nextGrade = Number(e.target.value) || null;
+                                            const selectedClass = (voiceOptions.classes || []).find(item => item.id === settings.voiceNarration?.classroomId);
+                                            const clearClass = selectedClass?.grade && nextGrade && Number(selectedClass.grade) !== nextGrade;
+                                            setSettings({
+                                                ...settings,
+                                                grade: nextGrade,
+                                                voiceNarration: clearClass
+                                                    ? {...(settings.voiceNarration || {}), classroomId: ''}
+                                                    : settings.voiceNarration
+                                            });
+                                        }}
+                                        className="mt-1 block w-28 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-800 normal-case outline-none focus:border-indigo-300"
+                                    >
+                                        <option value="">Chọn lớp</option>
+                                        {Array.from({length: 12}, (_, index) => index + 1).map(grade => <option key={grade} value={grade}>Lớp {grade}</option>)}
+                                    </select>
+                                </label>
+                                <label className="text-[9px] font-black text-slate-400 uppercase flex-1 min-w-[16rem]">
+                                    Bài/chủ đề
+                                    <input value={settings.title || ''} onChange={(e) => setSettings({...settings, title: e.target.value})} placeholder="VD: Bài 3: Máy tính và em" className="mt-1 block w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-800 normal-case outline-none focus:border-indigo-300" />
+                                </label>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] font-bold text-emerald-600">☁️ {usage} media đang tham chiếu • Storage riêng tư</span>
@@ -2628,7 +2703,15 @@
                                                 <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Lớp tham gia</label>
                                                 <select
                                                     value={settings.voiceNarration?.classroomId || ''}
-                                                    onChange={(e) => setSettings({...settings, voiceNarration: {...(settings.voiceNarration || {}), enabled: true, scriptId: settings.voiceNarration?.scriptId || 'builtin', classroomId: e.target.value}})}
+                                                    onChange={(e) => {
+                                                        const classroomId = e.target.value;
+                                                        const selectedClass = (voiceOptions.classes || []).find(item => item.id === classroomId);
+                                                        setSettings({
+                                                            ...settings,
+                                                            grade: selectedClass?.grade ? Number(selectedClass.grade) : settings.grade,
+                                                            voiceNarration: {...(settings.voiceNarration || {}), enabled: true, scriptId: settings.voiceNarration?.scriptId || 'builtin', classroomId}
+                                                        });
+                                                    }}
                                                     className="w-full p-2 bg-white rounded-xl border border-indigo-100 text-xs font-bold"
                                                 >
                                                     <option value="">— Không sử dụng lớp · không đọc tên học sinh —</option>
