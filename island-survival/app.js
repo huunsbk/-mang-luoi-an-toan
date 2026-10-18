@@ -230,7 +230,7 @@ function buildQuestion(){
  let extra='';
  if(p==='build'){
   const actions=[['shield','🛡️ Dựng lá chắn','2 🪵',team.materials>=2],['repair','❤️ Sửa chữa đảo','3 🪵',team.materials>=3&&team.health<3],['bridge','🌉 Xây cầu','2 🪵',team.materials>=2],['save','📦 Tích trữ','0 🪵',true]];
-  extra='<div class="kicker" style="margin:15px 0 8px">LỰA CHỌN CHIẾN THUẬT – TÀI NGUYÊN HIỆN CÓ: '+team.materials+' 🪵</div><div class="row">'+actions.map(a=>'<button class="btn small" data-build="'+a[0]+'" '+(!a[3]?'disabled':'')+'>'+a[1]+' ('+a[2]+')</button>').join('')+'</div>';
+  extra='<div class="kicker">CHỌN CÔNG TRÌNH TRÊN ĐẢO · CÒN '+team.materials+' 🪵</div><div class="build-options">'+actions.map(a=>'<button class="btn" type="button" data-build="'+a[0]+'" '+(!a[3]?'disabled':'')+'>'+a[1]+'<br><span style="font-size:.85em">'+a[2]+'</span></button>').join('')+'</div>';
  }
  qc.innerHTML='<div class="question-head"><span>CÂU '+(s.turn+1)+' / '+s.questions.length+' · '+esc(team.name)+'</span><span>'+esc(s.activeStudent?.name||'Thi đấu theo đội')+'</span></div>'+
   '<p class="question-text">'+esc(q.text)+'</p>'+ (q.imageUrl?'<img alt="Hình minh họa câu hỏi" src="'+esc(q.imageUrl)+'" style="max-width:100%;max-height:180px;object-fit:contain;border-radius:12px;margin-bottom:12px">':'')+
@@ -240,8 +240,18 @@ function buildQuestion(){
  qc.querySelectorAll('[data-answer]').forEach(b=>b.addEventListener('click',()=>handleAnswer(b.dataset.answer)));
  qc.querySelectorAll('[data-build]').forEach(b=>b.addEventListener('click',()=>build(b.dataset.build)));
 }
+$('question-content').addEventListener('click',event=>{
+ const target=event.target.closest('[data-game-action]');
+ if(!target)return;
+ if(target.dataset.gameAction==='export')exportResult();
+ else if(target.dataset.gameAction==='reset')reset();
+});
 function setToolbar(){
  const p=game?.state.phase||'lobby';
+ // Câu hỏi, đáp án, vật liệu và nút tiến trình chỉ tồn tại trong sân khấu 3D.
+ $('question-panel').dataset.phase=p;
+ $('world-wrap').dataset.phase=p;
+ document.body.classList.toggle('island-gameplay',Boolean(game));
  const map={lobby:'▶ Bắt đầu khám phá',reading:'✓ Đã đọc xong',ready:'▶ Bắt đầu trả lời',
   answer:'⌛ Đang trả lời',feedback:'🛠️ Chọn công trình',build:'🛠️ Hãy chọn công trình',transition:'➡ Tiếp lượt',event:'🌊 Đang có biến cố',event_done:'⛵ Vòng tiếp theo',finished:'↺ Chơi trận mới'};
  $('main-action').textContent=map[p]||'Tiếp tục';
@@ -268,7 +278,8 @@ function render(){
   setBanner(voiceBusy?'🎙️ ĐANG ĐỌC LỜI DẪN / CÂU HỎI...':
    phase==='reading'?'📖 Đọc câu hỏi – chưa tính thời gian':
    phase==='ready'?'🎯 Sẵn sàng trả lời':
-   phase==='event'?'⚠️ BIẾN CỐ ĐANG DIỄN RA':null);
+   phase==='event'?'⚠️ BIẾN CỐ ĐANG DIỄN RA':
+   phase==='finished'?'🏆 CHÚC MỪNG '+game.standings()[0].name.toUpperCase()+'!':null);
  }else setBanner('⏸ ĐÃ TẠM DỪNG – giáo viên có thể giải thích đáp án');
  $('event-notice').textContent=phase==='event_done'&&game.state.lastEvent?'🛡️ '+game.state.lastEvent.title+' đã kết thúc. Điểm an toàn được cập nhật công bằng.':'🌊 Biến cố chung diễn ra sau khi tất cả đội hoàn thành lượt trong vòng.';
 }
@@ -321,12 +332,22 @@ async function startGame(){
  if(c.voiceEnabled&&!readyAuth)toast('Muốn phát giọng MotionClass, cần đăng nhập trước khi bắt đầu.');
  try{
   stopTick();voice?.stop();pose?.stop();pose=null;
-  game=eng.create(c);$('setup-panel').style.opacity='.7';
+  game=eng.create(c);
+  document.body.classList.add('island-gameplay');
+  $('setup-panel').style.opacity='.7';
   $('setup-panel').style.pointerEvents='none';
   await rebuildScene(game.state.teams);
   audio.playMusic();await prepareVoice();
   game.start();startTick();render();if(voice)await speakQuestion();
- }catch(e){info('⚠ '+e.message);toast(e.message)}
+ }catch(e){
+  if(!game?.state||game.state.phase==='lobby'){
+   game=null;
+   document.body.classList.remove('island-gameplay');
+   $('setup-panel').style.pointerEvents='auto';
+   $('setup-panel').style.opacity='1';
+  }
+  info('⚠ '+e.message);toast(e.message);
+ }
 }
 async function nextTurn(){
  if(!game)return;
@@ -373,12 +394,10 @@ function finish(){
   rank:standings.map(t=>({team:t.name,score:t.score,correct:t.correct}))};
  try{const key='motionclass:island-preview-history',history=JSON.parse(localStorage.getItem(key)||'[]');history.unshift(record);
   localStorage.setItem(key,JSON.stringify(history.slice(0,20)))}catch(_){}
- render();modal('🏆 Kết quả Đảo sinh tồn',
-  '<p>Chiến thắng: <b>'+esc(standings[0].name)+'</b> · '+standings[0].score.total+'/100 điểm.</p>'+
-  standings.map((t,i)=>'<div class="board-item"><span>'+(i+1)+'. '+esc(t.name)+'</span><b>'+t.score.total+'/100</b></div>').join('')+
-  '<p>Điểm dựa trên 70% kiến thức · 20% sinh tồn · 10% chiến thuật. Kết quả thử chỉ lưu trong trình duyệt.</p>',
-  '<button class="btn primary" id="modal-done">Đóng và xem bảng điểm</button>');
- $('modal-done').addEventListener('click',closeModal);
+ render();
+ setBanner('🏆 CHÚC MỪNG '+standings[0].name.toUpperCase()+' · '+standings[0].score.total+'/100 ĐIỂM');
+ // Không mở modal toàn trang: trao giải và các nút kết quả nằm ngay trong quần đảo.
+
 }
 async function startAnswer(){
  if(!game||game.state.phase!=='ready')return;
@@ -419,6 +438,7 @@ function reset(){
  if(!confirm('Trở về Soạn trò chơi? Trận đang diễn ra sẽ không được lưu thành kết quả.'))return;
  stopTick();voice?.stop();voice=null;pose?.stop();pose=null;$('posebox').hidden=true;
  audio.pauseMusic();game=null;voiceBusy=false;announcing++;
+ document.body.classList.remove('island-gameplay');
  $('setup-panel').style.opacity='1';$('setup-panel').style.pointerEvents='auto';
  $('team-board').innerHTML='';$('question-content').innerHTML='<p class="question-text">Sẵn sàng khám phá đảo sinh tồn?</p><p style="color:#52728a">Chọn cấu hình bên phải, sau đó nhấn Bắt đầu khám phá.</p>';
  $('standings').innerHTML='<div class="subtext">Điểm sẽ xuất hiện sau khi bắt đầu.</div>';
