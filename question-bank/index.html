@@ -136,7 +136,7 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 </div>
 <section id="listView" class="library-screen">
  <div class="library-heading">
-  <div><span class="eyebrow">MOTIONCLASS / HỌC LIỆU SỐ</span><h2>Thư viện câu hỏi</h2><p class="muted">Gom nhóm theo khối lớp, môn học và bài/chủ đề. Chọn một câu để xem chi tiết hoặc quản lý giọng đọc.</p></div>
+  <div><span class="eyebrow">MOTIONCLASS / HỌC LIỆU SỐ</span><h2>Ngân hàng câu hỏi</h2><p class="muted">Gom nhóm theo khối lớp, môn học và bài/chủ đề. Chọn một câu để xem chi tiết hoặc quản lý giọng đọc.</p></div>
   <div class="row"><button id="newQuestion" class="primary" type="button">＋ Tạo câu hỏi</button><button id="openImport" type="button">↑ Nhập hàng loạt</button><button id="openBatchAudio" type="button" hidden>🎧 Tạo giọng hàng loạt</button><button id="uvBankVoice" type="button" title="Tạo giọng thống nhất (Microsoft NamMinh) cho các câu hỏi còn thiếu">🎙️ Tạo giọng ngay</button><a class="buttonlink" href="/marble-race/">🏁 Đua bi</a></div>
  </div>
  <div class="library-metrics" aria-label="Thống kê câu hỏi">
@@ -226,14 +226,14 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <input id="questionImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/*">
 <div class="row" style="margin-top:8px"><button id="uploadQuestionImage">↑ Tải ảnh vào câu hỏi</button><button id="removeQuestionImage" class="danger">Xóa ảnh minh họa</button></div>
 <p class="muted">Lưu câu hỏi trước khi tải ảnh. Hình được nén và lưu riêng tư, có thể dùng chung với AI Pose Quiz và Đua bi.</p></div>
-<div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
+<div class="row" style="margin-top:14px"><button id="saveQuestion" class="primary">☁ Lưu câu hỏi vào Ngân hàng</button><button id="duplicateQuestion">⧉ Nhân bản</button><button id="deleteQuestion" class="danger">🗑 Xóa câu này</button><a href="/marble-race/" class="buttonlink">🏁 Mở Đua bi</a></div>
 <div id="editStatus" class="notice" role="status">Tạo câu hỏi mới hoặc chọn một câu ở danh sách bên trái.</div></div>
 </section>
 <section id="batchView" class="library-screen" hidden>
  <div class="subpage-top"><button type="button" class="backToList">← Quay lại danh sách</button><span class="eyebrow">TẠO GIỌNG HÀNG LOẠT · GOOGLE AI STUDIO</span></div>
  <div class="panel batch-panel">
   <h2>🎧 Gom lô, tự cắt WAV và duyệt trước khi lưu</h2>
-  <p class="muted">Chọn nhiều câu hỏi của mình trong Thư viện. Hệ thống tự bỏ qua WAV hiện hành, gom nội dung trong giới hạn API rồi cắt thành từng đoạn. <strong>Không tệp nào được lưu lên Supabase cho đến khi giáo viên nghe và duyệt.</strong></p>
+  <p class="muted">Chọn nhiều câu hỏi của mình trong Ngân hàng câu hỏi. Hệ thống tự bỏ qua WAV hiện hành, gom nội dung trong giới hạn API rồi cắt thành từng đoạn. <strong>Không tệp nào được lưu lên Supabase cho đến khi giáo viên nghe và duyệt.</strong></p>
   <div class="batch-picker">
    <div class="batch-picker-heading">
     <div><h3>1 · Tự chọn câu hỏi cần tạo giọng</h3><p class="muted">Chỉ những câu được tích trong danh sách này mới được gửi tới AI Studio. Danh sách là câu hỏi thầy/cô sở hữu trong ngân hàng.</p></div>
@@ -293,7 +293,7 @@ main{max-width:1480px;padding:18px 20px 75px}.library-userbar{padding:10px 17px;
 <textarea id="bulkText" rows="9" placeholder="Câu 1: Thiết bị nào giúp gõ chữ?&#10;A. Màn hình&#10;B. Bàn phím&#10;C. Loa&#10;D. Chuột&#10;Đáp án đúng: B&#10;Giải thích: Bàn phím dùng để nhập chữ."></textarea>
 <label for="bulkFile">Hoặc chọn TXT/JSON</label><input type="file" id="bulkFile" accept=".txt,.json,text/plain,application/json">
 <label class="control-label"><input id="bulkPublic" type="checkbox"> Chia sẻ công khai những câu mới</label>
-<div class="row"><button id="bulkPreview">✓ Kiểm tra danh sách</button><button id="bulkSave" class="primary">☁ Lưu tất cả lên Supabase</button></div>
+<div class="row"><button id="bulkPreview">✓ Kiểm tra danh sách</button><button id="bulkSave" class="primary">☁ Lưu tất cả vào Ngân hàng</button></div>
 <div id="bulkStatus" class="notice" role="status">Chưa nhập câu hỏi.</div></details></div>
 </section>
 </div>
