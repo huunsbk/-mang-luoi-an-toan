@@ -13,8 +13,13 @@ for (const marker of [
   'bankQuestionId',
   '/classrooms/classroom-store.js',
   '/scripts/script-store.js',
-  '/unified-voice/voice-profile.js'
+  '/unified-voice/voice-profile.js',
+  '⏭ BỎ QUA LỜI ĐỌC',
+  'voiceRunIdRef',
+  "skipNarration('watchdog')"
 ]) assert(index.includes(marker), 'Thiếu marker: '+marker);
+
+assert(!index.includes('currentQuestion?.id, feedback, voiceGameVolume'), 'Effect đọc không được phụ thuộc voiceGameVolume vì sẽ hủy phiên đọc khi kéo âm lượng.');
 
 const context = {
   console,
@@ -28,7 +33,11 @@ const context = {
   fetch: async () => ({ ok:true, json:async()=>({ok:true,items:[]}) }),
   Audio: class {
     constructor(url){ this.url=url; this.volume=1; this.paused=true; }
-    play(){ this.paused=false; setTimeout(()=>this.onended?.(),0); return Promise.resolve(); }
+    play(){
+      this.paused=false;
+      if(!String(this.url||'').startsWith('stuck://')) setTimeout(()=>this.onended?.(),0);
+      return Promise.resolve();
+    }
     pause(){ this.paused=true; }
   },
   SpeechSynthesisUtterance: class { constructor(text){ this.text=text; } },
@@ -122,5 +131,17 @@ const off=R.create({client,volume:0});
 await off.load({...settings,voiceNarration:{enabled:false,scriptId:'script-1',classroomId:'c1'}});
 const offResult=await off.presentQuestion(question,0,{});
 assert.equal(offResult.played,false,'Tắt giọng đọc thì runtime không được phát lời.');
+
+// Stop/skip phải giải phóng ngay Promise đang chờ audio, không để voiceBusy kẹt vô hạn.
+store.listPhraseAudio=async()=>[{phrase:'Bắt đầu nhé!',voiceId:'edge:namminh-b1',url:'stuck://intro'}];
+const stuck=R.create({client,volume:1});
+await stuck.load(settings);
+const pending=stuck.presentQuestion(question,0,{intro:true});
+setTimeout(()=>stuck.stop(),20);
+const stoppedResult=await Promise.race([
+  pending,
+  new Promise((_,reject)=>setTimeout(()=>reject(new Error('stop() không giải phóng narration đang chờ.')),800))
+]);
+assert.equal(stoppedResult.played,false,'Sau stop(), narration phải kết thúc ở trạng thái không phát.');
 
 console.log('POSE_VOICE_LAB_QA_OK');
