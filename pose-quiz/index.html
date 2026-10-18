@@ -1255,6 +1255,7 @@
             const feedbackTimeoutRef = useRef(null);
             const voiceRuntimeRef = useRef(null);
             const voiceLoadedRef = useRef(false);
+            const voiceRunIdRef = useRef(0);
             const presentedQuestionRef = useRef('');
             const currentStudentRef = useRef(null);
             
@@ -1307,6 +1308,17 @@
                 setBgmGameVolume(0);
                 setFeedbackGameVolume(0);
                 setVoiceGameVolume(0);
+            }, []);
+
+            const skipNarration = useCallback((reason = 'manual') => {
+                voiceRunIdRef.current += 1;
+                voiceRuntimeRef.current?.stop?.();
+                setVoiceBusy(false);
+                if (reason === 'watchdog') {
+                    setVoiceStatus('⚠ Lời đọc bị gián đoạn — hệ thống đã mở khóa trả lời.');
+                } else {
+                    setVoiceStatus('⏭ Đã bỏ qua lời đọc — học sinh có thể trả lời.');
+                }
             }, []);
 
             const getPoseVisual = (poseId) => {
@@ -1427,6 +1439,7 @@
             const togglePause = () => setIsPaused(prev => !prev);
 
             const backToEditor = () => {
+                voiceRunIdRef.current += 1;
                 voiceRuntimeRef.current?.stop?.();
                 if (bgmRef.current) {
                     try { bgmRef.current.pause(); } catch (_) {}
@@ -1497,6 +1510,7 @@
 
             useEffect(() => {
                 if (!settings.voiceNarration?.enabled) {
+                    voiceRunIdRef.current += 1;
                     voiceRuntimeRef.current?.stop?.();
                     voiceLoadedRef.current = false;
                     presentedQuestionRef.current = '';
@@ -1516,39 +1530,55 @@
                 if (!settings.voiceNarration?.enabled || !gameReady || !currentQuestion || feedback) return;
                 const key = String(qIndex) + ':' + String(currentQuestion.id || '');
                 if (presentedQuestionRef.current === key) return;
-                let cancelled = false;
+
+                const runId = ++voiceRunIdRef.current;
                 const play = async () => {
                     setVoiceBusy(true);
                     try {
                         const runtime = voiceRuntimeRef.current || window.PoseQuizVoiceRuntime.create({client: supabaseClient, volume: voiceGameVolume});
                         voiceRuntimeRef.current = runtime;
                         runtime.setVolume(voiceGameVolume);
+
                         if (!voiceLoadedRef.current) {
                             const info = await runtime.load(settings);
+                            if (voiceRunIdRef.current !== runId) return;
                             voiceLoadedRef.current = true;
-                            if (!cancelled) setVoiceStatus('🎙️ '+info.voiceLabel+' · '+info.scriptTitle+(info.classSize ? ' · '+info.classSize+' HS · '+info.studentVoiceCount+' tên có WAV' : ' · Không gọi tên HS')+' · '+info.questionAudioCount+' WAV câu hỏi');
+                            setVoiceStatus('🎙️ '+info.voiceLabel+' · '+info.scriptTitle+(info.classSize ? ' · '+info.classSize+' HS · '+info.studentVoiceCount+' tên có WAV' : ' · Không gọi tên HS')+' · '+info.questionAudioCount+' WAV câu hỏi');
                         }
-                        if (cancelled) return;
+
+                        if (voiceRunIdRef.current !== runId) return;
                         presentedQuestionRef.current = key;
+
                         const presented = await runtime.presentQuestion(currentQuestion, qIndex, {
                             intro: qIndex === 0,
                             onStudent: (student) => {
-                                if (cancelled) return;
+                                if (voiceRunIdRef.current !== runId) return;
                                 currentStudentRef.current = student || null;
                                 setCalledStudent(student || null);
                             }
                         });
-                        if (cancelled) return;
+
+                        if (voiceRunIdRef.current !== runId) return;
                         currentStudentRef.current = presented.student || null;
                     } catch (err) {
-                        if (!cancelled) setVoiceStatus('⚠ Không đọc được lời dẫn: '+(err.message || err));
+                        if (voiceRunIdRef.current === runId) {
+                            setVoiceStatus('⚠ Không đọc được lời dẫn: '+(err.message || err));
+                        }
                     } finally {
-                        if (!cancelled) setVoiceBusy(false);
+                        if (voiceRunIdRef.current === runId) {
+                            setVoiceBusy(false);
+                        }
                     }
                 };
+
                 play();
-                return () => { cancelled = true; };
-            }, [settings.voiceNarration?.enabled, gameReady, qIndex, currentQuestion?.id, feedback, voiceGameVolume]);
+
+                return () => {
+                    if (voiceRunIdRef.current === runId) {
+                        voiceRunIdRef.current += 1;
+                    }
+                };
+            }, [settings.voiceNarration?.enabled, gameReady, qIndex, currentQuestion?.id, feedback]);
 
             useEffect(() => {
                 if (isPaused) {
@@ -1575,6 +1605,19 @@
             useEffect(() => {
                 voiceRuntimeRef.current?.setVolume?.(voiceGameVolume);
             }, [voiceGameVolume]);
+
+            useEffect(() => {
+                if (!voiceBusy || isPaused || !currentQuestion) return;
+                const answerChars = (currentQuestion.answers || []).reduce((sum, answer) => sum + String(answer?.text || '').length, 0);
+                const textChars = String(currentQuestion.text || '').length + answerChars;
+                const timeoutMs = Math.max(15000, Math.min(60000, 12000 + textChars * 120));
+                const runId = voiceRunIdRef.current;
+                const timer = setTimeout(() => {
+                    if (voiceRunIdRef.current !== runId || isPausedRef.current) return;
+                    skipNarration('watchdog');
+                }, timeoutMs);
+                return () => clearTimeout(timer);
+            }, [voiceBusy, isPaused, qIndex, currentQuestion?.id, skipNarration]);
 
             useEffect(() => () => {
                 voiceRuntimeRef.current?.stop?.();
@@ -2005,9 +2048,21 @@
                         </div>
                     )}
                     {settings.voiceNarration?.enabled && !isPaused && (voiceBusy || calledStudent || voiceStatus) && (
-                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[75] max-w-[80vw] bg-slate-950/90 text-white px-4 py-2 rounded-2xl font-black shadow-xl border border-white/20 text-center">
-                            {voiceBusy ? '🔊 ĐANG ĐỌC LỜI DẪN / CÂU HỎI...' : calledStudent ? '🎯 MỜI: ' + calledStudent.name : voiceStatus}
-                            {!voiceBusy && calledStudent && voiceStatus && <div className="text-[9px] font-bold text-slate-300 mt-0.5">{voiceStatus}</div>}
+                        <div className="absolute top-[68px] left-1/2 -translate-x-1/2 z-[75] max-w-[86vw] bg-slate-950/90 text-white px-4 py-2 rounded-2xl font-black shadow-xl border border-white/20 text-center flex items-center gap-3">
+                            <div className="min-w-0">
+                                <div>{voiceBusy ? '🔊 ĐANG ĐỌC LỜI DẪN / CÂU HỎI...' : calledStudent ? '🎯 MỜI: ' + calledStudent.name : voiceStatus}</div>
+                                {!voiceBusy && calledStudent && voiceStatus && <div className="text-[9px] font-bold text-slate-300 mt-0.5">{voiceStatus}</div>}
+                            </div>
+                            {voiceBusy && (
+                                <button
+                                    type="button"
+                                    onClick={() => skipNarration('manual')}
+                                    className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-300 text-[10px] font-black"
+                                    title="Dừng lời đọc hiện tại và cho phép học sinh trả lời ngay"
+                                >
+                                    ⏭ BỎ QUA LỜI ĐỌC
+                                </button>
+                            )}
                         </div>
                     )}
                     <div className="pose-game-main flex-1 flex overflow-hidden">
