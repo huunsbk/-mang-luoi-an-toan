@@ -46,6 +46,7 @@ jobs:
             const mode=await page.evaluate(()=>window.__ISLAND_3D_MODE);
             if(mode!=='webgl-three')throw new Error('3D WebGL not active: '+mode);
             console.log('ISLAND_WEBGL_3D_OK');
+            await page.waitForFunction(()=>document.getElementById('camera-status')?.textContent?.includes('Toàn cảnh'),{timeout:40000});
             const readView=()=>page.evaluate(()=>window.__ISLAND_VIEW);
             const initial=await readView();
             if(!initial||!Number.isFinite(initial.yaw))throw Error('Camera state missing.');
