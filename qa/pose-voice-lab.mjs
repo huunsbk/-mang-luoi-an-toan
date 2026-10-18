@@ -15,11 +15,12 @@ for (const marker of [
   '/scripts/script-store.js',
   '/unified-voice/voice-profile.js',
   '⏭ BỎ QUA LỜI ĐỌC',
-  'voiceRunIdRef',
-  "skipNarration('watchdog')"
+  'voiceRunIdRef'
 ]) assert(index.includes(marker), 'Thiếu marker: '+marker);
 
 assert(!index.includes('currentQuestion?.id, feedback, voiceGameVolume'), 'Effect đọc không được phụ thuộc voiceGameVolume vì sẽ hủy phiên đọc khi kéo âm lượng.');
+assert(!index.includes("skipNarration('watchdog')"), 'Không được dùng watchdog tổng theo thời gian ước lượng vì có thể ngắt nhầm narration.');
+assert(!index.includes('Lời đọc bị gián đoạn — hệ thống đã mở khóa trả lời'), 'Không được hiện cảnh báo gián đoạn giả khi chỉ thay đổi âm lượng.');
 
 const context = {
   console,
