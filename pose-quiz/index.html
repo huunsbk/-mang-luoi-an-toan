@@ -1280,6 +1280,35 @@
             const lessonOverlay = Math.min(0.95, Math.max(0.2, Number(settings.theme?.overlay ?? 0.68)));
             const lessonBackgroundFit = settings.theme?.fit === 'contain' ? 'contain' : 'cover';
 
+            // Cập nhật âm lượng ngay trên từng sự kiện input khi đang kéo thanh trượt.
+            // Không chờ mouseup/touchend hoặc vòng render/effect tiếp theo mới áp dụng vào audio đang phát.
+            const updateBgmGameVolume = useCallback((rawValue) => {
+                const next = Math.min(1, Math.max(0, Number(rawValue) / 100));
+                if (bgmRef.current) bgmRef.current.volume = next;
+                setBgmGameVolume(next);
+            }, []);
+
+            const updateFeedbackGameVolume = useCallback((rawValue) => {
+                const next = Math.min(1, Math.max(0, Number(rawValue) / 100));
+                if (feedbackAudioRef.current) feedbackAudioRef.current.volume = next;
+                setFeedbackGameVolume(next);
+            }, []);
+
+            const updateVoiceGameVolume = useCallback((rawValue) => {
+                const next = Math.min(1, Math.max(0, Number(rawValue) / 100));
+                voiceRuntimeRef.current?.setVolume?.(next);
+                setVoiceGameVolume(next);
+            }, []);
+
+            const muteAllGameAudio = useCallback(() => {
+                if (bgmRef.current) bgmRef.current.volume = 0;
+                if (feedbackAudioRef.current) feedbackAudioRef.current.volume = 0;
+                voiceRuntimeRef.current?.setVolume?.(0);
+                setBgmGameVolume(0);
+                setFeedbackGameVolume(0);
+                setVoiceGameVolume(0);
+            }, []);
+
             const getPoseVisual = (poseId) => {
                 const src = resolvedPoseAssetSrc(settings, poseId);
                 if (src) {
@@ -1877,7 +1906,7 @@
                                             <input
                                                 type="range" min="0" max="100" step="1"
                                                 value={Math.round(bgmGameVolume * 100)}
-                                                onChange={(e) => setBgmGameVolume(Number(e.target.value) / 100)}
+                                                onInput={(e) => updateBgmGameVolume(e.currentTarget.value)}
                                                 className="w-full accent-sky-400 cursor-pointer"
                                                 aria-label="Âm lượng nhạc nền"
                                             />
@@ -1891,7 +1920,7 @@
                                             <input
                                                 type="range" min="0" max="100" step="1"
                                                 value={Math.round(feedbackGameVolume * 100)}
-                                                onChange={(e) => setFeedbackGameVolume(Number(e.target.value) / 100)}
+                                                onInput={(e) => updateFeedbackGameVolume(e.currentTarget.value)}
                                                 className="w-full accent-amber-400 cursor-pointer"
                                                 aria-label="Âm lượng đúng sai"
                                             />
@@ -1905,7 +1934,7 @@
                                             <input
                                                 type="range" min="0" max="100" step="1"
                                                 value={Math.round(voiceGameVolume * 100)}
-                                                onChange={(e) => setVoiceGameVolume(Number(e.target.value) / 100)}
+                                                onInput={(e) => updateVoiceGameVolume(e.currentTarget.value)}
                                                 disabled={!settings.voiceNarration?.enabled}
                                                 className="w-full accent-emerald-400 cursor-pointer disabled:cursor-not-allowed"
                                                 aria-label="Âm lượng giọng đọc"
@@ -1916,11 +1945,7 @@
                                             <span>Kéo về 0% để tắt riêng</span>
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setBgmGameVolume(0);
-                                                    setFeedbackGameVolume(0);
-                                                    setVoiceGameVolume(0);
-                                                }}
+                                                onClick={muteAllGameAudio}
                                                 className="text-red-300 hover:text-red-200 font-black"
                                             >TẮT TẤT CẢ</button>
                                         </div>
